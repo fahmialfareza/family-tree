@@ -1,0 +1,34 @@
+{
+  // Use IntelliSense to learn about possible attributes.
+  // Hover to view descriptions of existing attributes.
+  // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Run backend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}/family-tree-backend"
+    },
+    {
+      "name": "Frontend - Chrome",
+      "request": "launch",
+      "type": "chrome",
+      "url": "http://localhost:3000",
+      "webRoot": "${workspaceFolder}/family-tree-frontend"
+    },
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Frontend - Next.js",
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}/family-tree-frontend",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["run", "dev"]
+    }
+  ]
+}

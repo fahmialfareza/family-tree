@@ -1,0 +1,11 @@
+node_modules/
+
+.DS_Store
+.env.development
+.env.production
+access.log
+
+newrelic_agent.log
+dist
+tmp/*
+!tmp/Readme.md
