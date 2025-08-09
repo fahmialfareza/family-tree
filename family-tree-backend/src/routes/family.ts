@@ -1,10 +1,14 @@
 import express from "express";
 
-import { createFamily, getFamilies } from "@/controllers/family";
+import { createFamily, deleteFamily, getFamilies } from "@/controllers/family";
+import { authenticate } from "@/middlewares/auth";
 
 const router = express.Router();
 
-router.get("/", getFamilies);
-router.post("/", createFamily);
+router
+  .route("/")
+  .get(authenticate(["admin", "user"]), getFamilies)
+  .post(authenticate(["user"]), createFamily);
+router.route("/:id").delete(authenticate(["user"]), deleteFamily);
 
 export default router;

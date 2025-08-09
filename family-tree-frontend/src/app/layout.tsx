@@ -4,6 +4,7 @@ import "@radix-ui/themes/styles.css";
 import { Container, Theme } from "@radix-ui/themes";
 import { ToastContainer } from "react-toastify";
 import Navbar from "@/components/Navbar";
+import ProgressBarProvider from "@/components/ProgressBarProvider";
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -18,13 +19,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body suppressHydrationWarning={true}>
-        <Theme>
-          <Navbar />
+        <ProgressBarProvider>
+          <Theme>
+            <Navbar />
 
-          <Container size={"4"}>{children}</Container>
+            <Container size={"4"}>{children}</Container>
 
-          <ToastContainer position="bottom-right" />
-        </Theme>
+            <ToastContainer position="bottom-right" />
+          </Theme>
+        </ProgressBarProvider>
       </body>
     </html>
   );

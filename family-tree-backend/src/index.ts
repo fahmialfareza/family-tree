@@ -4,7 +4,7 @@ dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 import "newrelic";
 import path from "path";
 import fs from "fs";
-import express from "express";
+import express, { Request, Response } from "express";
 import rateLimit from "express-rate-limit";
 import hpp from "hpp";
 import cors from "cors";
@@ -12,7 +12,7 @@ import fileUpload from "express-fileupload";
 import morgan from "morgan";
 import compression from "compression";
 
-import errorHandler from "@/middlewares/errorHandler";
+import errorHandler, { error } from "@/middlewares/errorHandler";
 import logger from "@/utils/logger";
 import router from "@/routes";
 
@@ -63,6 +63,9 @@ server.use(express.static("public"));
 
 server.use("/api", router);
 
+server.all("{*any}", (req: Request, res: Response) => {
+  throw error("Not Found", 404);
+});
 server.use(errorHandler);
 
 server.listen(PORT, () => logger.error(`Server started on port ${PORT}`));

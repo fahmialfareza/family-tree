@@ -1,10 +1,14 @@
 import { Schema, model } from "mongoose";
-import mongooseDelete from "mongoose-delete";
+import mongooseDelete, {
+  SoftDeleteDocument,
+  SoftDeleteModel,
+} from "mongoose-delete";
 import { TTypeID } from "./types/id";
 
-export interface IFamily {
+export interface IFamily extends SoftDeleteDocument {
   name: string;
   person: TTypeID;
+  ownedBy: TTypeID;
 }
 
 const familySchema = new Schema<IFamily>(
@@ -18,6 +22,11 @@ const familySchema = new Schema<IFamily>(
       ref: "Person",
       required: true,
     },
+    ownedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
   },
   {
     timestamps: true,
@@ -28,4 +37,8 @@ const familySchema = new Schema<IFamily>(
 
 familySchema.plugin(mongooseDelete, { overrideMethods: "all" });
 
-export default model<IFamily>("Family", familySchema);
+const familyModel = model<IFamily>(
+  "Family",
+  familySchema
+) as SoftDeleteModel<IFamily>;
+export default familyModel;

@@ -1,10 +1,5 @@
-import { ObjectId } from "mongoose";
-
-type TUser = {
-  id: ObjectId;
-  email: string;
-  role: string;
-};
+import { Types } from "mongoose";
+import { IUser } from "./models/user";
 
 declare global {
   namespace Express {
@@ -13,7 +8,8 @@ declare global {
     }
 
     interface Request {
-      user?: TUser;
+      user?: IUser & { _id: Types.ObjectId };
+      token?: string;
     }
   }
 }

@@ -1,11 +1,19 @@
-import { Schema, model } from "mongoose";
-import mongooseDelete from "mongoose-delete";
+import { Schema, Types, model } from "mongoose";
+import mongooseDelete, {
+  SoftDeleteDocument,
+  SoftDeleteModel,
+} from "mongoose-delete";
 
-export interface IPerson {
+export interface IPerson extends SoftDeleteDocument {
   name: string;
+  nickname: string;
+  address: string;
+  status: "alive" | "deceased";
   gender: "male" | "female";
+  phone?: string;
   birthDate: Date;
   photoUrl?: string;
+  ownedBy?: Types.ObjectId;
 }
 
 const personSchema = new Schema<IPerson>(
@@ -14,10 +22,27 @@ const personSchema = new Schema<IPerson>(
       type: String,
       required: true,
     },
+    nickname: {
+      type: String,
+      required: true,
+    },
+    address: {
+      type: String,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["alive", "deceased"],
+      required: true,
+    },
     gender: {
       type: String,
       enum: ["male", "female"],
       required: true,
+    },
+    phone: {
+      type: String,
+      required: false,
     },
     birthDate: {
       type: Date,
@@ -25,6 +50,11 @@ const personSchema = new Schema<IPerson>(
     },
     photoUrl: {
       type: String,
+      required: false,
+    },
+    ownedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
       required: false,
     },
   },
@@ -37,4 +67,8 @@ const personSchema = new Schema<IPerson>(
 
 personSchema.plugin(mongooseDelete, { overrideMethods: "all" });
 
-export default model<IPerson>("Person", personSchema);
+const personModel: SoftDeleteModel<IPerson> = model<IPerson>(
+  "Person",
+  personSchema
+) as SoftDeleteModel<IPerson>;
+export default personModel;

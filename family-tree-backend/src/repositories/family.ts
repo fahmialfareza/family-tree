@@ -1,21 +1,24 @@
 import { Family } from "@/models";
+import { IFamily } from "@/models/family";
 import { TTypeID } from "@/models/types/id";
 
-export async function getFamilies() {
-  return Family.find().populate("person").lean();
+export async function getFamilies(ownedBy?: TTypeID) {
+  const query = ownedBy ? { ownedBy } : {};
+  return Family.find(query).populate("person").lean();
 }
 
 export async function getFamilyById(id: TTypeID) {
   return Family.findById(id).populate("person").lean();
 }
 
-export async function createFamily(name: string, person: TTypeID) {
-  const newFamily = new Family({
-    name,
-    person,
-  });
+export async function createFamily(data: Partial<IFamily>) {
+  const newFamily = new Family(data);
   const savedPerson = await newFamily.save();
-  const insertedId = savedPerson._id;
+  const insertedId = savedPerson._id as TTypeID;
 
   return getFamilyById(insertedId);
+}
+
+export async function deleteFamily(id: TTypeID) {
+  return Family.delete({ _id: id });
 }

@@ -1,8 +1,11 @@
-import { model, Schema, Types } from "mongoose";
-import mongooseDelete from "mongoose-delete";
+import { model, Schema } from "mongoose";
+import mongooseDelete, {
+  SoftDeleteDocument,
+  SoftDeleteModel,
+} from "mongoose-delete";
 import { TTypeID } from "./types/id";
 
-export interface IRelationship {
+export interface IRelationship extends SoftDeleteDocument {
   from: TTypeID;
   to: TTypeID;
   order?: number;
@@ -40,4 +43,8 @@ const relationshipSchema = new Schema<IRelationship>(
 
 relationshipSchema.plugin(mongooseDelete, { overrideMethods: "all" });
 
-export default model<IRelationship>("Relationship", relationshipSchema);
+const relationshipModel = model<IRelationship>(
+  "Relationship",
+  relationshipSchema
+) as SoftDeleteModel<IRelationship>;
+export default relationshipModel;

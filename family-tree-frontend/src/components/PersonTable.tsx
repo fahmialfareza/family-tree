@@ -46,7 +46,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -95,10 +94,14 @@ import { TPerson } from "@/models/person";
 import Link from "next/link";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
+import useStore from "@/zustand";
+import { addFamily } from "@/service/family";
+import { deletePerson } from "@/service/person";
+import DialogDelete from "./DialogDelete";
 
 const multiColumnFilterFn: FilterFn<TPerson> = (row, columnId, filterValue) => {
   const searchableRowContent =
-    `${row.original.name} ${row.original.gender} ${row.original.birthDate}`.toLowerCase();
+    `${row.original.name} ${row.original.nickname} ${row.original.gender} ${row.original.birthDate}`.toLowerCase();
   const searchTerm = (filterValue ?? "").toLowerCase();
   return searchableRowContent.includes(searchTerm);
 };
@@ -115,6 +118,11 @@ const statusFilterFn: FilterFn<TPerson> = (
 
 const columns: ColumnDef<TPerson>[] = [
   {
+    header: "Nickname",
+    accessorKey: "nickname",
+    filterFn: multiColumnFilterFn,
+  },
+  {
     header: "Name",
     accessorKey: "name",
     cell: ({ row }) => (
@@ -125,8 +133,21 @@ const columns: ColumnDef<TPerson>[] = [
     enableHiding: false,
   },
   {
+    header: "Address",
+    accessorKey: "address",
+  },
+  {
+    header: "Status",
+    accessorKey: "status",
+    filterFn: statusFilterFn,
+  },
+  {
     header: "Gender",
     accessorKey: "gender",
+  },
+  {
+    header: "Phone",
+    accessorKey: "phone",
   },
   {
     header: "Birth Date",
@@ -248,34 +269,42 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
       {/* Filters */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          {/* Filter by name or email */}
+          {/* Filter by name or nickname */}
           <div className="relative">
             <Input
               id={`${id}-input`}
               ref={inputRef}
               className={cn(
                 "peer min-w-60 ps-9",
-                Boolean(table.getColumn("name")?.getFilterValue()) && "pe-9"
+                (Boolean(table.getColumn("name")?.getFilterValue()) ||
+                  Boolean(table.getColumn("nickname")?.getFilterValue())) &&
+                  "pe-9"
               )}
               value={
-                (table.getColumn("name")?.getFilterValue() ?? "") as string
+                // Show the value from either filter, prefer name if both are set
+                (table.getColumn("name")?.getFilterValue() as string) ??
+                (table.getColumn("nickname")?.getFilterValue() as string) ??
+                ""
               }
-              onChange={(e) =>
-                table.getColumn("name")?.setFilterValue(e.target.value)
-              }
-              placeholder="Filter by name"
+              onChange={(e) => {
+                table.getColumn("name")?.setFilterValue(e.target.value);
+                table.getColumn("nickname")?.setFilterValue(e.target.value);
+              }}
+              placeholder="Filter by name or nickname"
               type="text"
-              aria-label="Filter by name"
+              aria-label="Filter by name or nickname"
             />
             <div className="text-muted-foreground/80 pointer-events-none absolute inset-y-0 start-0 flex items-center justify-center ps-3 peer-disabled:opacity-50">
               <ListFilterIcon size={16} aria-hidden="true" />
             </div>
-            {Boolean(table.getColumn("name")?.getFilterValue()) && (
+            {(Boolean(table.getColumn("name")?.getFilterValue()) ||
+              Boolean(table.getColumn("nickname")?.getFilterValue())) && (
               <button
                 className="text-muted-foreground/80 hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 absolute inset-y-0 end-0 flex h-full w-9 items-center justify-center rounded-e-md transition-[color,box-shadow] outline-none focus:z-10 focus-visible:ring-[3px] disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50"
                 aria-label="Clear filter"
                 onClick={() => {
                   table.getColumn("name")?.setFilterValue("");
+                  table.getColumn("nickname")?.setFilterValue("");
                   if (inputRef.current) {
                     inputRef.current.focus();
                   }
@@ -287,6 +316,16 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
           </div>
           {/* Filter by status */}
           <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline">
+                <FilterIcon
+                  className="-ms-1 opacity-60"
+                  size={16}
+                  aria-hidden="true"
+                />
+                Status
+              </Button>
+            </PopoverTrigger>
             <PopoverContent className="w-auto min-w-36 p-3" align="start">
               <div className="space-y-3">
                 <div className="text-muted-foreground text-xs font-medium">
@@ -401,14 +440,16 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
             </AlertDialog>
           )}
 
-          <Button className="ml-auto" variant="outline">
-            <PlusIcon
-              className="-ms-1 opacity-60"
-              size={16}
-              aria-hidden="true"
-            />
-            Add person
-          </Button>
+          <Link href={"/person/create"}>
+            <Button className="ml-auto" variant="outline">
+              <PlusIcon
+                className="-ms-1 opacity-60"
+                size={16}
+                aria-hidden="true"
+              />
+              Add person
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -626,96 +667,130 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
 
 function RowActions({ row }: { row: Row<TPerson> }) {
   const router = useRouter();
+  const { token } = useStore();
+  const [openDelete, setOpenDelete] = useState(false);
+
+  const handleDelete = async () => {
+    const { data, message } = await deletePerson(row.original._id, token);
+    if (!data) {
+      toast.error(message);
+      return;
+    }
+    toast.success("Person deleted successfully");
+    router.refresh();
+  };
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div className="flex justify-end">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="shadow-none"
-            aria-label="Edit item"
-          >
-            <EllipsisIcon size={16} aria-hidden="true" />
-          </Button>
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>Family Tree</DropdownMenuSubTrigger>
-            <DropdownMenuPortal>
-              <DropdownMenuSubContent>
-                <Link href={`/tree/${row.original._id}?mode=parent`}>
-                  <DropdownMenuItem>
-                    <span>As Parent</span>
-                    <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </Link>
-                <Link href={`/tree/${row.original._id}?mode=child`}>
-                  <DropdownMenuItem>
-                    <span>As Child</span>
-                    <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
-                  </DropdownMenuItem>
-                </Link>
-              </DropdownMenuSubContent>
-            </DropdownMenuPortal>
-          </DropdownMenuSub>
-          <DropdownMenuItem>
-            <span>Edit</span>
-            <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={async () => {
-              const res = await fetch(
-                `${process.env.NEXT_PUBLIC_API_URL}/api/family`,
-                {
-                  method: "POST",
-                  body: JSON.stringify({
-                    name: row.original.name + " Family's",
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div className="flex justify-end">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="shadow-none"
+              aria-label="Edit item"
+            >
+              <EllipsisIcon size={16} aria-hidden="true" />
+            </Button>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Family Tree</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <Link href={`/tree/${row.original._id}?mode=parent`}>
+                    <DropdownMenuItem>
+                      <span>As Parent</span>
+                      <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href={`/tree/${row.original._id}?mode=child`}>
+                    <DropdownMenuItem>
+                      <span>As Child</span>
+                      <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+                    </DropdownMenuItem>
+                  </Link>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+            <Link href={`/person/edit/${row.original._id}`}>
+              <DropdownMenuItem>
+                <span>Edit</span>
+                <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </Link>
+            <DropdownMenuItem
+              onClick={async () => {
+                const { data, message } = await addFamily(
+                  {
+                    name: row.original.name,
                     person: row.original._id,
-                  }),
-                  headers: {
-                    "Content-Type": "application/json",
                   },
+                  token
+                );
+                if (!data) {
+                  toast.error(message);
+                  return;
                 }
-              );
-              if (!res.ok) {
-                toast.error("Failed to create family group", {
-                  autoClose: 3000,
-                });
-                return;
-              }
-
-              toast.success("Family group created successfully", {
-                autoClose: 3000,
-              });
-
-              router.push("/family");
-            }}
+                toast.success("Family group created successfully");
+                router.push("/family");
+              }}
+            >
+              <span>Make as Family Group</span>
+              <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>Share to WhatsApp</DropdownMenuSubTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const url = `${window.location.origin}/tree/${row.original._id}?mode=parent`;
+                      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+                        url
+                      )}`;
+                      window.open(whatsappUrl, "_blank");
+                    }}
+                  >
+                    As Parent
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => {
+                      const url = `${window.location.origin}/tree/${row.original._id}?mode=child`;
+                      const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+                        url
+                      )}`;
+                      window.open(whatsappUrl, "_blank");
+                    }}
+                  >
+                    As Child
+                  </DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuPortal>
+            </DropdownMenuSub>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => setOpenDelete(true)}
           >
-            <span>Make as Family Group</span>
-            <DropdownMenuShortcut>⌘D</DropdownMenuShortcut>
+            <span>Delete</span>
+            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <span>Archive</span>
-            <DropdownMenuShortcut>⌘A</DropdownMenuShortcut>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>Share</DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive">
-          <span>Delete</span>
-          <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DialogDelete
+        open={openDelete}
+        type="person"
+        setOpen={setOpenDelete}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

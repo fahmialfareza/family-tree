@@ -1,0 +1,16 @@
+import { User } from "@/models";
+import { TTypeID } from "@/models/types/id";
+import { IUser } from "@/models/user";
+
+export const findUserById = async (id: TTypeID) => {
+  return User.findById(id).lean();
+};
+
+export const findUserByUsername = async (username: TTypeID) => {
+  return User.findOne({ username }).lean();
+};
+
+export const createUser = async (data: IUser) => {
+  const user = await User.create(data);
+  return findUserById(user._id as TTypeID);
+};

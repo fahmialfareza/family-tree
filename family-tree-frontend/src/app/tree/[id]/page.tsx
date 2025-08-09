@@ -1,5 +1,8 @@
+import { cookies } from "next/headers";
 import ClientTreeWrapper from "@/components/ClientTreeWrapper";
-import { SearchParams } from "next/dist/server/request/search-params";
+import { getFamilyTreeData } from "@/service/tree";
+import { toast } from "react-toastify";
+import { redirect } from "next/navigation";
 
 export default async function TreePage({
   params,
@@ -10,7 +13,14 @@ export default async function TreePage({
 }) {
   const { id } = params;
   const { mode } = searchParams;
-  const data = await fetchFamilyTreeData(id, mode);
+
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  const { data, message } = await getFamilyTreeData(id, mode, token);
+  if (!data) {
+    toast.error(message);
+    redirect("/auth/login");
+  }
 
   return (
     <main className="flex flex-col items-center py-12">
@@ -32,26 +42,4 @@ export default async function TreePage({
       </section>
     </main>
   );
-}
-
-async function fetchFamilyTreeData(id: string, mode: "parent" | "child") {
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  if (!apiUrl) {
-    throw new Error("NEXT_PUBLIC_API_URL environment variable is not set");
-  }
-
-  let res: Response;
-  try {
-    res = await fetch(`${apiUrl}/api/tree/${id}?mode=${mode}`, {
-      cache: "no-store",
-    });
-  } catch (error) {
-    throw new Error(
-      "Failed to fetch family tree data: " + (error as Error).message
-    );
-  }
-
-  if (!res.ok) throw new Error("Failed to fetch family tree data");
-  const { data } = await res.json();
-  return data;
 }

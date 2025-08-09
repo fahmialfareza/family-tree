@@ -155,55 +155,6 @@ export const buildFamilyTree = async (
   };
 };
 
-export const addPersonWithRelations = async (
-  person: IPerson,
-  relationships: IRelationship[] = []
-) => {
-  const newPerson = await createPerson(person);
-  if (!newPerson) {
-    throw error("Failed to create person");
-  }
-
-  const relationshipDocs: IRelationship[] = [];
-  for (const rel of relationships) {
-    if (!rel.to || !rel.type) continue;
-
-    relationshipDocs.push({
-      from: newPerson._id,
-      to: rel.to,
-      type: rel.type,
-      order: rel.order,
-    });
-
-    if (rel.type === "parent") {
-      relationshipDocs.push({
-        from: rel.to,
-        to: newPerson._id,
-        type: "child",
-        order: rel.order,
-      });
-    } else if (rel.type === "spouse") {
-      relationshipDocs.push({
-        from: rel.to,
-        to: newPerson._id,
-        type: "spouse",
-        order: rel.order,
-      });
-    } else if (rel.type === "child") {
-      relationshipDocs.push({
-        from: rel.to,
-        to: newPerson._id,
-        type: "parent",
-        order: rel.order,
-      });
-    }
-  }
-
-  await insertManyRelationships(relationshipDocs);
-
-  return newPerson;
-};
-
 function transformToD3Tree(person: FamilyTreeNode): any {
   const node: FamilyTreeNode = {
     name: person.name,

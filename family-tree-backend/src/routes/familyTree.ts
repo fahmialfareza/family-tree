@@ -1,10 +1,10 @@
 import express from "express";
 
-import { addPerson, getFamilyTree } from "@/controllers/familyTree";
+import { getFamilyTree } from "@/controllers/familyTree";
+import { authenticate } from "@/middlewares/auth";
 
 const router = express.Router();
 
-router.get("/:personId", getFamilyTree);
-router.post("/", addPerson);
+router.get("/:personId", authenticate(["user", "admin"]), getFamilyTree);
 
 export default router;

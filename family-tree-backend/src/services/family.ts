@@ -1,16 +1,21 @@
+import { IFamily } from "@/models/family";
 import { TTypeID } from "@/models/types/id";
-import { createFamily, getFamilies } from "@/repositories/family";
+import { createFamily, deleteFamily, getFamilies } from "@/repositories/family";
 import { getPersonById } from "@/repositories/person";
 
-export const getAllFamilies = async () => {
-  return getFamilies();
+export const getAllFamilies = async (ownedBy?: TTypeID) => {
+  return getFamilies(ownedBy);
 };
 
-export const addFamily = async (name: string, personId: TTypeID) => {
-  const person = await getPersonById(personId);
+export const addFamily = async (data: Partial<IFamily>) => {
+  const person = await getPersonById(data.person!);
   if (!person) {
     throw new Error("Person not found");
   }
 
-  return createFamily(name, personId);
+  return createFamily(data);
+};
+
+export const removeFamily = async (id: TTypeID) => {
+  return deleteFamily(id);
 };

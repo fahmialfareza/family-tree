@@ -93,6 +93,11 @@ import {
 } from "@/components/ui/table";
 import { TFamily } from "@/models/family";
 import Link from "next/link";
+import DialogDelete from "./DialogDelete";
+import { useRouter } from "next/navigation";
+import useStore from "@/zustand";
+import { deleteFamily } from "@/service/family";
+import { toast } from "react-toastify";
 
 const multiColumnFilterFn: FilterFn<TFamily> = (row, columnId, filterValue) => {
   const searchableRowContent =
@@ -590,58 +595,82 @@ export default function FamilyTable({ data }: { data: TFamily[] }) {
 }
 
 function RowActions({ row }: { row: Row<TFamily> }) {
+  const router = useRouter();
+  const { token } = useStore();
+  const [openDelete, setOpenDelete] = useState(false);
+
+  const handleDelete = async () => {
+    const { data, message } = await deleteFamily(row.original._id, token);
+    if (!data) {
+      toast.error(message);
+      return;
+    }
+    toast.success("Family deleted successfully");
+    router.refresh();
+  };
+
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <div className="flex justify-end">
-          <Button
-            size="icon"
-            variant="ghost"
-            className="shadow-none"
-            aria-label="Edit item"
-          >
-            <EllipsisIcon size={16} aria-hidden="true" />
-          </Button>
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuGroup>
-          <Link
-            href={`/tree/${
-              typeof row.original.person === "object" &&
-              row.original.person !== null &&
-              "_id" in row.original.person
-                ? (row.original.person as { _id: string })._id
-                : ""
-            }`}
-          >
-            <DropdownMenuItem>
-              <span>Family Tree</span>
-              <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <div className="flex justify-end">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="shadow-none"
+              aria-label="Edit item"
+            >
+              <EllipsisIcon size={16} aria-hidden="true" />
+            </Button>
+          </div>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuGroup>
+            <Link
+              href={`/tree/${
+                typeof row.original.person === "object" &&
+                row.original.person !== null &&
+                "_id" in row.original.person
+                  ? (row.original.person as { _id: string })._id
+                  : ""
+              }?mode=parent`}
+            >
+              <DropdownMenuItem>
+                <span>Family Tree</span>
+                <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </Link>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuGroup>
+            <DropdownMenuItem
+              onClick={() => {
+                const url = `${window.location.origin}/tree/${row.original._id}?mode=parent`;
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
+                  url
+                )}`;
+                window.open(whatsappUrl, "_blank");
+              }}
+            >
+              Share to WhatsApp
             </DropdownMenuItem>
-          </Link>
-          <DropdownMenuItem>
-            <span>Edit</span>
-            <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onClick={() => setOpenDelete(true)}
+          >
+            <span>Delete</span>
+            <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
           </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>
-            <span>Archive</span>
-            <DropdownMenuShortcut>⌘A</DropdownMenuShortcut>
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuItem>Share</DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="text-destructive focus:text-destructive">
-          <span>Delete</span>
-          <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <DialogDelete
+        open={openDelete}
+        type="person"
+        setOpen={setOpenDelete}
+        onConfirm={handleDelete}
+      />
+    </>
   );
 }

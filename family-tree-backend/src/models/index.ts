@@ -6,6 +6,7 @@ import logger from "@/utils/logger";
 import Person from "./person";
 import Relationship from "./relationship";
 import Family from "./family";
+import User from "./user";
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV}` });
 
@@ -35,4 +36,4 @@ export async function redisClient(): Promise<RedisClientType> {
   }
 }
 
-export { Person, Relationship, Family };
+export { Person, Relationship, Family, User };
