@@ -33,7 +33,7 @@ function Navbar() {
       };
       fetchProfile();
     }
-  }, [token]);
+  }, [token, setUser]);
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-lg">

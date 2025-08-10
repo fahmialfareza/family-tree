@@ -28,9 +28,7 @@ import {
   CircleXIcon,
   Columns3Icon,
   EllipsisIcon,
-  FilterIcon,
   ListFilterIcon,
-  PlusIcon,
   TrashIcon,
 } from "lucide-react";
 
@@ -46,7 +44,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -56,12 +53,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuPortal,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -71,11 +64,7 @@ import {
   PaginationContent,
   PaginationItem,
 } from "@/components/ui/pagination";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -104,16 +93,6 @@ const multiColumnFilterFn: FilterFn<TFamily> = (row, columnId, filterValue) => {
     `${row.original.name} ${row.original.person}`.toLowerCase();
   const searchTerm = (filterValue ?? "").toLowerCase();
   return searchableRowContent.includes(searchTerm);
-};
-
-const statusFilterFn: FilterFn<TFamily> = (
-  row,
-  columnId,
-  filterValue: string[]
-) => {
-  if (!filterValue?.length) return true;
-  const status = row.getValue(columnId) as string;
-  return filterValue.includes(status);
 };
 
 const columns: ColumnDef<TFamily>[] = [

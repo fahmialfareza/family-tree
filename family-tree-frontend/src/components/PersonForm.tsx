@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import useStore from "@/zustand";
 import { useEffect } from "react";
+import Image from "next/image";
 
 // Zod schema for validation
 const personSchema = z.object({
@@ -65,7 +66,10 @@ export default function PersonFormComponent({
     if (mode === "edit" && initialValues) {
       Object.entries(initialValues).forEach(([key, value]) => {
         if (value !== undefined && key !== "photoUrl") {
-          setValue(key as keyof PersonForm, value as any);
+          setValue(
+            key as keyof PersonForm,
+            value as PersonForm[keyof PersonForm]
+          );
         }
       });
     }
@@ -351,7 +355,7 @@ export default function PersonFormComponent({
                           }}
                         >
                           {field.value && field.value.length > 0 ? (
-                            <img
+                            <Image
                               src={URL.createObjectURL(field.value[0])}
                               alt="Preview"
                               style={{
