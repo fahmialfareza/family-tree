@@ -42,7 +42,7 @@ COPY --from=prod-deps /app/node_modules /app/node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/newrelic.cjs /app/newrelic.cjs
 COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/tmp /app/tmp
+# COPY --from=builder /app/tmp /app/tmp
 
 # Set the ownership of the application files to the non-root user
 RUN chown -R nonroot:nonroot /app
