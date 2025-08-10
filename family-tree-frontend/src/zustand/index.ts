@@ -10,16 +10,27 @@ interface IStore {
   logout: () => void;
 }
 
+const getInitialToken = (): string | undefined => {
+  if (typeof window !== "undefined") {
+    return (cookie.getItem("token") as string) || undefined;
+  }
+  return undefined;
+};
+
 const useStore = create<IStore>((set) => ({
   user: null,
-  token: (cookie.getItem("token") as string) || undefined,
+  token: getInitialToken(),
   setUser: (user: TUser) => set({ user }),
   setToken: (token: string) => {
-    cookie.setItem("token", token);
+    if (typeof window !== "undefined") {
+      cookie.setItem("token", token);
+    }
     set({ token });
   },
   logout: () => {
-    cookie.removeItem("token");
+    if (typeof window !== "undefined") {
+      cookie.removeItem("token");
+    }
     set({ user: null, token: undefined });
   },
 }));

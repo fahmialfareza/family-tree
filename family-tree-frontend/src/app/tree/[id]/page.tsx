@@ -8,11 +8,11 @@ export default async function TreePage({
   params,
   searchParams,
 }: {
-  params: { id: string };
-  searchParams: { mode: "parent" | "child" };
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ mode: "parent" | "child" }>;
 }) {
-  const { id } = params;
-  const { mode } = searchParams;
+  const { id } = await params;
+  const { mode } = await searchParams;
 
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
