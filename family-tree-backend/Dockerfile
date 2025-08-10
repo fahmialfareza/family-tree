@@ -46,7 +46,7 @@ COPY --from=builder /app/package.json /app/package.json
 
 # Set the ownership of the application files to the non-root user
 RUN chown -R nonroot:nonroot /app
-RUN chown -R nonroot:nonroot /app/tmp
+# RUN chown -R nonroot:nonroot /app/tmp
 
 # Switch to non-root user
 USER nonroot
