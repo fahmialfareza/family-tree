@@ -27,10 +27,7 @@ export const signIn = async (
 
   const token = jwt.sign(
     { id: user._id },
-    process.env.JWT_SECRET || "family-tree-secret",
-    {
-      expiresIn: "30d",
-    }
+    process.env.JWT_SECRET || "family-tree-secret"
   );
 
   req.user = user;

@@ -8,7 +8,7 @@ declare global {
     }
 
     interface Request {
-      user?: IUser & { _id: Types.ObjectId };
+      user?: IUser;
       token?: string;
     }
   }
