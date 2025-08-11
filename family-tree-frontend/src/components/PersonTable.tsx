@@ -332,18 +332,16 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
   return (
     <div className="space-y-4">
       {/* Filters */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch max-sm:gap-2">
+        <div className="flex items-center gap-3 max-sm:flex-wrap max-sm:gap-2">
           {/* Filter by name or nickname */}
-          <div className="relative">
+          <div className="relative max-sm:w-full">
             <Input
               id={`${id}-input`}
               ref={inputRef}
               className={cn(
-                "peer min-w-60 ps-9",
-                (Boolean(table.getColumn("name")?.getFilterValue()) ||
-                  Boolean(table.getColumn("nickname")?.getFilterValue())) &&
-                  "pe-9"
+                "peer min-w-60 ps-9 max-sm:min-w-0 max-sm:w-full",
+                Boolean(table.getColumn("name")?.getFilterValue()) && "pe-9"
               )}
               value={
                 // Show the value from either filter, prefer name if both are set
@@ -667,11 +665,11 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
         </div>
 
         {/* Pagination buttons */}
-        <div>
+        <div className="w-full flex justify-end max-sm:justify-center">
           <Pagination>
-            <PaginationContent>
+            <PaginationContent className="gap-1 max-sm:gap-0">
               {/* First page button */}
-              <PaginationItem>
+              <PaginationItem className="max-sm:hidden">
                 <Button
                   size="icon"
                   variant="outline"
@@ -710,7 +708,7 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
                 </Button>
               </PaginationItem>
               {/* Last page button */}
-              <PaginationItem>
+              <PaginationItem className="max-sm:hidden">
                 <Button
                   size="icon"
                   variant="outline"

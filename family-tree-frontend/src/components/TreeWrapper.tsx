@@ -43,8 +43,7 @@ const renderRectSvgNode = ({
         y={0}
         textAnchor="middle"
         alignmentBaseline="middle"
-        fontSize={18}
-        style={{ pointerEvents: "none" }}
+        fontSize={16}
         paintOrder="stroke"
         shapeRendering="geometricPrecision"
       >
@@ -55,14 +54,19 @@ const renderRectSvgNode = ({
           {Object.entries(nodeDatum.attributes).map(([key, value], idx) => (
             <text
               key={key}
-              fill="#64748b"
+              fill="#1e293b"
               x={0}
               y={22 + idx * 16}
               textAnchor="middle"
               alignmentBaseline="middle"
               fontSize={12}
+              style={{
+                fontWeight: 100,
+                pointerEvents: "none",
+                textShadow: "0 1px 2px #fff, 0 -1px 2px #fff",
+              }}
             >
-              {`${key}: ${String(value)}`}
+              <tspan>{key}:</tspan> <tspan>{String(value)}</tspan>
             </text>
           ))}
         </g>
