@@ -44,6 +44,12 @@ const upsertRelationshipBodySchema = z.array(
         }
         return true;
       })
+      .transform((val) => {
+        if (typeof val === "string") {
+          return Number(val);
+        }
+        return val;
+      })
       .optional(),
     type: z.enum(["parent", "spouse", "child"]),
     _id: z.string().optional(),
