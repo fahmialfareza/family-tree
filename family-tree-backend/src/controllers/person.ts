@@ -11,6 +11,7 @@ import {
 import { responseSuccess } from "@/utils/response";
 import { error } from "@/middlewares/errorHandler";
 import { Types } from "mongoose";
+import { UploadedFile } from "express-fileupload";
 
 export async function getAllPeople(req: Request, res: Response) {
   return newrelic.startSegment(
@@ -68,7 +69,34 @@ const createPersonBodySchema = z.object({
     })
     .transform((date) => new Date(date)),
   phone: z.string().optional(),
-  photoUrl: z.url("Invalid photo URL").optional(),
+});
+
+const createPersonFileSchema = z.object({
+  photo: z
+    .any()
+    .refine(
+      (file: UploadedFile | UploadedFile[]) =>
+        file === undefined ||
+        (Array.isArray(file) &&
+          file.length > 0 &&
+          file[0] &&
+          typeof file[0].size === "number" &&
+          file[0].size <= 1024 * 1024) ||
+        (!Array.isArray(file) &&
+          typeof file.size === "number" &&
+          file.size <= 1024 * 1024),
+      {
+        message: "Photo must not exceed 1 MB",
+      }
+    )
+    .transform((file: UploadedFile | UploadedFile[]) =>
+      Array.isArray(file)
+        ? file[0]
+        : file && typeof file === "object"
+          ? file
+          : undefined
+    )
+    .optional(),
 });
 
 export async function createPerson(
@@ -88,9 +116,19 @@ export async function createPerson(
         );
       }
 
+      const parseFileResult = createPersonFileSchema.safeParse(req.files);
+      if (!parseFileResult.success) {
+        const firstIssue = parseFileResult.error.issues[0];
+        throw error(
+          firstIssue ? firstIssue.message : "Invalid file upload",
+          400
+        );
+      }
+
       const newPerson = await addPerson({
         ...parseResult.data,
         ownedBy: req.user!._id!,
+        photo: parseFileResult.data.photo,
       });
       responseSuccess(res, newPerson);
     }
@@ -123,7 +161,34 @@ const updatePersonBodySchema = z.object({
     })
     .transform((date) => new Date(date)),
   phone: z.string().optional(),
-  photoUrl: z.url("Invalid photo URL").optional(),
+});
+
+const updatePersonFileSchema = z.object({
+  photo: z
+    .any()
+    .refine(
+      (file: UploadedFile | UploadedFile[]) =>
+        file === undefined ||
+        (Array.isArray(file) &&
+          file.length > 0 &&
+          file[0] &&
+          typeof file[0].size === "number" &&
+          file[0].size <= 1024 * 1024) ||
+        (!Array.isArray(file) &&
+          typeof file.size === "number" &&
+          file.size <= 1024 * 1024),
+      {
+        message: "Photo must not exceed 1 MB",
+      }
+    )
+    .transform((file: UploadedFile | UploadedFile[]) =>
+      Array.isArray(file)
+        ? file[0]
+        : file && typeof file === "object"
+          ? file
+          : undefined
+    )
+    .optional(),
 });
 
 export async function updatePerson(
@@ -156,10 +221,20 @@ export async function updatePerson(
         );
       }
 
+      const parseFileResult = updatePersonFileSchema.safeParse(req.files);
+      if (!parseFileResult.success) {
+        const firstIssue = parseFileResult.error.issues[0];
+        throw error(
+          firstIssue ? firstIssue.message : "Invalid file upload",
+          400
+        );
+      }
+
       const newPerson = await editPerson({
         ...parseBodyResult.data,
         _id: parseParamsResult.data.id,
         ownedBy: req.user!._id!,
+        photo: parseFileResult.data.photo,
       });
       responseSuccess(res, newPerson);
     }

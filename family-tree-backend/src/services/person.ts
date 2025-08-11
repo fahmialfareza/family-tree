@@ -8,6 +8,7 @@ import {
   updatePerson,
   deletePersonById,
 } from "@/repositories/person";
+import { uploadImage } from "@/utils/cloudinary";
 
 export async function findAllPeople(ownedBy?: TTypeID) {
   return getAllPeople(ownedBy);
@@ -22,18 +23,36 @@ export async function findPersonById(id: TTypeID) {
 }
 
 export const addPerson = async (person: CreatePersonDto) => {
-  const newPerson = await createPerson(person);
+  let newPerson = await createPerson(person);
   if (!newPerson) {
     throw error("Failed to create person");
+  }
+
+  if (person.photo) {
+    const photoUrl = await uploadImage(person.photo);
+    if (!photoUrl) {
+      throw error("Failed to upload photo");
+    }
+    person.photoUrl = photoUrl;
+    newPerson = await createPerson(person);
   }
 
   return newPerson;
 };
 
 export const editPerson = async (person: UpdatePersonDto) => {
-  const updatedPerson = await updatePerson(person);
+  let updatedPerson = await updatePerson(person);
   if (!updatedPerson) {
     throw error("Failed to update person");
+  }
+
+  if (person.photo) {
+    const photoUrl = await uploadImage(person.photo);
+    if (!photoUrl) {
+      throw error("Failed to upload photo");
+    }
+    person.photoUrl = photoUrl;
+    updatedPerson = await updatePerson(person);
   }
 
   return updatedPerson;

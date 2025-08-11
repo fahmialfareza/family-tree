@@ -98,6 +98,7 @@ import useStore from "@/zustand";
 import { addFamily } from "@/service/family";
 import { deletePerson } from "@/service/person";
 import DialogDelete from "./DialogDelete";
+import Image from "next/image";
 
 const multiColumnFilterFn: FilterFn<TPerson> = (row, columnId, filterValue) => {
   const relationships =
@@ -237,6 +238,7 @@ const columns: ColumnDef<TPerson>[] = [
   {
     header: "Photo",
     accessorKey: "photoUrl",
+    cell: ({ row }) => <PhotoCell row={row} />,
   },
   {
     id: "actions",
@@ -612,10 +614,10 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between gap-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {/* Results per page */}
-        <div className="flex items-center gap-3">
-          <Label htmlFor={id} className="max-sm:sr-only">
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Label htmlFor={id} className="sr-only">
             Rows per page
           </Label>
           <Select
@@ -624,104 +626,93 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
               table.setPageSize(Number(value));
             }}
           >
-            <SelectTrigger id={id} className="w-fit whitespace-nowrap">
-              <SelectValue placeholder="Select number of results" />
+            <SelectTrigger
+              id={id}
+              className="w-full sm:w-24 min-w-0 px-2 py-1 text-sm border rounded-md bg-background"
+            >
+              <SelectValue placeholder="Rows" />
             </SelectTrigger>
-            <SelectContent className="[&_*[role=option]]:ps-2 [&_*[role=option]]:pe-8 [&_*[role=option]>span]:start-auto [&_*[role=option]>span]:end-2">
+            <SelectContent>
               {[5, 10, 25, 50].map((pageSize) => (
                 <SelectItem key={pageSize} value={pageSize.toString()}>
-                  {pageSize}
+                  {pageSize} rows
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        {/* Page number information */}
-        <div className="text-muted-foreground flex grow justify-end text-sm whitespace-nowrap">
-          <p
-            className="text-muted-foreground text-sm whitespace-nowrap"
-            aria-live="polite"
-          >
-            <span className="text-foreground">
-              {table.getState().pagination.pageIndex *
-                table.getState().pagination.pageSize +
-                1}
+
+        {/* Page info and pagination controls */}
+        <div className="flex flex-col gap-2 w-full sm:w-auto sm:flex-row sm:items-center sm:gap-4">
+          {/* Page number information */}
+          <span className="text-muted-foreground text-sm whitespace-nowrap text-center sm:text-left">
+            <span className="font-semibold text-foreground">
+              {table.getRowModel().rows.length === 0
+                ? 0
+                : table.getState().pagination.pageIndex *
+                    table.getState().pagination.pageSize +
+                  1}
               -
               {Math.min(
-                Math.max(
-                  table.getState().pagination.pageIndex *
-                    table.getState().pagination.pageSize +
-                    table.getState().pagination.pageSize,
-                  0
-                ),
+                (table.getState().pagination.pageIndex + 1) *
+                  table.getState().pagination.pageSize,
                 table.getRowCount()
               )}
             </span>{" "}
             of{" "}
-            <span className="text-foreground">
+            <span className="font-semibold text-foreground">
               {table.getRowCount().toString()}
             </span>
-          </p>
-        </div>
+          </span>
 
-        {/* Pagination buttons */}
-        <div className="w-full flex justify-end max-sm:justify-center">
-          <Pagination>
-            <PaginationContent className="gap-1 max-sm:gap-0">
-              {/* First page button */}
-              <PaginationItem className="max-sm:hidden">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="disabled:pointer-events-none disabled:opacity-50"
-                  onClick={() => table.firstPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  aria-label="Go to first page"
-                >
-                  <ChevronFirstIcon size={16} aria-hidden="true" />
-                </Button>
-              </PaginationItem>
-              {/* Previous page button */}
-              <PaginationItem>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="disabled:pointer-events-none disabled:opacity-50"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                  aria-label="Go to previous page"
-                >
-                  <ChevronLeftIcon size={16} aria-hidden="true" />
-                </Button>
-              </PaginationItem>
-              {/* Next page button */}
-              <PaginationItem>
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="disabled:pointer-events-none disabled:opacity-50"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                  aria-label="Go to next page"
-                >
-                  <ChevronRightIcon size={16} aria-hidden="true" />
-                </Button>
-              </PaginationItem>
-              {/* Last page button */}
-              <PaginationItem className="max-sm:hidden">
-                <Button
-                  size="icon"
-                  variant="outline"
-                  className="disabled:pointer-events-none disabled:opacity-50"
-                  onClick={() => table.lastPage()}
-                  disabled={!table.getCanNextPage()}
-                  aria-label="Go to last page"
-                >
-                  <ChevronLastIcon size={16} aria-hidden="true" />
-                </Button>
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+          {/* Pagination buttons */}
+          <div className="flex justify-center w-full flex-wrap gap-1 sm:justify-end">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => table.firstPage()}
+              disabled={!table.getCanPreviousPage()}
+              aria-label="Go to first page"
+            >
+              <ChevronFirstIcon size={18} aria-hidden="true" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              aria-label="Go to previous page"
+            >
+              <ChevronLeftIcon size={18} aria-hidden="true" />
+            </Button>
+            <span className="inline-flex items-center px-2 text-sm font-medium text-foreground bg-muted rounded">
+              {table.getState().pagination.pageIndex + 1}
+              <span className="mx-1 text-muted-foreground">/</span>
+              {table.getPageCount()}
+            </span>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              aria-label="Go to next page"
+            >
+              <ChevronRightIcon size={18} aria-hidden="true" />
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="rounded-full"
+              onClick={() => table.lastPage()}
+              disabled={!table.getCanNextPage()}
+              aria-label="Go to last page"
+            >
+              <ChevronLastIcon size={18} aria-hidden="true" />
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -860,6 +851,51 @@ function RowActions({ row }: { row: Row<TPerson> }) {
         setOpen={setOpenDelete}
         onConfirm={handleDelete}
       />
+    </>
+  );
+}
+
+function PhotoCell({ row }: { row: Row<TPerson> }) {
+  const value = row.getValue("photoUrl") as string | undefined;
+  const [open, setOpen] = useState(false);
+
+  if (!value) return null;
+  return (
+    <>
+      <div className="flex justify-center">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setOpen(true)}
+          type="button"
+        >
+          See Photo
+        </Button>
+      </div>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="bg-background rounded-lg p-4 shadow-lg relative w-full max-w-xs sm:max-w-sm md:max-w-md">
+            <button
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              onClick={() => setOpen(false)}
+              aria-label="Close"
+              type="button"
+            >
+              <CircleXIcon size={20} />
+            </button>
+            <div className="flex justify-center">
+              <Image
+                src={value}
+                alt={row.getValue("name")}
+                width={320}
+                height={320}
+                className="w-full max-w-[320px] h-auto object-cover rounded-md"
+                style={{ aspectRatio: "1 / 1" }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

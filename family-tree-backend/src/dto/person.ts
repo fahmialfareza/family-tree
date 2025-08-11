@@ -1,4 +1,5 @@
 import { TTypeID } from "@/models/types/id";
+import { UploadedFile } from "express-fileupload";
 
 export interface CreatePersonDto {
   name: string;
@@ -10,6 +11,8 @@ export interface CreatePersonDto {
   phone?: string;
   photoUrl?: string;
   ownedBy: TTypeID;
+
+  photo?: UploadedFile;
 }
 
 export interface UpdatePersonDto extends CreatePersonDto {

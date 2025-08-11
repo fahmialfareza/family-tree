@@ -21,7 +21,18 @@ const personSchema = z.object({
   gender: z.enum(["male", "female"]),
   phone: z.string().optional(),
   birthDate: z.string().min(1, "Birth date is required"),
-  photoUrl: z.any().optional(),
+  photo: z
+    .any()
+    .refine(
+      (files) =>
+        !files ||
+        (files instanceof FileList && files.length === 0) ||
+        (files instanceof FileList &&
+          files.length === 1 &&
+          files[0] instanceof File),
+      "Photo must be a file"
+    )
+    .optional(),
 });
 
 export type PersonForm = z.infer<typeof personSchema>;
@@ -86,8 +97,8 @@ export default function PersonFormComponent({
     formData.append("gender", data.gender);
     if (data.phone) formData.append("phone", data.phone);
     formData.append("birthDate", data.birthDate);
-    if (data.photoUrl && data.photoUrl[0]) {
-      formData.append("photoUrl", data.photoUrl[0]);
+    if (data.photo && data.photo[0]) {
+      formData.append("photo", data.photo[0]);
     }
 
     let response;
@@ -315,11 +326,11 @@ export default function PersonFormComponent({
               )}
             </Label>
 
-            {/* <Label style={{ fontWeight: 500 }}>
+            <Label style={{ fontWeight: 500 }}>
               Photo
               <Controller
                 control={control}
-                name="photoUrl"
+                name="photo"
                 render={({ field }) => (
                   <Box
                     style={{
@@ -363,6 +374,8 @@ export default function PersonFormComponent({
                             <Image
                               src={URL.createObjectURL(field.value[0])}
                               alt="Preview"
+                              width={36}
+                              height={36}
                               style={{
                                 width: "100%",
                                 height: "100%",
@@ -384,12 +397,12 @@ export default function PersonFormComponent({
                   </Box>
                 )}
               />
-              {errors.photoUrl && (
+              {errors.photo && (
                 <Text color="red" size="2" mt="1">
-                  {errors.photoUrl.message as string}
+                  {errors.photo.message as string}
                 </Text>
               )}
-            </Label> */}
+            </Label>
 
             <Button
               type="submit"
