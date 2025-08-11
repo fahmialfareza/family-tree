@@ -315,7 +315,7 @@ export default function PersonFormComponent({
               )}
             </Label>
 
-            <Label style={{ fontWeight: 500 }}>
+            {/* <Label style={{ fontWeight: 500 }}>
               Photo
               <Controller
                 control={control}
@@ -389,7 +389,7 @@ export default function PersonFormComponent({
                   {errors.photoUrl.message as string}
                 </Text>
               )}
-            </Label>
+            </Label> */}
 
             <Button
               type="submit"
