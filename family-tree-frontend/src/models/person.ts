@@ -1,3 +1,5 @@
+import { TRelationship } from "./relationship";
+
 export type TPerson = {
   _id: string;
   name: string;
@@ -8,4 +10,6 @@ export type TPerson = {
   birthDate: Date;
   phone?: string;
   photoUrl?: string;
+
+  relationships?: TRelationship[];
 };

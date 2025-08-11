@@ -19,13 +19,15 @@ export default async function EditPersonPage({
   }
 
   return (
-    <PersonForm
-      mode="edit"
-      key={id}
-      initialValues={{
-        ...data,
-        birthDate: new Date(data.birthDate).toISOString().split("T")[0],
-      }}
-    />
+    <div className="p-8 m-1">
+      <PersonForm
+        mode="edit"
+        key={id}
+        initialValues={{
+          ...data,
+          birthDate: new Date(data.birthDate).toISOString().split("T")[0],
+        }}
+      />
+    </div>
   );
 }

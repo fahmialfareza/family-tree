@@ -100,8 +100,19 @@ import { deletePerson } from "@/service/person";
 import DialogDelete from "./DialogDelete";
 
 const multiColumnFilterFn: FilterFn<TPerson> = (row, columnId, filterValue) => {
+  const relationships =
+    row.original.relationships
+      ?.map((rel) => {
+        if (!rel.toDetails) return "";
+        return `${rel.type} ${rel.toDetails.nickname || ""} ${
+          rel.toDetails.name || ""
+        }`;
+      })
+      .join(" ") ?? "";
+
   const searchableRowContent =
-    `${row.original.name} ${row.original.nickname} ${row.original.gender} ${row.original.birthDate}`.toLowerCase();
+    `${row.original.name} ${row.original.nickname} ${row.original.address} ${row.original.gender} ${row.original.birthDate} ${relationships}`.toLowerCase();
+
   const searchTerm = (filterValue ?? "").toLowerCase();
   return searchableRowContent.includes(searchTerm);
 };
@@ -135,6 +146,7 @@ const columns: ColumnDef<TPerson>[] = [
   {
     header: "Address",
     accessorKey: "address",
+    filterFn: multiColumnFilterFn,
   },
   {
     header: "Status",
@@ -144,10 +156,63 @@ const columns: ColumnDef<TPerson>[] = [
   {
     header: "Gender",
     accessorKey: "gender",
+    filterFn: multiColumnFilterFn,
+  },
+  {
+    header: "Relationship",
+    cell: ({ row }) => {
+      const relationships = row.original.relationships;
+      if (!relationships || relationships.length === 0) return null;
+
+      return (
+        <ul className="list-disc ps-4 space-y-1">
+          {relationships.map((rel) => {
+            if (!rel.toDetails) return null;
+            let label = "";
+            if (rel.type === "spouse") {
+              if (row.original.gender === "male") {
+                label = `Husband of ${
+                  rel.toDetails.nickname || rel.toDetails.name
+                }`;
+              } else if (row.original.gender === "female") {
+                label = `Wife of ${
+                  rel.toDetails.nickname || rel.toDetails.name
+                }`;
+              } else {
+                label = `Spouse of ${
+                  rel.toDetails.nickname || rel.toDetails.name
+                }`;
+              }
+            } else if (rel.type === "parent") {
+              if (row.original.gender === "male") {
+                label = `Dad of ${
+                  rel.toDetails.nickname || rel.toDetails.name
+                }`;
+              } else if (row.original.gender === "female") {
+                label = `Mom of ${
+                  rel.toDetails.nickname || rel.toDetails.name
+                }`;
+              } else {
+                label = `Parent of ${
+                  rel.toDetails.nickname || rel.toDetails.name
+                }`;
+              }
+            } else {
+              label = `Child of ${
+                rel.toDetails.nickname || rel.toDetails.name
+              }`;
+            }
+            return <li key={rel._id}>{label}</li>;
+          })}
+        </ul>
+      );
+    },
+    filterFn: multiColumnFilterFn,
   },
   {
     header: "Phone",
     accessorKey: "phone",
+    filterFn: multiColumnFilterFn,
   },
   {
     header: "Birth Date",
@@ -719,6 +784,12 @@ function RowActions({ row }: { row: Row<TPerson> }) {
             <Link href={`/person/edit/${row.original._id}`}>
               <DropdownMenuItem>
                 <span>Edit</span>
+                <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
+              </DropdownMenuItem>
+            </Link>
+            <Link href={`/relationship/${row.original._id}`}>
+              <DropdownMenuItem>
+                <span>Edit Relationship</span>
                 <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
               </DropdownMenuItem>
             </Link>

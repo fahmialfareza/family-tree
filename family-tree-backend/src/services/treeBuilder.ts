@@ -1,13 +1,7 @@
-import { error } from "@/middlewares/errorHandler";
-import { IPerson } from "@/models/person";
-import { IRelationship } from "@/models/relationship";
 import { FamilyTreeNode } from "@/models/types/familyTree";
 import { TTypeID } from "@/models/types/id";
-import { createPerson, getPersonById } from "@/repositories/person";
-import {
-  getRelationshipsByPersonId,
-  insertManyRelationships,
-} from "@/repositories/relationship";
+import { getPersonById } from "@/repositories/person";
+import { getRelationshipsByPersonId } from "@/repositories/relationship";
 
 export const buildFamilyTree = async (
   personId: TTypeID,
@@ -82,7 +76,7 @@ export const buildFamilyTree = async (
         if (!spouses.some((s) => s._id.toString() === spouse._id.toString())) {
           spouses.push({
             _id: spouse._id as TTypeID,
-            name: spouse.name,
+            name: spouse.nickname,
             gender: spouse.gender,
             children,
           });
@@ -102,7 +96,7 @@ export const buildFamilyTree = async (
 
     familyTree = {
       _id: person._id as TTypeID,
-      name: person.name,
+      name: person.nickname,
       gender: person.gender,
       attributes: {
         gender: person.gender,
@@ -135,7 +129,7 @@ export const buildFamilyTree = async (
 
     familyTree = {
       _id: person._id as TTypeID,
-      name: person.name,
+      name: person.nickname,
       gender: person.gender,
       attributes: {
         gender: person.gender,
@@ -149,7 +143,7 @@ export const buildFamilyTree = async (
 
   return {
     _id: person._id as TTypeID,
-    name: person.name,
+    name: person.nickname,
     gender: person.gender,
     children: [],
   };

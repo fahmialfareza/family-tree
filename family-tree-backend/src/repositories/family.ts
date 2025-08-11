@@ -1,5 +1,5 @@
+import { CreateFamilyDto } from "@/dto/family";
 import { Family } from "@/models";
-import { IFamily } from "@/models/family";
 import { TTypeID } from "@/models/types/id";
 
 export async function getFamilies(ownedBy?: TTypeID) {
@@ -11,7 +11,7 @@ export async function getFamilyById(id: TTypeID) {
   return Family.findById(id).populate("person").lean();
 }
 
-export async function createFamily(data: Partial<IFamily>) {
+export async function createFamily(data: CreateFamilyDto) {
   const newFamily = new Family(data);
   const savedPerson = await newFamily.save();
   const insertedId = savedPerson._id as TTypeID;

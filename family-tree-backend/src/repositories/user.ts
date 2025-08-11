@@ -1,3 +1,4 @@
+import { CreateUserDto } from "@/dto/auth";
 import { User } from "@/models";
 import { TTypeID } from "@/models/types/id";
 import { IUser } from "@/models/user";
@@ -10,7 +11,7 @@ export const findUserByUsername = async (username: TTypeID) => {
   return User.findOne({ username }).lean();
 };
 
-export const createUser = async (data: IUser) => {
+export const createUser = async (data: CreateUserDto) => {
   const user = await User.create(data);
   return findUserById(user._id as TTypeID);
 };

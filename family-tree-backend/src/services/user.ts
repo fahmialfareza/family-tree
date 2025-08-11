@@ -1,6 +1,6 @@
-import { IUser } from "@/models/user";
+import { CreateUserDto } from "@/dto/auth";
 import { createUser } from "@/repositories/user";
 
-export const addUser = async (data: IUser) => {
+export const addUser = async (data: CreateUserDto) => {
   return createUser(data);
 };

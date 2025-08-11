@@ -123,6 +123,11 @@ export default function PersonFormComponent({
           boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
           minWidth: 420,
           maxWidth: 480,
+          height: "100%",
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "center",
         }}
       >
         <Text as="div" size="7" weight="bold" mb="6" align="center">

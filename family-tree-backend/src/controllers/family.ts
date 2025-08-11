@@ -25,7 +25,12 @@ export async function getFamilies(req: Request, res: Response) {
 
 const createFamilyBodySchema = z.object({
   name: z.string().min(1, "Family Name is required"),
-  person: z.string().min(1, "Person is required"),
+  person: z
+    .string()
+    .min(1, "Person is required")
+    .refine((id) => Types.ObjectId.isValid(id), {
+      message: "Invalid Person ID",
+    }),
 });
 
 export async function createFamily(

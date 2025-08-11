@@ -4,12 +4,16 @@ import mongooseDelete, {
   SoftDeleteModel,
 } from "mongoose-delete";
 import { TTypeID } from "./types/id";
+import { IPerson } from "./person";
 
 export interface IRelationship extends SoftDeleteDocument {
   from: TTypeID;
   to: TTypeID;
   order?: number;
   type: "parent" | "spouse" | "child";
+
+  fromDetails?: IPerson;
+  toDetails?: IPerson;
 }
 
 const relationshipSchema = new Schema<IRelationship>(
@@ -42,6 +46,19 @@ const relationshipSchema = new Schema<IRelationship>(
 );
 
 relationshipSchema.plugin(mongooseDelete, { overrideMethods: "all" });
+
+relationshipSchema.virtual("fromDetails", {
+  ref: "Person",
+  localField: "from",
+  foreignField: "_id",
+  justOne: true,
+});
+relationshipSchema.virtual("toDetails", {
+  ref: "Person",
+  localField: "to",
+  foreignField: "_id",
+  justOne: true,
+});
 
 const relationshipModel = model<IRelationship>(
   "Relationship",
