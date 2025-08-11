@@ -3,6 +3,13 @@ import PersonTable from "@/components/PersonTable";
 import { getPeople } from "@/service/person";
 import { toast } from "react-toastify";
 import { redirect } from "next/navigation";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Family Tree | People",
+  description:
+    "Manage your family tree by adding, editing, and viewing people.",
+};
 
 async function Tree() {
   const cookieStore = await cookies();

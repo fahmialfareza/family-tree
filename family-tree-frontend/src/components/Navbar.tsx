@@ -90,16 +90,6 @@ function Navbar() {
                   </svg>
                 </button>
                 <ul className="absolute right-0 mt-2 w-40 bg-white rounded shadow-lg opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-20">
-                  {user.role === "admin" && (
-                    <li>
-                      <Link
-                        href="/admin"
-                        className="block px-4 py-2 text-gray-800 hover:bg-blue-100"
-                      >
-                        Admin Dashboard
-                      </Link>
-                    </li>
-                  )}
                   <li>
                     <button
                       onClick={() => {

@@ -29,7 +29,7 @@ const useStore = create<IStore>((set) => ({
   },
   logout: () => {
     if (typeof window !== "undefined") {
-      cookie.removeItem("token");
+      cookie.setItem("token", "");
     }
     set({ user: null, token: undefined });
   },

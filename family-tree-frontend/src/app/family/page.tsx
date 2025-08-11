@@ -3,6 +3,12 @@ import { toast } from "react-toastify";
 import FamilyTable from "@/components/FamilyTable";
 import { getFamilies } from "@/service/family";
 import { redirect } from "next/navigation";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Family | Family Tree",
+  description: "Manage your family tree",
+};
 
 async function Tree() {
   const cookieStore = await cookies();

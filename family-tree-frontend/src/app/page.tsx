@@ -1,4 +1,10 @@
+import { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Home | Family Tree",
+  description: "Welcome to the Family Tree app",
+};
 
 export default function Home() {
   return (

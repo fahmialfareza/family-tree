@@ -4,6 +4,28 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { toast } from "react-toastify";
 
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  const { data, message } = await getPerson(id, token);
+  if (!data) {
+    toast.error(message);
+    redirect("/auth/login");
+  }
+
+  return {
+    title: `Edit Person | Family Tree`,
+    description: `Edit person with ${
+      data?.name ?? "Unknown"
+    } in the family tree`,
+  };
+}
+
 export default async function EditPersonPage({
   params,
 }: {

@@ -4,6 +4,29 @@ import { getFamilyTreeData } from "@/service/tree";
 import { toast } from "react-toastify";
 import { redirect } from "next/navigation";
 
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ mode: "parent" | "child" }>;
+}) {
+  const { id } = await params;
+  const { mode } = await searchParams;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  const { data, message } = await getFamilyTreeData(id, mode, token);
+  if (!data) {
+    toast.error(message);
+    redirect("/auth/login");
+  }
+
+  return {
+    title: `Family Tree | ${data.name}`,
+    description: `View the family tree of ${data.name}.`,
+  };
+}
+
 export default async function TreePage({
   params,
   searchParams,

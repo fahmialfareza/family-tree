@@ -1,9 +1,31 @@
 import RelationshipForm from "@/components/RelationshipForm";
 import { getPeople } from "@/service/person";
-import { getRelationships, upsertRelationships } from "@/service/relationship";
+import { getRelationships } from "@/service/relationship";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { toast } from "react-toastify";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const cookieStore = await cookies();
+  const token = cookieStore.get("token")?.value;
+  const { data, message } = await getRelationships(id, token);
+  if (!data) {
+    toast.error(message);
+    redirect("/auth/login");
+  }
+
+  return {
+    title: `Edit Relationship | Family Tree`,
+    description: `Edit relationship with ${
+      data?.name ?? "Unknown"
+    } in the family tree`,
+  };
+}
 
 export default async function RelationshipPage({
   params,
