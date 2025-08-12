@@ -21,7 +21,17 @@ export async function getAllPeople(ownedBy?: TTypeID) {
 }
 
 export async function getPersonById(id: TTypeID) {
-  return Person.findById(id).lean();
+  return Person.findById(id)
+    .populate([
+      {
+        path: "relationships",
+        match: { from: "$$CURRENT._id" },
+        populate: {
+          path: "toDetails",
+        },
+      },
+    ])
+    .lean();
 }
 
 export async function createPerson(person: CreatePersonDto) {

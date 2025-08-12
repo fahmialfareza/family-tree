@@ -67,7 +67,7 @@ export default function PersonFormComponent({
       status: "alive",
       gender: "male",
       phone: "",
-      birthDate: new Date().toISOString().split("T")[0],
+      birthDate: "",
       ...initialValues,
     },
   });
