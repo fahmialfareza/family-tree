@@ -1,4 +1,5 @@
 import { TRelationship } from "./relationship";
+import { TUser } from "./user";
 
 export type TPerson = {
   _id: string;
@@ -12,4 +13,5 @@ export type TPerson = {
   photoUrl?: string;
 
   relationships?: TRelationship[];
+  owners?: TUser[];
 };

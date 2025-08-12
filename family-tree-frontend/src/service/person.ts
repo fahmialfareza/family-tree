@@ -70,6 +70,31 @@ export const updatePerson = async (data: FormData, token?: string) => {
   return responseData;
 };
 
+export const updateOwnership = async (
+  personId: string,
+  owners: string[],
+  token?: string
+) => {
+  if (!token) {
+    redirect("/auth/login");
+  }
+
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/api/person/${personId}/ownership`,
+    {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ owners }),
+    }
+  );
+
+  const responseData = await res.json();
+  return responseData;
+};
+
 export const deletePerson = async (id: string, token?: string) => {
   if (!token) {
     redirect("/auth/login");

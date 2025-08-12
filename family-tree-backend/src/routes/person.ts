@@ -5,6 +5,7 @@ import {
   getAllPeople,
   getPersonById,
   updatePerson,
+  updatePersonOwnership,
   deletePersonById,
 } from "@/controllers/person";
 import { authenticate } from "@/middlewares/auth";
@@ -20,5 +21,6 @@ router
   .get(authenticate(["admin", "user"]), getPersonById)
   .put(authenticate(["user"]), updatePerson)
   .delete(authenticate(["user"]), deletePersonById);
+router.put("/:id/ownership", authenticate(["admin"]), updatePersonOwnership);
 
 export default router;

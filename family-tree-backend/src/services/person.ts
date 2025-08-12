@@ -7,8 +7,15 @@ import {
   createPerson,
   updatePerson,
   deletePersonById,
+  updatePersonOwnership,
 } from "@/repositories/person";
 import { uploadImage } from "@/utils/cloudinary";
+import { buildFamilyTree } from "./treeBuilder";
+import { FamilyTreeNode } from "@/models/types/familyTree";
+import {
+  getFamilyByPersonIds,
+  updateFamilyOwnership,
+} from "@/repositories/family";
 
 export async function findAllPeople(ownedBy?: TTypeID[]) {
   return getAllPeople(ownedBy);
@@ -56,6 +63,48 @@ export const editPerson = async (person: UpdatePersonDto) => {
   }
 
   return updatedPerson;
+};
+
+function collectIdsFromTree(node: FamilyTreeNode): TTypeID[] {
+  let ids: TTypeID[] = [];
+  if (node._id) {
+    ids.push(node._id);
+  }
+  if (node.children && node.children.length > 0) {
+    for (const child of node.children) {
+      ids = ids.concat(collectIdsFromTree(child));
+    }
+  }
+  return ids;
+}
+
+export const editOwnership = async (personId: TTypeID, ownedBy: TTypeID[]) => {
+  const children = await buildFamilyTree(personId, true);
+  const parents = await buildFamilyTree(personId, false, true);
+
+  const childrenIds =
+    children && children.children
+      ? children.children.flatMap((child) => collectIdsFromTree(child))
+      : [];
+
+  const parentIds =
+    parents && parents.children
+      ? parents.children.flatMap((parent) => collectIdsFromTree(parent))
+      : [];
+
+  const allPeople = [personId, ...parentIds, ...childrenIds];
+  const families = await getFamilyByPersonIds(allPeople);
+  const familyIds = families.map((family) => family._id as TTypeID);
+
+  const [updatedPerson, updatedFamilies] = await Promise.all([
+    updatePersonOwnership(allPeople, ownedBy),
+    updateFamilyOwnership(familyIds, ownedBy),
+  ]);
+  if (!updatedPerson || !updatedFamilies) {
+    throw error("Failed to update person ownership");
+  }
+
+  return true;
 };
 
 export const removePersonById = async (id: TTypeID) => {

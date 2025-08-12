@@ -23,7 +23,7 @@ const familySchema = new Schema<IFamily>(
       required: true,
     },
     ownedBy: {
-      type: Schema.Types.ObjectId,
+      type: [Schema.Types.ObjectId],
       ref: "User",
       required: true,
     },

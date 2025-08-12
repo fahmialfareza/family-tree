@@ -2,6 +2,11 @@ import { CreateUserDto } from "@/dto/auth";
 import { User } from "@/models";
 import { TTypeID } from "@/models/types/id";
 import { IUser } from "@/models/user";
+import { FilterQuery } from "mongoose";
+
+export const findUsers = async (query: FilterQuery<IUser>) => {
+  return User.find(query).lean();
+};
 
 export const findUserById = async (id: TTypeID) => {
   return User.findById(id).lean();

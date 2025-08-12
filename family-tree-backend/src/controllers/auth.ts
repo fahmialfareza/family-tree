@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import newrelic from "newrelic";
 import { z } from "zod";
-import { addUser } from "@/services/user";
+import { addUser, getUsers } from "@/services/user";
 import { error } from "@/middlewares/errorHandler";
 import { responseSuccess } from "@/utils/response";
 
@@ -47,5 +47,21 @@ export const profile = async (
     }
 
     responseSuccess(res, { user, token }, 200);
+  });
+};
+
+export const users = async (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  return newrelic.startSegment("controller.user.users", true, async () => {
+    const { user } = req;
+    if (user && user.role !== "admin") {
+      throw error("Unauthorized", 403);
+    }
+
+    const users = await getUsers({ role: "user" });
+    responseSuccess(res, users, 200);
   });
 };

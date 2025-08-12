@@ -93,7 +93,6 @@ import useStore from "@/zustand";
 import { addFamily } from "@/service/family";
 import { deletePerson } from "@/service/person";
 import DialogDelete from "./DialogDelete";
-import Image from "next/image";
 import PhotoModal from "./PhotoModal";
 
 const multiColumnFilterFn: FilterFn<TPerson> = (row, columnId, filterValue) => {
@@ -717,7 +716,7 @@ export default function PersonTable({ data }: { data: TPerson[] }) {
 
 function RowActions({ row }: { row: Row<TPerson> }) {
   const router = useRouter();
-  const { token } = useStore();
+  const { token, user } = useStore();
   const [openDelete, setOpenDelete] = useState(false);
 
   const handleDelete = async () => {
@@ -778,6 +777,14 @@ function RowActions({ row }: { row: Row<TPerson> }) {
                 <DropdownMenuShortcut>⌘E</DropdownMenuShortcut>
               </DropdownMenuItem>
             </Link>
+            {user?.role === "admin" && (
+              <Link href={`/person/ownership/${row.original._id}`}>
+                <DropdownMenuItem>
+                  <span>Edit Ownership</span>
+                  <DropdownMenuShortcut>⌘O</DropdownMenuShortcut>
+                </DropdownMenuItem>
+              </Link>
+            )}
             <DropdownMenuItem
               onClick={async () => {
                 const { data, message } = await addFamily(

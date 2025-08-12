@@ -3,46 +3,39 @@
 import React from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import Select from "react-select";
-import { TPerson } from "@/models/person";
-import { TRelationship } from "@/models/relationship";
-import { upsertRelationships } from "@/service/relationship";
 import { toast } from "react-toastify";
 import { useRouter } from "next/navigation";
 import useStore from "@/zustand";
+import { TUser } from "@/models/user";
+import { updateOwnership } from "@/service/person";
 
-const RELATIONSHIP_TYPES: TRelationship["type"][] = [
-  "parent",
-  "spouse",
-  "child",
-];
-
-function RelationshipForm({
+function OwnershipForm({
   id,
-  initialRelationships,
-  initialPeople,
+  initialOwners,
+  initialUsers,
 }: {
   id: string;
-  initialRelationships: Partial<TRelationship>[];
-  initialPeople: TPerson[];
+  initialOwners: Partial<TUser>[];
+  initialUsers: TUser[];
 }) {
   const router = useRouter();
   const { token } = useStore();
 
-  const options = initialPeople.map((person) => ({
-    value: person._id,
-    label: person.name,
+  const options = initialUsers.map((user) => ({
+    value: user._id,
+    label: user.name,
   }));
 
   const { control, handleSubmit, getValues } = useForm<{
-    relationships: Partial<TRelationship>[];
-    to: string;
+    owners: Partial<TUser>[];
+    _id: string;
   }>({
-    defaultValues: { relationships: initialRelationships, to: "" },
+    defaultValues: { owners: initialOwners, _id: "" },
   });
 
   const { fields, append, remove } = useFieldArray({
     control,
-    name: "relationships",
+    name: "owners",
   });
 
   const {
@@ -51,44 +44,45 @@ function RelationshipForm({
     reset: resetNew,
     formState: { errors: newErrors },
     setValue: setNewValue,
-  } = useForm<Partial<TRelationship>>({
+  } = useForm<Partial<TUser>>({
     defaultValues: {
-      to: "",
-      type: RELATIONSHIP_TYPES[0],
-      order: 1,
+      _id: "",
     },
   });
 
-  const onAdd = (data: Partial<TRelationship>) => {
-    const newTo = data.to ?? "";
-    const currentRelationships = getValues("relationships") || [];
-    const isDuplicate = currentRelationships.some((rel) => rel.to === newTo);
+  const onAdd = (data: Partial<TUser>) => {
+    const newId = data._id ?? "";
+    const currentOwners = getValues("owners") || [];
+    const isDuplicate = currentOwners.some((owner) => owner._id === newId);
 
-    if (!newTo) {
-      toast.error("Please select a person.");
+    if (!newId) {
+      toast.error("Please select a user.");
       return;
     }
 
     if (isDuplicate) {
-      toast.error("This person is already added.");
+      toast.error("This user is already added.");
       return;
     }
 
-    const newRelationship: Partial<TRelationship> = {
-      to: newTo,
-      type: data.type ?? RELATIONSHIP_TYPES[0],
-      order: data.order ?? 1,
+    const newOwnership: Partial<TUser> = {
+      _id: newId,
     };
-    append(newRelationship);
+    append(newOwnership);
     resetNew();
   };
 
-  const onUpdate = async (data: {
-    relationships: Partial<TRelationship>[];
-  }) => {
-    const { data: respData, message } = await upsertRelationships(
+  const onUpdate = async (data: { owners: Partial<TUser>[] }) => {
+    if (data.owners.length === 0) {
+      toast.error("Please add at least one owner.");
+      return;
+    }
+
+    const { data: respData, message } = await updateOwnership(
       id,
-      data.relationships,
+      data.owners
+        .map((owner) => owner._id)
+        .filter((id): id is string => typeof id === "string"),
       token
     );
     if (!respData) {
@@ -114,10 +108,10 @@ function RelationshipForm({
         className="mb-8 flex flex-wrap gap-4 items-end bg-blue-50 p-4 rounded-lg shadow"
       >
         <div className="flex flex-col flex-1 min-w-[160px]">
-          <label className="mb-1 font-medium text-blue-900">To</label>
+          <label className="mb-1 font-medium text-blue-900">User</label>
           <Controller
             control={control}
-            name={`to`}
+            name={`_id`}
             render={({ field }) => (
               <Select
                 options={options}
@@ -129,7 +123,7 @@ function RelationshipForm({
                 }
                 onChange={(selected) => {
                   field.onChange(selected ? selected.value : "");
-                  setNewValue("to", selected ? selected.value : "");
+                  setNewValue("_id", selected ? selected.value : "");
                 }}
                 placeholder="Select Person"
                 isClearable
@@ -154,35 +148,11 @@ function RelationshipForm({
               />
             )}
           />
-          {newErrors.to && (
+          {newErrors._id && (
             <span className="text-red-500 text-xs mt-1">Required</span>
           )}
         </div>
-        <div className="flex flex-col flex-1 min-w-[120px]">
-          <label className="mb-1 font-medium text-blue-900">Type</label>
-          <select
-            className="border border-blue-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm"
-            {...registerNew("type", { required: true })}
-          >
-            {RELATIONSHIP_TYPES.map((type) => (
-              <option key={type} value={type}>
-                {type.charAt(0).toUpperCase() + type.slice(1)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex flex-col flex-1 min-w-[80px]">
-          <label className="mb-1 font-medium text-blue-900">Order</label>
-          <input
-            className="border border-blue-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-sm"
-            type="number"
-            min={1}
-            {...registerNew("order", { required: true, valueAsNumber: true })}
-          />
-          {newErrors.order && (
-            <span className="text-red-500 text-xs mt-1">Required</span>
-          )}
-        </div>
+
         <button
           className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded shadow transition"
           type="submit"
@@ -190,7 +160,7 @@ function RelationshipForm({
           Add
         </button>
       </form>
-      {/* Edit Relationships Form */}
+      {/* Edit Ownership Form */}
       <form onSubmit={handleSubmit(onUpdate)}>
         <ul>
           {fields.map((field, idx) => (
@@ -200,10 +170,12 @@ function RelationshipForm({
             >
               <Controller
                 control={control}
-                name={`relationships.${idx}.to`}
+                name={`owners.${idx}._id`}
                 render={({ field }) => (
                   <div className="flex flex-col flex-1 min-w-[160px]">
-                    <label className="mb-1 font-medium text-gray-700">To</label>
+                    <label className="mb-1 font-medium text-gray-700">
+                      User
+                    </label>
                     <Select
                       options={options}
                       value={
@@ -238,44 +210,6 @@ function RelationshipForm({
                   </div>
                 )}
               />
-              <Controller
-                control={control}
-                name={`relationships.${idx}.type`}
-                render={({ field }) => (
-                  <div className="flex flex-col flex-1 min-w-[120px]">
-                    <label className="mb-1 font-medium text-gray-700">
-                      Type
-                    </label>
-                    <select
-                      className="border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
-                      {...field}
-                    >
-                      {RELATIONSHIP_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                          {type.charAt(0).toUpperCase() + type.slice(1)}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
-              />
-              <Controller
-                control={control}
-                name={`relationships.${idx}.order`}
-                render={({ field }) => (
-                  <div className="flex flex-col flex-1 min-w-[80px]">
-                    <label className="mb-1 font-medium text-gray-700">
-                      Order
-                    </label>
-                    <input
-                      className="border border-gray-300 px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-300 shadow-sm"
-                      type="number"
-                      min={1}
-                      {...field}
-                    />
-                  </div>
-                )}
-              />
               <button
                 className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded shadow transition"
                 type="button"
@@ -297,4 +231,4 @@ function RelationshipForm({
   );
 }
 
-export default RelationshipForm;
+export default OwnershipForm;

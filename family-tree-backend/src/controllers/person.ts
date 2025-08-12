@@ -7,6 +7,7 @@ import {
   addPerson,
   editPerson,
   removePersonById,
+  editOwnership,
 } from "@/services/person";
 import { responseSuccess } from "@/utils/response";
 import { error } from "@/middlewares/errorHandler";
@@ -247,6 +248,51 @@ export async function updatePerson(
     }
   );
 }
+
+const updatePersonOwnershipBodyParams = z.object({
+  owners: z.array(
+    z
+      .string()
+      .min(1, "Owner ID is required")
+      .refine((id) => Types.ObjectId.isValid(id), {
+        message: "Invalid Owner ID",
+      })
+  ),
+});
+
+export const updatePersonOwnership = async (
+  req: Request<
+    z.infer<typeof updatePersonParamsSchema>,
+    {},
+    z.infer<typeof updatePersonOwnershipBodyParams>
+  >,
+  res: Response
+) => {
+  const parseBodyResult = updatePersonOwnershipBodyParams.safeParse(req.body);
+  if (!parseBodyResult.success) {
+    const firstIssue = parseBodyResult.error.issues[0];
+    throw error(firstIssue ? firstIssue.message : "Invalid request body", 400);
+  }
+
+  const parseParamsResult = updatePersonParamsSchema.safeParse(req.params);
+  if (!parseParamsResult.success) {
+    const firstIssue = parseParamsResult.error.issues[0];
+    throw error(
+      firstIssue ? firstIssue.message : "Invalid request parameters",
+      400
+    );
+  }
+
+  const updatedPerson = await editOwnership(
+    parseParamsResult.data.id,
+    parseBodyResult.data.owners
+  );
+  if (!updatedPerson) {
+    throw error("Failed to update person ownership");
+  }
+
+  responseSuccess(res, updatedPerson);
+};
 
 const deletePersonByIdSchema = z.object({
   id: z
