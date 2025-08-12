@@ -24,7 +24,8 @@ export async function getAllPeople(req: Request, res: Response) {
         return;
       }
 
-      const people = await findAllPeople(req.user!._id!);
+      const userId = req.user!._id! as Types.ObjectId;
+      const people = await findAllPeople([userId]);
       responseSuccess(res, people, 200);
     }
   );
@@ -128,9 +129,10 @@ export async function createPerson(
         );
       }
 
+      const userId = req.user!._id! as Types.ObjectId;
       const newPerson = await addPerson({
         ...parseResult.data,
-        ownedBy: req.user!._id!,
+        ownedBy: [userId],
         photo: parseFileResult?.data?.photo,
       });
       responseSuccess(res, newPerson);
@@ -239,7 +241,6 @@ export async function updatePerson(
       const newPerson = await editPerson({
         ...parseBodyResult.data,
         _id: parseParamsResult.data.id,
-        ownedBy: req.user!._id!,
         photo: parseFileResult?.data?.photo,
       });
       responseSuccess(res, newPerson);

@@ -7,10 +7,10 @@ export interface CreatePersonDto {
   address: string;
   status: "alive" | "deceased";
   gender: "male" | "female";
-  birthDate: Date;
+  birthDate?: Date;
   phone?: string;
   photoUrl?: string;
-  ownedBy: TTypeID;
+  ownedBy?: TTypeID[];
 
   photo?: UploadedFile;
 }

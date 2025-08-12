@@ -14,7 +14,7 @@ export interface IPerson extends SoftDeleteDocument {
   phone?: string;
   birthDate?: Date;
   photoUrl?: string;
-  ownedBy?: Types.ObjectId;
+  ownedBy?: Types.ObjectId[];
 
   relationships?: IRelationship[];
 }
@@ -56,7 +56,7 @@ const personSchema = new Schema<IPerson>(
       required: false,
     },
     ownedBy: {
-      type: Schema.Types.ObjectId,
+      type: [Schema.Types.ObjectId],
       ref: "User",
       required: false,
     },
@@ -74,6 +74,13 @@ personSchema.virtual("relationships", {
   ref: "Relationship",
   localField: "_id",
   foreignField: "from",
+  justOne: false,
+});
+
+personSchema.virtual("owners", {
+  ref: "User",
+  localField: "ownedBy",
+  foreignField: "_id",
   justOne: false,
 });
 

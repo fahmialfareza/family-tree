@@ -2,8 +2,8 @@ import { CreateFamilyDto } from "@/dto/family";
 import { Family } from "@/models";
 import { TTypeID } from "@/models/types/id";
 
-export async function getFamilies(ownedBy?: TTypeID) {
-  const query = ownedBy ? { ownedBy } : {};
+export async function getFamilies(ownedBy?: TTypeID[]) {
+  const query = ownedBy ? { ownedBy: { $in: ownedBy } } : {};
   return Family.find(query).populate("person").lean();
 }
 

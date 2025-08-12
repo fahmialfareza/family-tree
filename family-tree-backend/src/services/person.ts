@@ -10,7 +10,7 @@ import {
 } from "@/repositories/person";
 import { uploadImage } from "@/utils/cloudinary";
 
-export async function findAllPeople(ownedBy?: TTypeID) {
+export async function findAllPeople(ownedBy?: TTypeID[]) {
   return getAllPeople(ownedBy);
 }
 

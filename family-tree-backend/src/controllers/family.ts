@@ -12,7 +12,8 @@ export async function getFamilies(req: Request, res: Response) {
     true,
     async () => {
       if (req.user?.role === "user") {
-        const families = await getAllFamilies(req.user!._id!);
+        const userId = req.user!._id! as Types.ObjectId;
+        const families = await getAllFamilies([userId]);
         responseSuccess(res, families, 200);
         return;
       }
@@ -50,9 +51,10 @@ export async function createFamily(
         );
       }
 
+      const userId = req.user!._id! as Types.ObjectId;
       const newFamily = await addFamily({
         ...parseResult.data,
-        ownedBy: req.user!._id!,
+        ownedBy: [userId],
       });
       responseSuccess(res, newFamily, 201);
     }

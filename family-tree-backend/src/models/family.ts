@@ -8,7 +8,7 @@ import { TTypeID } from "./types/id";
 export interface IFamily extends SoftDeleteDocument {
   name: string;
   person: TTypeID;
-  ownedBy: TTypeID;
+  ownedBy: TTypeID[];
 }
 
 const familySchema = new Schema<IFamily>(

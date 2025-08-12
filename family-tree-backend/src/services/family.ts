@@ -3,7 +3,7 @@ import { TTypeID } from "@/models/types/id";
 import { createFamily, deleteFamily, getFamilies } from "@/repositories/family";
 import { getPersonById } from "@/repositories/person";
 
-export const getAllFamilies = async (ownedBy?: TTypeID) => {
+export const getAllFamilies = async (ownedBy?: TTypeID[]) => {
   return getFamilies(ownedBy);
 };
 
