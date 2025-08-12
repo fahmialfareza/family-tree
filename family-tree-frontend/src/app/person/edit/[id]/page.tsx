@@ -47,7 +47,9 @@ export default async function EditPersonPage({
         key={id}
         initialValues={{
           ...data,
-          birthDate: new Date(data.birthDate).toISOString().split("T")[0],
+          birthDate: data?.birthDate
+            ? new Date(data.birthDate).toISOString().split("T")[0]
+            : "",
         }}
       />
     </div>

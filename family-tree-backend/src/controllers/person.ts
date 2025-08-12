@@ -67,37 +67,40 @@ const createPersonBodySchema = z.object({
     .refine((date) => !isNaN(new Date(date).getTime()), {
       message: "Invalid birth date",
     })
-    .transform((date) => new Date(date)),
+    .transform((date) => new Date(date))
+    .optional(),
   phone: z.string().optional(),
 });
 
-const createPersonFileSchema = z.object({
-  photo: z
-    .any()
-    .refine(
-      (file: UploadedFile | UploadedFile[]) =>
-        file === undefined ||
-        (Array.isArray(file) &&
-          file.length > 0 &&
-          file[0] &&
-          typeof file[0].size === "number" &&
-          file[0].size <= 1024 * 1024) ||
-        (!Array.isArray(file) &&
-          typeof file.size === "number" &&
-          file.size <= 1024 * 1024),
-      {
-        message: "Photo must not exceed 1 MB",
-      }
-    )
-    .transform((file: UploadedFile | UploadedFile[]) =>
-      Array.isArray(file)
-        ? file[0]
-        : file && typeof file === "object"
-          ? file
-          : undefined
-    )
-    .optional(),
-});
+const createPersonFileSchema = z
+  .object({
+    photo: z
+      .any()
+      .refine(
+        (file: UploadedFile | UploadedFile[]) =>
+          file === undefined ||
+          (Array.isArray(file) &&
+            file.length > 0 &&
+            file[0] &&
+            typeof file[0].size === "number" &&
+            file[0].size <= 1024 * 1024) ||
+          (!Array.isArray(file) &&
+            typeof file.size === "number" &&
+            file.size <= 1024 * 1024),
+        {
+          message: "Photo must not exceed 1 MB",
+        }
+      )
+      .transform((file: UploadedFile | UploadedFile[]) =>
+        Array.isArray(file)
+          ? file[0]
+          : file && typeof file === "object"
+            ? file
+            : undefined
+      )
+      .optional(),
+  })
+  .nullable();
 
 export async function createPerson(
   req: Request<{}, {}, z.infer<typeof createPersonBodySchema>>,
@@ -128,7 +131,7 @@ export async function createPerson(
       const newPerson = await addPerson({
         ...parseResult.data,
         ownedBy: req.user!._id!,
-        photo: parseFileResult.data.photo,
+        photo: parseFileResult?.data?.photo,
       });
       responseSuccess(res, newPerson);
     }
@@ -159,37 +162,40 @@ const updatePersonBodySchema = z.object({
     .refine((date) => !isNaN(new Date(date).getTime()), {
       message: "Invalid birth date",
     })
-    .transform((date) => new Date(date)),
+    .transform((date) => new Date(date))
+    .optional(),
   phone: z.string().optional(),
 });
 
-const updatePersonFileSchema = z.object({
-  photo: z
-    .any()
-    .refine(
-      (file: UploadedFile | UploadedFile[]) =>
-        file === undefined ||
-        (Array.isArray(file) &&
-          file.length > 0 &&
-          file[0] &&
-          typeof file[0].size === "number" &&
-          file[0].size <= 1024 * 1024) ||
-        (!Array.isArray(file) &&
-          typeof file.size === "number" &&
-          file.size <= 1024 * 1024),
-      {
-        message: "Photo must not exceed 1 MB",
-      }
-    )
-    .transform((file: UploadedFile | UploadedFile[]) =>
-      Array.isArray(file)
-        ? file[0]
-        : file && typeof file === "object"
-          ? file
-          : undefined
-    )
-    .optional(),
-});
+const updatePersonFileSchema = z
+  .object({
+    photo: z
+      .any()
+      .refine(
+        (file: UploadedFile | UploadedFile[]) =>
+          file === undefined ||
+          (Array.isArray(file) &&
+            file.length > 0 &&
+            file[0] &&
+            typeof file[0].size === "number" &&
+            file[0].size <= 1024 * 1024) ||
+          (!Array.isArray(file) &&
+            typeof file.size === "number" &&
+            file.size <= 1024 * 1024),
+        {
+          message: "Photo must not exceed 1 MB",
+        }
+      )
+      .transform((file: UploadedFile | UploadedFile[]) =>
+        Array.isArray(file)
+          ? file[0]
+          : file && typeof file === "object"
+            ? file
+            : undefined
+      )
+      .optional(),
+  })
+  .nullable();
 
 export async function updatePerson(
   req: Request<
@@ -234,7 +240,7 @@ export async function updatePerson(
         ...parseBodyResult.data,
         _id: parseParamsResult.data.id,
         ownedBy: req.user!._id!,
-        photo: parseFileResult.data.photo,
+        photo: parseFileResult?.data?.photo,
       });
       responseSuccess(res, newPerson);
     }

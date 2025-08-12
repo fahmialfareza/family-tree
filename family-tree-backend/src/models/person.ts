@@ -12,7 +12,7 @@ export interface IPerson extends SoftDeleteDocument {
   status: "alive" | "deceased";
   gender: "male" | "female";
   phone?: string;
-  birthDate: Date;
+  birthDate?: Date;
   photoUrl?: string;
   ownedBy?: Types.ObjectId;
 
@@ -49,7 +49,7 @@ const personSchema = new Schema<IPerson>(
     },
     birthDate: {
       type: Date,
-      required: true,
+      required: false,
     },
     photoUrl: {
       type: String,

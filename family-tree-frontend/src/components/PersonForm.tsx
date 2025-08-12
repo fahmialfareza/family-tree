@@ -20,7 +20,7 @@ const personSchema = z.object({
   status: z.enum(["alive", "deceased"]),
   gender: z.enum(["male", "female"]),
   phone: z.string().optional(),
-  birthDate: z.string().min(1, "Birth date is required"),
+  birthDate: z.string().optional(),
   photo: z
     .any()
     .refine(
@@ -33,6 +33,7 @@ const personSchema = z.object({
       "Photo must be a file"
     )
     .optional(),
+  photoUrl: z.string().optional(),
 });
 
 export type PersonForm = z.infer<typeof personSchema>;
@@ -58,6 +59,7 @@ export default function PersonFormComponent({
     formState: { errors, isSubmitting },
     reset,
     setValue,
+    getValues,
   } = useForm<PersonForm>({
     resolver: zodResolver(personSchema),
     defaultValues: {
@@ -96,7 +98,7 @@ export default function PersonFormComponent({
     formData.append("status", data.status);
     formData.append("gender", data.gender);
     if (data.phone) formData.append("phone", data.phone);
-    formData.append("birthDate", data.birthDate);
+    if (data.birthDate) formData.append("birthDate", data.birthDate);
     if (data.photo && data.photo[0]) {
       formData.append("photo", data.photo[0]);
     }
@@ -370,9 +372,15 @@ export default function PersonFormComponent({
                             color: "#6b7280",
                           }}
                         >
-                          {field.value && field.value.length > 0 ? (
+                          {(field.value && field.value.length > 0) ||
+                          getValues("photoUrl") ? (
                             <Image
-                              src={URL.createObjectURL(field.value[0])}
+                              src={
+                                field.value && field.value.length > 0
+                                  ? URL.createObjectURL(field.value[0])
+                                  : getValues("photoUrl") ||
+                                    "/default-avatar.png"
+                              }
                               alt="Preview"
                               width={36}
                               height={36}
