@@ -15,7 +15,7 @@ export interface FamilyTreeNode {
   _id: string;
   name: string;
   children: FamilyTreeNode[];
-  attributes: Record<string, any>;
+  attributes: Record<string, string | number | boolean>;
 }
 
 interface ModalProps {
@@ -228,15 +228,8 @@ function useModal() {
   return { modalOpen, selectedNode, openModal, closeModal };
 }
 
-const renderRectSvgNode =
-  (modalHandler: (node: FamilyTreeNode) => void) =>
-  ({
-    nodeDatum,
-    toggleNode,
-  }: {
-    nodeDatum: RawNodeDatum;
-    toggleNode: () => void;
-  }) => {
+const renderRectSvgNode = (modalHandler: (node: FamilyTreeNode) => void) => {
+  const CustomNode = ({ nodeDatum }: { nodeDatum: RawNodeDatum }) => {
     return (
       <g>
         <rect
@@ -298,6 +291,9 @@ const renderRectSvgNode =
       </g>
     );
   };
+  CustomNode.displayName = "CustomNode";
+  return CustomNode;
+};
 
 export default function TreeWrapper({ data }: { data: FamilyTreeNode }) {
   const treeRef = useRef<HTMLDivElement>(null);
