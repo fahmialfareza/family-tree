@@ -16,7 +16,11 @@ export const getFamilies = async (token?: string) => {
   return data;
 };
 
-export const addFamily = async (family: Partial<TFamily>, token?: string) => {
+export const addFamily = async (
+  family: Partial<TFamily>,
+  token?: string,
+  logout?: () => void
+) => {
   if (!token) {
     redirect("/auth/login");
   }
@@ -32,12 +36,22 @@ export const addFamily = async (family: Partial<TFamily>, token?: string) => {
       Authorization: `Bearer ${token}`,
     },
   });
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const data = await res.json();
   return data;
 };
 
-export const deleteFamily = async (id: string, token?: string) => {
+export const deleteFamily = async (
+  id: string,
+  token?: string,
+  logout?: () => void
+) => {
   if (!token) {
     redirect("/auth/login");
   }
@@ -51,6 +65,12 @@ export const deleteFamily = async (id: string, token?: string) => {
       },
     }
   );
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const data = await res.json();
   return data;

@@ -26,7 +26,7 @@ function RelationshipForm({
   initialPeople: TPerson[];
 }) {
   const router = useRouter();
-  const { token } = useStore();
+  const { token, logout } = useStore();
 
   const options = initialPeople.map((person) => ({
     value: person._id,
@@ -89,7 +89,8 @@ function RelationshipForm({
     const { data: respData, message } = await upsertRelationships(
       id,
       data.relationships,
-      token
+      token,
+      logout
     );
     if (!respData) {
       toast.error(message);

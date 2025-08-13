@@ -19,7 +19,7 @@ function OwnershipForm({
   initialUsers: TUser[];
 }) {
   const router = useRouter();
-  const { token } = useStore();
+  const { token, logout } = useStore();
 
   const options = initialUsers.map((user) => ({
     value: user._id,
@@ -83,7 +83,8 @@ function OwnershipForm({
       data.owners
         .map((owner) => owner._id)
         .filter((id): id is string => typeof id === "string"),
-      token
+      token,
+      logout
     );
     if (!respData) {
       toast.error(message);

@@ -23,7 +23,7 @@ function Navbar() {
   useEffect(() => {
     if (token) {
       const fetchProfile = async () => {
-        const { data, message } = await getProfile(token);
+        const { data, message } = await getProfile(token, logout);
         if (!data) {
           toast.error(message);
           return;

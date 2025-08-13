@@ -16,7 +16,7 @@ export async function login(username: string, password: string) {
   return data;
 }
 
-export async function getProfile(token: string) {
+export async function getProfile(token: string, logout: () => void) {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth`, {
     method: "GET",
     headers: {
@@ -24,6 +24,10 @@ export async function getProfile(token: string) {
       Authorization: `Bearer ${token}`,
     },
   });
+  if (response.status === 401) {
+    logout();
+    redirect("/auth/login");
+  }
 
   const data = await response.json();
   return data;

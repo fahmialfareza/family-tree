@@ -13,8 +13,9 @@ export async function generateMetadata({
   const { id } = await params;
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  const { data, message } = await getRelationships(id, token);
-  if (!data) {
+  const { data, message, status } = await getRelationships(id, token);
+  if (status === 401) cookieStore.delete("token");
+  if (!data || status === 401) {
     toast.error(message);
     redirect("/auth/login");
   }
@@ -39,12 +40,14 @@ export default async function RelationshipPage({
     getRelationships(id, token),
     getPeople(token),
   ]);
-  if (!relationshipsData.data) {
+  if (relationshipsData.status === 401) cookieStore.delete("token");
+  if (!relationshipsData.data || relationshipsData.status === 401) {
     toast.error(relationshipsData.message);
     redirect("/auth/login");
   }
 
-  if (!peopleData.data) {
+  if (peopleData.status === 401) cookieStore.delete("token");
+  if (!peopleData.data || peopleData.status === 401) {
     toast.error(peopleData.message);
     redirect("/auth/login");
   }

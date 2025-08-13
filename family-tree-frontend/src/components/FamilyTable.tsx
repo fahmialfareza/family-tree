@@ -559,11 +559,15 @@ export default function FamilyTable({ data }: { data: TFamily[] }) {
 
 function RowActions({ row }: { row: Row<TFamily> }) {
   const router = useRouter();
-  const { token } = useStore();
+  const { token, logout } = useStore();
   const [openDelete, setOpenDelete] = useState(false);
 
   const handleDelete = async () => {
-    const { data, message } = await deleteFamily(row.original._id, token);
+    const { data, message } = await deleteFamily(
+      row.original._id,
+      token,
+      logout
+    );
     if (!data) {
       toast.error(message);
       return;

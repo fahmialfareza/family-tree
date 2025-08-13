@@ -22,7 +22,8 @@ export const getRelationships = async (id: string, token?: string) => {
 export const upsertRelationships = async (
   id: string,
   data: Partial<TRelationship>[],
-  token?: string
+  token?: string,
+  logout?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -39,6 +40,12 @@ export const upsertRelationships = async (
       body: JSON.stringify(data),
     }
   );
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const responseData = await res.json();
   return responseData;

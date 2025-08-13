@@ -14,8 +14,9 @@ export const metadata: Metadata = {
 async function Tree() {
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  const { data, message } = await getPeople(token);
-  if (!data) {
+  const { data, message, status } = await getPeople(token);
+  if (status === 401) cookieStore.delete("token");
+  if (!data || status === 401) {
     toast.error(message);
     redirect("/auth/login");
   }

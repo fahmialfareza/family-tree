@@ -1,7 +1,7 @@
 import bcrypt from "bcrypt";
 import { Request, Response, NextFunction } from "express";
-import jwt from "jsonwebtoken";
-import { error } from "./errorHandler";
+import jwt, { JsonWebTokenError } from "jsonwebtoken";
+import { CustomError, error } from "./errorHandler";
 import { findUserById, findUserByUsername } from "@/repositories/user";
 
 export const signIn = async (
@@ -39,27 +39,37 @@ export const signIn = async (
 export const authenticate =
   (roles: ("admin" | "user")[]) =>
   async (req: Request, res: Response, next: NextFunction) => {
-    const token = req.headers["authorization"]?.split(" ")[1];
-    if (!token) {
-      throw error("No token provided", 401);
-    }
+    try {
+      const token = req.headers["authorization"]?.split(" ")[1];
+      if (!token) {
+        throw error("No token provided", 401);
+      }
 
-    const decoded = jwt.verify(
-      token,
-      process.env.JWT_SECRET || "family-tree-secret"
-    );
-    if (!decoded || typeof decoded !== "object" || !("id" in decoded)) {
-      throw error("Invalid token", 401);
-    }
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || "family-tree-secret"
+      );
+      if (!decoded || typeof decoded !== "object" || !("id" in decoded)) {
+        throw error("Invalid token", 401);
+      }
 
-    const user = await findUserById((decoded as jwt.JwtPayload).id);
-    if (!user) {
-      throw error("User not found", 401);
-    }
-    if (!roles.includes(user.role)) {
-      throw error("Forbidden", 403);
-    }
+      const user = await findUserById((decoded as jwt.JwtPayload).id);
+      if (!user) {
+        throw error("User not found", 401);
+      }
+      if (!roles.includes(user.role)) {
+        throw error("Forbidden", 403);
+      }
 
-    req.user = user;
-    next();
+      req.user = user;
+      next();
+    } catch (error) {
+      let err: CustomError =
+        error instanceof JsonWebTokenError
+          ? (error as CustomError)
+          : Object.assign(new Error("Unknown error"), { statusCode: 401 });
+      err.statusCode = 401;
+
+      next(err);
+    }
   };

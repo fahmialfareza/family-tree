@@ -15,7 +15,11 @@ export const getPeople = async (token?: string) => {
   return data;
 };
 
-export const getPerson = async (id: string, token?: string) => {
+export const getPerson = async (
+  id: string,
+  token?: string,
+  logout?: () => void
+) => {
   if (!token) {
     redirect("/auth/login");
   }
@@ -28,12 +32,22 @@ export const getPerson = async (id: string, token?: string) => {
       },
     }
   );
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const data = await res.json();
   return data;
 };
 
-export const createPerson = async (data: FormData, token?: string) => {
+export const createPerson = async (
+  data: FormData,
+  token?: string,
+  logout?: () => void
+) => {
   if (!token) {
     redirect("/auth/login");
   }
@@ -45,12 +59,22 @@ export const createPerson = async (data: FormData, token?: string) => {
     },
     body: data,
   });
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const responseData = await res.json();
   return responseData;
 };
 
-export const updatePerson = async (data: FormData, token?: string) => {
+export const updatePerson = async (
+  data: FormData,
+  token?: string,
+  logout?: () => void
+) => {
   if (!token) {
     redirect("/auth/login");
   }
@@ -65,6 +89,12 @@ export const updatePerson = async (data: FormData, token?: string) => {
       body: data,
     }
   );
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const responseData = await res.json();
   return responseData;
@@ -73,7 +103,8 @@ export const updatePerson = async (data: FormData, token?: string) => {
 export const updateOwnership = async (
   personId: string,
   owners: string[],
-  token?: string
+  token?: string,
+  logout?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -90,12 +121,22 @@ export const updateOwnership = async (
       body: JSON.stringify({ owners }),
     }
   );
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const responseData = await res.json();
   return responseData;
 };
 
-export const deletePerson = async (id: string, token?: string) => {
+export const deletePerson = async (
+  id: string,
+  token?: string,
+  logout?: () => void
+) => {
   if (!token) {
     redirect("/auth/login");
   }
@@ -109,6 +150,12 @@ export const deletePerson = async (id: string, token?: string) => {
       },
     }
   );
+  if (res.status === 401) {
+    if (logout) {
+      logout();
+    }
+    redirect("/auth/login");
+  }
 
   const data = await res.json();
   return data;

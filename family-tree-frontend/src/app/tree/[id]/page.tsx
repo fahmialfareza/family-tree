@@ -15,8 +15,9 @@ export async function generateMetadata({
   const { mode } = await searchParams;
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  const { data, message } = await getFamilyTreeData(id, mode, token);
-  if (!data) {
+  const { data, message, status } = await getFamilyTreeData(id, mode, token);
+  if (status === 401) cookieStore.delete("token");
+  if (!data || status === 401) {
     toast.error(message);
     redirect("/auth/login");
   }
@@ -39,8 +40,9 @@ export default async function TreePage({
 
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  const { data, message } = await getFamilyTreeData(id, mode, token);
-  if (!data) {
+  const { data, message, status } = await getFamilyTreeData(id, mode, token);
+  if (status === 401) cookieStore.delete("token");
+  if (!data || status === 401) {
     toast.error(message);
     redirect("/auth/login");
   }

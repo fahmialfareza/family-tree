@@ -50,7 +50,7 @@ export default function PersonFormComponent({
   onSuccess,
 }: PersonFormProps) {
   const router = useRouter();
-  const { token } = useStore();
+  const { token, logout } = useStore();
 
   const {
     register,
@@ -105,9 +105,9 @@ export default function PersonFormComponent({
 
     let response;
     if (mode === "edit" && initialValues?._id) {
-      response = await updatePerson(formData, token);
+      response = await updatePerson(formData, token, logout);
     } else {
-      response = await createPerson(formData, token);
+      response = await createPerson(formData, token, logout);
     }
 
     const { data: responseData, message } = response;

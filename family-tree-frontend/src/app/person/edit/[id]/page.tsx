@@ -12,8 +12,9 @@ export async function generateMetadata({
   const { id } = await params;
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  const { data, message } = await getPerson(id, token);
-  if (!data) {
+  const { data, message, status } = await getPerson(id, token);
+  if (status === 401) cookieStore.delete("token");
+  if (!data || status === 401) {
     toast.error(message);
     redirect("/auth/login");
   }
@@ -34,8 +35,9 @@ export default async function EditPersonPage({
   const { id } = await params;
   const cookieStore = await cookies();
   const token = cookieStore.get("token")?.value;
-  const { data, message } = await getPerson(id, token);
-  if (!data) {
+  const { data, message, status } = await getPerson(id, token);
+  if (status === 401) cookieStore.delete("token");
+  if (!data || status === 401) {
     toast.error(message);
     redirect("/auth/login");
   }

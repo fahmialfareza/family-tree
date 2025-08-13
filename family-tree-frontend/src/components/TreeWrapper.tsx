@@ -47,12 +47,12 @@ function ShowPhoto({ person }: { person: TPerson }) {
 }
 
 const MemberDetailModal: React.FC<ModalProps> = ({ open, onClose, node }) => {
-  const { token } = useStore();
+  const { token, logout } = useStore();
   const [data, setData] = useState<TPerson>();
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data, message } = await getPerson(node!._id, token);
+      const { data, message } = await getPerson(node!._id, token, logout);
       if (!data) {
         toast.error(message);
         onClose();
