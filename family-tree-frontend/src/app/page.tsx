@@ -22,7 +22,8 @@ export default function Home() {
           </Link>
           <Link
             className="rounded-full border border-solid border-black-500 transition-colors flex items-center justify-center bg-white-500 text-blue-500 gap-2  hover:bg-blue-700 hover:text-background dark:hover:bg-blue-700 dark:hover:text-background font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="/docs"
+            href="https://youtu.be/BcjajE33rhU"
+            target="__blank"
           >
             How to Use
           </Link>

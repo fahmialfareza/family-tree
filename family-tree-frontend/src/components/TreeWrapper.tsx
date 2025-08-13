@@ -10,6 +10,7 @@ import { toast } from "react-toastify";
 import { TPerson } from "@/models/person";
 import { Button } from "./ui/button";
 import PhotoModal from "./PhotoModal";
+import PhoneButton from "./PhoneButton";
 
 export interface FamilyTreeNode {
   _id: string;
@@ -180,7 +181,8 @@ const MemberDetailModal: React.FC<ModalProps> = ({ open, onClose, node }) => {
           </ul>
         </div>
         <div>
-          <strong>Phone:</strong> {data?.phone}
+          <strong>Phone:</strong>{" "}
+          {data?.phone && <PhoneButton value={data?.phone} withFlex={false} />}
         </div>
         <div>
           <strong>Birth Date:</strong>{" "}
