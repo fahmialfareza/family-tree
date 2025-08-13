@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 
 export async function login(username: string, password: string) {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_API_URL}/api/auth/signin`,
+    `${process.env.NEXT_PUBLIC_FE_API_URL}/api/auth/login`,
     {
       method: "POST",
       headers: {
@@ -16,7 +16,7 @@ export async function login(username: string, password: string) {
   return data;
 }
 
-export async function getProfile(token: string, logout: () => void) {
+export async function getProfile(token: string, logoutUser: () => void) {
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth`, {
     method: "GET",
     headers: {
@@ -25,7 +25,8 @@ export async function getProfile(token: string, logout: () => void) {
     },
   });
   if (response.status === 401) {
-    logout();
+    await logout();
+    logoutUser();
     redirect("/auth/login");
   }
 
@@ -49,4 +50,17 @@ export async function getUsers(token?: string) {
 
   const data = await response.json();
   return data;
+}
+
+export async function logout() {
+  const response = await fetch(
+    `${process.env.NEXT_PUBLIC_FE_API_URL}/api/auth/logout`,
+    {
+      method: "POST",
+      credentials: "include",
+    }
+  );
+
+  const { message } = await response.json();
+  return message;
 }

@@ -1,6 +1,6 @@
 import { TUser } from "@/models/user";
 import { create } from "zustand";
-import cookie from "./cookie";
+import { persist, createJSONStorage } from "zustand/middleware";
 
 interface IStore {
   user: TUser | null;
@@ -10,29 +10,21 @@ interface IStore {
   logout: () => void;
 }
 
-const getInitialToken = (): string | undefined => {
-  if (typeof window !== "undefined") {
-    return (cookie.getItem("token") as string) || undefined;
-  }
-  return undefined;
-};
-
-const useStore = create<IStore>((set) => ({
-  user: null,
-  token: getInitialToken(),
-  setUser: (user: TUser) => set({ user }),
-  setToken: (token: string) => {
-    if (typeof window !== "undefined") {
-      cookie.setItem("token", token);
+const useStore = create<IStore>()(
+  persist(
+    (set) => ({
+      user: null,
+      token: undefined,
+      setUser: (user: TUser) => set({ user }),
+      setToken: (token: string) => set({ token }),
+      logout: () => set({ user: null, token: undefined }),
+    }),
+    {
+      name: "family-tree-store",
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({ user: state.user, token: state.token }),
     }
-    set({ token });
-  },
-  logout: () => {
-    if (typeof window !== "undefined") {
-      cookie.removeItem("token");
-    }
-    set({ user: null, token: undefined });
-  },
-}));
+  )
+);
 
 export default useStore;

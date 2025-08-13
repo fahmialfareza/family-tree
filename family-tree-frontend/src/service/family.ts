@@ -1,5 +1,6 @@
 import { TFamily } from "@/models/family";
 import { redirect } from "next/navigation";
+import { logout } from "./auth";
 
 export const getFamilies = async (token?: string) => {
   if (!token) {
@@ -19,7 +20,7 @@ export const getFamilies = async (token?: string) => {
 export const addFamily = async (
   family: Partial<TFamily>,
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -37,8 +38,9 @@ export const addFamily = async (
     },
   });
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }
@@ -50,7 +52,7 @@ export const addFamily = async (
 export const deleteFamily = async (
   id: string,
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -66,8 +68,9 @@ export const deleteFamily = async (
     }
   );
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }

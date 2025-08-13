@@ -1,5 +1,6 @@
 import { TRelationship } from "@/models/relationship";
 import { redirect } from "next/navigation";
+import { logout } from "./auth";
 
 export const getRelationships = async (id: string, token?: string) => {
   if (!token) {
@@ -23,7 +24,7 @@ export const upsertRelationships = async (
   id: string,
   data: Partial<TRelationship>[],
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -41,8 +42,9 @@ export const upsertRelationships = async (
     }
   );
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }

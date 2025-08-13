@@ -1,6 +1,6 @@
 "use client";
 
-import { getProfile } from "@/service/auth";
+import { getProfile, logout } from "@/service/auth";
 import useStore from "@/zustand";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -18,14 +18,14 @@ function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
 
-  const { token, user, setUser, logout } = useStore();
+  const { token, user, setUser, logout: logoutUser } = useStore();
 
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
     if (token) {
       const fetchProfile = async () => {
-        const { data, message } = await getProfile(token, logout);
+        const { data, message } = await getProfile(token, logoutUser);
         if (!data) {
           toast.error(message);
           return;
@@ -131,9 +131,12 @@ function Navbar() {
                     >
                       <li>
                         <button
-                          onClick={() => {
-                            logout();
-                            router.push("/auth/login");
+                          onClick={async () => {
+                            const message = await logout();
+                            if (message === "Logged out") {
+                              logoutUser();
+                              router.push("/auth/login");
+                            }
                             setOpen(false);
                           }}
                           className="w-full text-left block px-4 py-2 text-gray-800 hover:bg-blue-100"

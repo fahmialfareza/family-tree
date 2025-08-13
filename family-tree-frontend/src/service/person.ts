@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { logout } from "./auth";
 
 export const getPeople = async (token?: string) => {
   if (!token) {
@@ -18,7 +19,7 @@ export const getPeople = async (token?: string) => {
 export const getPerson = async (
   id: string,
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -33,8 +34,9 @@ export const getPerson = async (
     }
   );
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }
@@ -46,7 +48,7 @@ export const getPerson = async (
 export const createPerson = async (
   data: FormData,
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -60,8 +62,9 @@ export const createPerson = async (
     body: data,
   });
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }
@@ -73,7 +76,7 @@ export const createPerson = async (
 export const updatePerson = async (
   data: FormData,
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -90,8 +93,9 @@ export const updatePerson = async (
     }
   );
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }
@@ -104,7 +108,7 @@ export const updateOwnership = async (
   personId: string,
   owners: string[],
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -122,8 +126,9 @@ export const updateOwnership = async (
     }
   );
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }
@@ -135,7 +140,7 @@ export const updateOwnership = async (
 export const deletePerson = async (
   id: string,
   token?: string,
-  logout?: () => void
+  logoutUser?: () => void
 ) => {
   if (!token) {
     redirect("/auth/login");
@@ -151,8 +156,9 @@ export const deletePerson = async (
     }
   );
   if (res.status === 401) {
-    if (logout) {
-      logout();
+    await logout();
+    if (logoutUser) {
+      logoutUser();
     }
     redirect("/auth/login");
   }
