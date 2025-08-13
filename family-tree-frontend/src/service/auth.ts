@@ -16,7 +16,11 @@ export async function login(username: string, password: string) {
   return data;
 }
 
-export async function getProfile(token: string, logoutUser: () => void) {
+export async function getProfile(token?: string, logoutUser?: () => void) {
+  if (!token) {
+    redirect("/auth/login");
+  }
+
   const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth`, {
     method: "GET",
     headers: {
@@ -26,7 +30,9 @@ export async function getProfile(token: string, logoutUser: () => void) {
   });
   if (response.status === 401) {
     await logout();
-    logoutUser();
+    if (logoutUser) {
+      logoutUser();
+    }
     redirect("/auth/login");
   }
 
