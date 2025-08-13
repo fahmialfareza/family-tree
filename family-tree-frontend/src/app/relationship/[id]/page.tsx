@@ -12,7 +12,8 @@ export async function generateMetadata({
 }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
+  const tokenCookie = cookieStore.get("token");
+  const token = tokenCookie ? tokenCookie.value : undefined;
   const { data, message, status } = await getRelationships(id, token);
   if (status === 401) cookieStore.delete("token");
   if (!data || status === 401) {
@@ -35,7 +36,8 @@ export default async function RelationshipPage({
 }) {
   const { id } = await params;
   const cookieStore = await cookies();
-  const token = cookieStore.get("token")?.value;
+  const tokenCookie = cookieStore.get("token");
+  const token = tokenCookie ? tokenCookie.value : undefined;
   const [relationshipsData, peopleData] = await Promise.all([
     getRelationships(id, token),
     getPeople(token),
