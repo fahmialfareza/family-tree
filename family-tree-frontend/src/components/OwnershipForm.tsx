@@ -39,7 +39,6 @@ function OwnershipForm({
   });
 
   const {
-    register: registerNew,
     handleSubmit: handleSubmitNew,
     reset: resetNew,
     formState: { errors: newErrors },

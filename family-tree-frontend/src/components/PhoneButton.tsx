@@ -60,7 +60,7 @@ function ButtonGroup({ value }: { value: string }) {
               try {
                 document.execCommand("copy");
                 toast.success("Phone number copied to clipboard");
-              } catch (err) {
+              } catch {
                 toast.error("Failed to copy phone number");
               }
               document.body.removeChild(textArea);

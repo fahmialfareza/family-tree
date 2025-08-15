@@ -65,7 +65,7 @@ const MemberDetailModal: React.FC<ModalProps> = ({ open, onClose, node }) => {
     if (node?._id) {
       fetchData();
     }
-  }, [node?._id]);
+  }, [logout, node, onClose, token]);
 
   if (!open || !node) return null;
   return (

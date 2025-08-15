@@ -8,7 +8,7 @@ import { toast } from "react-toastify";
 
 function LoginComponent({ token: tokenFromCookie }: { token?: string }) {
   const router = useRouter();
-  const { setToken, setUser, token, logout: logoutUser } = useStore();
+  const { setToken, setUser, token } = useStore();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -30,7 +30,7 @@ function LoginComponent({ token: tokenFromCookie }: { token?: string }) {
 
   useEffect(() => {
     setToken(tokenFromCookie || "");
-  }, [tokenFromCookie]);
+  }, [tokenFromCookie, setToken]);
 
   if (token) {
     router.push("/");

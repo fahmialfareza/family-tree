@@ -35,11 +35,11 @@ function Navbar({ token: tokenFromCookie }: { token?: string }) {
       };
       fetchProfile();
     }
-  }, [token, setUser]);
+  }, [token, setUser, logoutUser]);
 
   useEffect(() => {
     setToken(tokenFromCookie || "");
-  }, [tokenFromCookie]);
+  }, [tokenFromCookie, setToken]);
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-lg sticky top-0 z-50">
