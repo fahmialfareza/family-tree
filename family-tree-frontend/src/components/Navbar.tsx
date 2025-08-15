@@ -14,11 +14,11 @@ const navLinks = [
   { href: "/auth/login", label: "Login", notShowInTokenExists: true },
 ];
 
-function Navbar() {
+function Navbar({ token: tokenFromCookie }: { token?: string }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const { token, user, setUser, logout: logoutUser } = useStore();
+  const { token, user, setUser, logout: logoutUser, setToken } = useStore();
 
   const [open, setOpen] = useState(false);
 
@@ -36,6 +36,10 @@ function Navbar() {
       fetchProfile();
     }
   }, [token, setUser]);
+
+  useEffect(() => {
+    setToken(tokenFromCookie || "");
+  }, [tokenFromCookie]);
 
   return (
     <nav className="bg-gradient-to-r from-blue-600 to-indigo-700 shadow-lg sticky top-0 z-50">

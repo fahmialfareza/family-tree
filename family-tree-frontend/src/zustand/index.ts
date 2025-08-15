@@ -16,7 +16,14 @@ const useStore = create<IStore>()(
       user: null,
       token: undefined,
       setUser: (user: TUser) => set({ user }),
-      setToken: (token: string) => set({ token }),
+      setToken: (token: string) => {
+        if (!token) {
+          set({ user: null, token: undefined });
+          return;
+        }
+
+        set({ token });
+      },
       logout: () => set({ user: null, token: undefined }),
     }),
     {

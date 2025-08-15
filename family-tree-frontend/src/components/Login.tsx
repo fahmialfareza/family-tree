@@ -3,12 +3,12 @@
 import { login } from "@/service/auth";
 import useStore from "@/zustand";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
-function LoginComponent() {
+function LoginComponent({ token: tokenFromCookie }: { token?: string }) {
   const router = useRouter();
-  const { setToken, setUser, token } = useStore();
+  const { setToken, setUser, token, logout: logoutUser } = useStore();
 
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -27,6 +27,10 @@ function LoginComponent() {
 
     router.push("/");
   };
+
+  useEffect(() => {
+    setToken(tokenFromCookie || "");
+  }, [tokenFromCookie]);
 
   if (token) {
     router.push("/");

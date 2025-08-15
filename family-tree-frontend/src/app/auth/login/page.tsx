@@ -19,7 +19,7 @@ async function Login() {
     }
   }
 
-  return <LoginComponent />;
+  return <LoginComponent token={token} />;
 }
 
 export default Login;
