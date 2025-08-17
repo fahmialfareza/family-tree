@@ -353,7 +353,139 @@ export default function PersonFormComponent({
                       <input
                         type="file"
                         accept="image/*"
-                        onChange={(e) => field.onChange(e.target.files)}
+                        onChange={async (e) => {
+                          const files = e.target.files;
+                          if (files && files.length > 0) {
+                            const file = files[0];
+                            if (file.size > 1024 * 1024) {
+                              // Compress image if > 1MB
+                              const compressImage = async (file: File) => {
+                                return new Promise<File>((resolve, reject) => {
+                                  const img = new window.Image();
+                                  const reader = new FileReader();
+                                  reader.onload = (event) => {
+                                    img.onload = () => {
+                                      const canvas =
+                                        document.createElement("canvas");
+                                      let width = img.width;
+                                      let height = img.height;
+                                      // Scale down if needed
+                                      const maxSize = 1200;
+                                      if (width > maxSize || height > maxSize) {
+                                        if (width > height) {
+                                          height = Math.round(
+                                            (height * maxSize) / width
+                                          );
+                                          width = maxSize;
+                                        } else {
+                                          width = Math.round(
+                                            (width * maxSize) / height
+                                          );
+                                          height = maxSize;
+                                        }
+                                      }
+                                      canvas.width = width;
+                                      canvas.height = height;
+                                      const ctx = canvas.getContext("2d");
+                                      ctx?.drawImage(img, 0, 0, width, height);
+                                      // Try different qualities to get under 1MB
+                                      let quality = 0.8;
+                                      let blob: Blob | null = null;
+                                      const tryCompress = () => {
+                                        canvas.toBlob(
+                                          (b) => {
+                                            if (b && b.size <= 1024 * 1024) {
+                                              blob = b;
+                                              resolve(
+                                                new File([blob], file.name, {
+                                                  type: "image/jpeg",
+                                                })
+                                              );
+                                            } else if (quality > 0.3) {
+                                              quality -= 0.1;
+                                              canvas.toBlob(
+                                                (b2) => {
+                                                  if (b2) {
+                                                    if (
+                                                      b2.size <=
+                                                      1024 * 1024
+                                                    ) {
+                                                      resolve(
+                                                        new File(
+                                                          [b2],
+                                                          file.name,
+                                                          {
+                                                            type: "image/jpeg",
+                                                          }
+                                                        )
+                                                      );
+                                                    } else {
+                                                      quality -= 0.1;
+                                                      tryCompress();
+                                                    }
+                                                  } else {
+                                                    reject(
+                                                      new Error(
+                                                        "Compression failed"
+                                                      )
+                                                    );
+                                                  }
+                                                },
+                                                "image/jpeg",
+                                                quality
+                                              );
+                                            } else {
+                                              // If still too big, just use the last blob
+                                              if (b) {
+                                                resolve(
+                                                  new File([b], file.name, {
+                                                    type: "image/jpeg",
+                                                  })
+                                                );
+                                              } else {
+                                                reject(
+                                                  new Error(
+                                                    "Compression failed"
+                                                  )
+                                                );
+                                              }
+                                            }
+                                          },
+                                          "image/jpeg",
+                                          quality
+                                        );
+                                      };
+                                      tryCompress();
+                                    };
+                                    img.onerror = () =>
+                                      reject(new Error("Invalid image file"));
+                                    img.src = event.target?.result as string;
+                                  };
+                                  reader.onerror = () =>
+                                    reject(new Error("File read error"));
+                                  reader.readAsDataURL(file);
+                                });
+                              };
+
+                              try {
+                                const compressed = await compressImage(file);
+                                // Create a new FileList-like object
+                                const dt = new DataTransfer();
+                                dt.items.add(compressed);
+                                field.onChange(dt.files);
+                              } catch (err) {
+                                toast.error(
+                                  "Failed to compress image under 1MB."
+                                );
+                                field.onChange(null);
+                              }
+                            } else {
+                              field.onChange(files);
+                            }
+                          } else {
+                            field.onChange(files);
+                          }
+                        }}
                         style={{
                           display: "none",
                         }}
