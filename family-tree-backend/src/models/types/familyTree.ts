@@ -16,3 +16,11 @@ export interface FamilyTreeNode {
     gender: "male" | "female";
   };
 }
+
+export type TD3Node = {
+  name: string;
+  _id: string;
+  gender?: string;
+  attributes?: Record<string, any>;
+  children: TD3Node[];
+};

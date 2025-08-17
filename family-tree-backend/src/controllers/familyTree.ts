@@ -5,6 +5,7 @@ import { Types } from "mongoose";
 import { error } from "@/middlewares/errorHandler";
 import { buildFamilyTree } from "@/services/treeBuilder";
 import { responseSuccess } from "@/utils/response";
+import { transformToCoupleTree } from "@/utils/transformation";
 
 const getFamilyTreeParamsSchema = z.object({
   personId: z
@@ -56,7 +57,9 @@ export async function getFamilyTree(
         mode === "parent",
         mode === "child"
       );
-      responseSuccess(res, familyTree, 200);
+      const result = transformToCoupleTree(familyTree);
+
+      responseSuccess(res, result, 200);
     }
   );
 }
