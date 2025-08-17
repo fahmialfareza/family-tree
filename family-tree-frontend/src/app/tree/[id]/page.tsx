@@ -24,7 +24,7 @@ export async function generateMetadata({
   }
 
   return {
-    title: `Family Tree | ${data.name}`,
+    title: `${Array.isArray(data) ? data[0]?.name : data.name} | Family Tree`,
     description: `View the family tree of ${data.name}.`,
   };
 }

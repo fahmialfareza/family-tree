@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Family Tree | People",
+  title: "People | Family Tree",
   description:
     "Manage your family tree by adding, editing, and viewing people.",
 };
