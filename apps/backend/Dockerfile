@@ -16,16 +16,16 @@ WORKDIR /app
 RUN groupadd -r nonroot && useradd -r -g nonroot -u 777 nonroot
 
 # Copy only the necessary files to install dependencies
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
 
 # Stage 2: Install production dependencies
 FROM base AS prod-deps
-RUN pnpm install --prod --frozen-lockfile
+RUN pnpm install --prod
 
 # Stage 3: Install build dependencies and build the application
 FROM base AS builder
 # Re-use pnpm cache and install all dependencies (including dev dependencies)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
 # Copy source files for building
 COPY . .

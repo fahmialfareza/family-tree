@@ -25,6 +25,7 @@
       "@parcel/watcher",
       "@tailwindcss/oxide",
       "bcrypt",
+      "esbuild",
       "oxc-resolver",
       "protobufjs",
       "sharp",
