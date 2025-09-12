@@ -1,5 +1,4 @@
 import { cookies } from "next/headers";
-import { toast } from "react-toastify";
 import FamilyTable from "@/components/FamilyTable";
 import { getFamilies } from "@/service/family";
 import { redirect } from "next/navigation";
@@ -14,10 +13,9 @@ async function Tree() {
   const cookieStore = await cookies();
   const tokenCookie = cookieStore.get("token");
   const token = tokenCookie ? tokenCookie.value : undefined;
-  const { data, message, status } = await getFamilies(token);
+  const { data, status } = await getFamilies(token);
   if (status === 401) cookieStore.delete("token");
   if (!data || status === 401) {
-    toast.error(message);
     redirect("/auth/login");
   }
 

@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import ClientTreeWrapper from "@/components/ClientTreeWrapper";
 import { getFamilyTreeData } from "@/service/tree";
-import { toast } from "react-toastify";
 import { redirect } from "next/navigation";
 
 export async function generateMetadata({
@@ -16,10 +15,9 @@ export async function generateMetadata({
   const cookieStore = await cookies();
   const tokenCookie = cookieStore.get("token");
   const token = tokenCookie ? tokenCookie.value : undefined;
-  const { data, message, status } = await getFamilyTreeData(id, mode, token);
+  const { data, status } = await getFamilyTreeData(id, mode, token);
   if (status === 401) cookieStore.delete("token");
   if (!data || status === 401) {
-    toast.error(message);
     redirect("/auth/login");
   }
 
@@ -42,10 +40,9 @@ export default async function TreePage({
   const cookieStore = await cookies();
   const tokenCookie = cookieStore.get("token");
   const token = tokenCookie ? tokenCookie.value : undefined;
-  const { data, message, status } = await getFamilyTreeData(id, mode, token);
+  const { data, status } = await getFamilyTreeData(id, mode, token);
   if (status === 401) cookieStore.delete("token");
   if (!data || status === 401) {
-    toast.error(message);
     redirect("/auth/login");
   }
 

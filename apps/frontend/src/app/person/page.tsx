@@ -1,7 +1,6 @@
 import { cookies } from "next/headers";
 import PersonTable from "@/components/PersonTable";
 import { getPeople } from "@/service/person";
-import { toast } from "react-toastify";
 import { redirect } from "next/navigation";
 import { Metadata } from "next";
 
@@ -15,10 +14,9 @@ async function Tree() {
   const cookieStore = await cookies();
   const tokenCookie = cookieStore.get("token");
   const token = tokenCookie ? tokenCookie.value : undefined;
-  const { data, message, status } = await getPeople(token);
+  const { data, status } = await getPeople(token);
   if (status === 401) cookieStore.delete("token");
   if (!data || status === 401) {
-    toast.error(message);
     redirect("/auth/login");
   }
 

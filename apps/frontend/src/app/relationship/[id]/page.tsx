@@ -3,7 +3,6 @@ import { getPeople } from "@/service/person";
 import { getRelationships } from "@/service/relationship";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { toast } from "react-toastify";
 
 export async function generateMetadata({
   params,
@@ -14,10 +13,9 @@ export async function generateMetadata({
   const cookieStore = await cookies();
   const tokenCookie = cookieStore.get("token");
   const token = tokenCookie ? tokenCookie.value : undefined;
-  const { data, message, status } = await getRelationships(id, token);
+  const { data, status } = await getRelationships(id, token);
   if (status === 401) cookieStore.delete("token");
   if (!data || status === 401) {
-    toast.error(message);
     redirect("/auth/login");
   }
 
@@ -44,13 +42,11 @@ export default async function RelationshipPage({
   ]);
   if (relationshipsData.status === 401) cookieStore.delete("token");
   if (!relationshipsData.data || relationshipsData.status === 401) {
-    toast.error(relationshipsData.message);
     redirect("/auth/login");
   }
 
   if (peopleData.status === 401) cookieStore.delete("token");
   if (!peopleData.data || peopleData.status === 401) {
-    toast.error(peopleData.message);
     redirect("/auth/login");
   }
 

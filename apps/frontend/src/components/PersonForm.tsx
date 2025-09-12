@@ -473,7 +473,7 @@ export default function PersonFormComponent({
                                 const dt = new DataTransfer();
                                 dt.items.add(compressed);
                                 field.onChange(dt.files);
-                              } catch (err) {
+                              } catch {
                                 toast.error(
                                   "Failed to compress image under 1MB."
                                 );
@@ -560,8 +560,8 @@ export default function PersonFormComponent({
                   ? "Updating..."
                   : "Submitting..."
                 : mode === "edit"
-                ? "Update"
-                : "Create"}
+                  ? "Update"
+                  : "Create"}
             </Button>
           </Flex>
         </form>
