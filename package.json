@@ -20,7 +20,15 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "esbuild"
+      "@newrelic/fn-inspect",
+      "@newrelic/native-metrics",
+      "@parcel/watcher",
+      "@tailwindcss/oxide",
+      "bcrypt",
+      "oxc-resolver",
+      "protobufjs",
+      "sharp",
+      "unrs-resolver"
     ]
   },
   "volta": {
