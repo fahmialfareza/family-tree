@@ -7,14 +7,15 @@
     "dev": "turbo run dev",
     "lint": "turbo run lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "check-types": "turbo run check-types"
+    "check-types": "turbo run check-types",
+    "clean": "rm -rf node_modules && rm -rf apps/**/node_modules && rm -rf packages/**/node_modules && rm -rf dist && rm -rf apps/**/dist && rm -rf packages/**/dist && rm -rf .turbo && rm -rf pnpm-lock.yaml",
+    "reset": "pnpm run clean && pnpm install"
   },
   "devDependencies": {
     "prettier": "^3.6.2",
     "turbo": "2.5.6",
     "typescript": "5.9.2"
   },
-  "packageManager": "pnpm@10.11.0",
   "engines": {
     "node": ">=18"
   },
@@ -33,7 +34,7 @@
     ]
   },
   "volta": {
-    "node": "22.15.1",
-    "pnpm": "10.11.0"
+    "node": "24.11.0",
+    "pnpm": "10.20.0"
   }
 }
