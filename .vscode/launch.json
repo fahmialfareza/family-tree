@@ -5,6 +5,15 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Go Backend",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "cwd": "${workspaceFolder}/apps/backend-go",
+      "program": "${workspaceFolder}/apps/backend-go/main.go",
+      "envFile": "${workspaceFolder}/apps/backend-go/.env"
+    },
+    {
       "type": "node",
       "request": "launch",
       "name": "Run backend",

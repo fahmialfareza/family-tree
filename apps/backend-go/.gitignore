@@ -1,0 +1,6 @@
+.env
+__debug*
+
+# Temporary upload files
+tmp/*
+!tmp/README.md

@@ -612,7 +612,13 @@ function RowActions({ row }: { row: Row<TFamily> }) {
           <DropdownMenuGroup>
             <DropdownMenuItem
               onClick={() => {
-                const url = `${window.location.origin}/tree/${row.original._id}?mode=parent`;
+                const url = `${window.location.origin}/tree/${
+                  typeof row.original.person === "object" &&
+                  row.original.person !== null &&
+                  "_id" in row.original.person
+                    ? (row.original.person as { _id: string })._id
+                    : ""
+                }?mode=parent`;
                 const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
                   url
                 )}`;
