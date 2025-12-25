@@ -86,6 +86,11 @@ function RelationshipForm({
   const onUpdate = async (data: {
     relationships: Partial<TRelationship>[];
   }) => {
+    data.relationships = data.relationships.map((rel) => ({
+      ...rel,
+      order: Number(rel.order) || 1,
+    }));
+
     const { data: respData, message } = await upsertRelationships(
       id,
       data.relationships,

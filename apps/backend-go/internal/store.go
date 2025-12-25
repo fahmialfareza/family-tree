@@ -1035,6 +1035,12 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	// Convert relationship ID to ObjectID
+	id, err := primitive.ObjectIDFromHex(r.ID)
+	if err != nil {
+		return nil, fmt.Errorf("invalid relationship ID")
+	}
+
 	// Convert from and to string IDs to ObjectIDs
 	fromOID, errFrom := primitive.ObjectIDFromHex(r.From)
 	toOID, errTo := primitive.ObjectIDFromHex(r.To)
@@ -1042,7 +1048,7 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 		return nil, fmt.Errorf("invalid from or to ID")
 	}
 
-	filter := bson.M{"_id": r.ID}
+	filter := bson.M{"_id": id}
 	update := bson.M{"$set": bson.M{"from": fromOID, "to": toOID, "type": r.Type, "order": r.Order}}
 	opts := options.FindOneAndUpdate().SetReturnDocument(options.After)
 	var out Relationship
@@ -1060,8 +1066,20 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 	col := MongoDB.Collection("relationships")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
+
+	// Convert string IDs to ObjectIDs
+	objIDs := []primitive.ObjectID{}
+	for _, idStr := range ids {
+		if oid, err := primitive.ObjectIDFromHex(idStr); err == nil {
+			objIDs = append(objIDs, oid)
+		}
+	}
+	if len(objIDs) == 0 {
+		return nil
+	}
+
 	// Soft delete: set deleted flag instead of removing
 	update := bson.M{"$set": bson.M{"deleted": true, "deletedAt": time.Now()}}
-	_, err := col.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": ids}}, update)
+	_, err := col.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}}, update)
 	return err
 }
