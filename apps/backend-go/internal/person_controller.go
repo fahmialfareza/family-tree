@@ -170,8 +170,46 @@ func updatePersonOwnership(c *gin.Context) {
 		responseError(c, "Person not found", 404)
 		return
 	}
+
+	// Update ownership for the person
 	p.OwnedBy = body.Owners
 	_, _ = updatePersonRepo(c, p)
+
+	// Get all relationships for this person
+	rels, err := getRelationshipsByPersonIdRepo(c, id)
+	if err == nil && len(rels) > 0 {
+		// Collect all spouse and child IDs
+		relatedIDs := make(map[string]bool)
+
+		for _, rel := range rels {
+			// If this person is 'from' and relationship is spouse or parent (parent means they have children)
+			if rel.From == id {
+				if rel.Type == "spouse" || rel.Type == "parent" {
+					relatedIDs[rel.To] = true
+				}
+			}
+			// If this person is 'to' and relationship is spouse or child
+			if rel.To == id {
+				if rel.Type == "spouse" {
+					relatedIDs[rel.From] = true
+				}
+				// If someone has a child relationship TO this person,
+				// that means this person is the parent, so we include them as child
+				if rel.Type == "child" {
+					relatedIDs[rel.From] = true
+				}
+			}
+		}
+
+		// Update ownership for all related people
+		for relatedID := range relatedIDs {
+			if relatedPerson, err := getPersonByIdRepo(c, relatedID); err == nil {
+				relatedPerson.OwnedBy = body.Owners
+				_, _ = updatePersonRepo(c, relatedPerson)
+			}
+		}
+	}
+
 	responseSuccess(c, true, 200)
 }
 
