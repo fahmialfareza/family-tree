@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "family-tree-frontend",
+  "name": "family-tree",
   "compatibility_date": "2026-01-08",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
