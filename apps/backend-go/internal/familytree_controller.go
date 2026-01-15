@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 
 	"github.com/gin-gonic/gin"
 )
@@ -125,9 +126,11 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 
 			// get my children ids
 			myChildrenSet := map[string]struct{}{}
+			childOrderMap := map[string]int{} // Track order for each child
 			for _, rel := range rels {
 				if rel.Type == "parent" && rel.From == id {
 					myChildrenSet[rel.To] = struct{}{}
+					childOrderMap[rel.To] = rel.Order
 				}
 			}
 
@@ -143,20 +146,33 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 					}
 				}
 
-				sharedChildrenIds := []string{}
+				// Create a list of shared children with their orders
+				type childWithOrder struct {
+					id    string
+					order int
+				}
+				sharedChildrenList := []childWithOrder{}
 				for cid := range myChildrenSet {
 					if _, ok := spouseChildrenSet[cid]; ok {
-						sharedChildrenIds = append(sharedChildrenIds, cid)
+						sharedChildrenList = append(sharedChildrenList, childWithOrder{
+							id:    cid,
+							order: childOrderMap[cid],
+						})
 						sharedChildrenSet[cid] = struct{}{}
 					}
 				}
 
+				// Sort shared children by order
+				sort.Slice(sharedChildrenList, func(i, j int) bool {
+					return sharedChildrenList[i].order < sharedChildrenList[j].order
+				})
+
 				children := []internalNode{}
-				for _, childId := range sharedChildrenIds {
-					childNode, err := build(childId, true, false)
+				for _, child := range sharedChildrenList {
+					childNode, err := build(child.id, true, false)
 					if err == nil {
 						if debug {
-							fmt.Printf("[TREE]  node=%s spouse=%s child=%s found\n", id, spouseId, childId)
+							fmt.Printf("[TREE]  node=%s spouse=%s child=%s order=%d found\n", id, spouseId, child.id, child.order)
 						}
 						children = append(children, childNode)
 					}
@@ -177,16 +193,33 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 			}
 
 			// children not associated with any spouse
-			singleChildren := []internalNode{}
+			type childWithOrder struct {
+				id    string
+				order int
+			}
+			singleChildrenList := []childWithOrder{}
 			for cid := range myChildrenSet {
 				if _, ok := sharedChildrenSet[cid]; !ok {
-					childNode, err := build(cid, true, false)
-					if err == nil {
-						if debug {
-							fmt.Printf("[TREE]  node=%s singleChild=%s found\n", id, cid)
-						}
-						singleChildren = append(singleChildren, childNode)
+					singleChildrenList = append(singleChildrenList, childWithOrder{
+						id:    cid,
+						order: childOrderMap[cid],
+					})
+				}
+			}
+
+			// Sort single children by order
+			sort.Slice(singleChildrenList, func(i, j int) bool {
+				return singleChildrenList[i].order < singleChildrenList[j].order
+			})
+
+			singleChildren := []internalNode{}
+			for _, child := range singleChildrenList {
+				childNode, err := build(child.id, true, false)
+				if err == nil {
+					if debug {
+						fmt.Printf("[TREE]  node=%s singleChild=%s order=%d found\n", id, child.id, child.order)
 					}
+					singleChildren = append(singleChildren, childNode)
 				}
 			}
 
