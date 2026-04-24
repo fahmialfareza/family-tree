@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"go.mongodb.org/mongo-driver/bson"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,6 +21,7 @@ func getJWTSecret() []byte {
 }
 
 func signIn(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/signIn").End()
 	var body struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -130,6 +132,7 @@ func authenticate(roles []string) gin.HandlerFunc {
 }
 
 func createUser(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/createUser").End()
 	var body struct {
 		Name     string `json:"name"`
 		Username string `json:"username"`
@@ -151,6 +154,7 @@ func createUser(c *gin.Context) {
 }
 
 func profile(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/profile").End()
 	u, _ := c.Get("user")
 	t, _ := c.Get("token")
 	user := u.(*User)
@@ -160,6 +164,7 @@ func profile(c *gin.Context) {
 }
 
 func users(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/users").End()
 	// only admin allowed by middleware
 	us, err := repoFindUsers(c, bson.M{"role": RoleUser})
 	if err != nil {

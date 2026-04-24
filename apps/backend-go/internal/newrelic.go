@@ -6,6 +6,10 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
+// NRApp is the global New Relic application instance. It is set by InitNewRelic and used
+// by database/external-service instrumentation hooks throughout the application.
+var NRApp *newrelic.Application
+
 // InitNewRelic initializes the new relic app if NEW_RELIC_APP_NAME and NEW_RELIC_LICENSE_KEY are set
 func InitNewRelic() (*newrelic.Application, error) {
 	appName := os.Getenv("NEW_RELIC_APP_NAME")
@@ -27,5 +31,6 @@ func InitNewRelic() (*newrelic.Application, error) {
 	if err != nil {
 		return nil, err
 	}
+	NRApp = app
 	return app, nil
 }

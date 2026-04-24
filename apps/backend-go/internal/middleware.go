@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	nrredis "github.com/newrelic/go-agent/v3/integrations/nrredis-v9"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -35,6 +37,7 @@ func RateLimitMiddleware(max int, per time.Duration) gin.HandlerFunc {
 			c.Next()
 			return
 		}
+		defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "middleware/RateLimit").End()
 		ip := c.ClientIP()
 		now := time.Now().Unix()
 		windowSec := int64(per.Seconds())
@@ -48,6 +51,8 @@ func RateLimitMiddleware(max int, per time.Duration) gin.HandlerFunc {
 				return
 			}
 			RedisClient = redis.NewClient(opt)
+			// Attach nrredis hook for New Relic datastore instrumentation
+			RedisClient.AddHook(nrredisHook(opt))
 		}
 
 		// remove entries older than window
@@ -84,4 +89,10 @@ func RateLimitMiddleware(max int, per time.Duration) gin.HandlerFunc {
 		}
 		c.Next()
 	}
+}
+
+// nrredisHook returns a New Relic datastore hook for Redis.
+// Pass opts from redis.ParseURL so segments carry connection details.
+func nrredisHook(opts *redis.Options) redis.Hook {
+	return nrredis.NewHook(opts)
 }

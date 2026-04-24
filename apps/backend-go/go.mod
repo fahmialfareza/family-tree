@@ -22,6 +22,8 @@ require (
 	github.com/goccy/go-yaml v1.19.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/schema v1.4.1 // indirect
+	github.com/newrelic/go-agent/v3/integrations/nrmongo v1.1.5 // indirect
+	github.com/newrelic/go-agent/v3/integrations/nrredis-v9 v1.1.2 // indirect
 	github.com/quic-go/qpack v0.6.0 // indirect
 	github.com/quic-go/quic-go v0.57.1 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251124214823-79d6a2a48846 // indirect

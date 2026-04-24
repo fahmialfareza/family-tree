@@ -2,9 +2,11 @@ package app
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func getFamilies(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/getFamilies").End()
 	u, _ := c.Get("user")
 	user := u.(*User)
 	if user.Role == RoleUser {
@@ -17,6 +19,7 @@ func getFamilies(c *gin.Context) {
 }
 
 func createFamily(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/createFamily").End()
 	var body struct {
 		Name   string `json:"name"`
 		Person string `json:"person"`
@@ -39,6 +42,7 @@ func createFamily(c *gin.Context) {
 }
 
 func deleteFamily(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/deleteFamily").End()
 	id := c.Param("id")
 	f, err := deleteFamilyRepo(c, id)
 	if err != nil {

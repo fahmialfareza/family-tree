@@ -5,9 +5,11 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func getAllPeople(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/getAllPeople").End()
 	u, _ := c.Get("user")
 	user := u.(*User)
 	if user.Role == RoleAdmin {
@@ -20,6 +22,7 @@ func getAllPeople(c *gin.Context) {
 }
 
 func getPersonById(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/getPersonById").End()
 	id := c.Param("id")
 	p, err := getPersonByIdRepo(c, id)
 	if err != nil {
@@ -30,6 +33,7 @@ func getPersonById(c *gin.Context) {
 }
 
 func createPerson(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/createPerson").End()
 	// accept multipart/form-data or json
 	name := c.PostForm("name")
 	nickname := c.PostForm("nickname")
@@ -94,6 +98,7 @@ func createPerson(c *gin.Context) {
 }
 
 func updatePerson(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/updatePerson").End()
 	id := c.Param("id")
 	name := c.PostForm("name")
 	nickname := c.PostForm("nickname")
@@ -157,6 +162,7 @@ func updatePerson(c *gin.Context) {
 }
 
 func updatePersonOwnership(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/updatePersonOwnership").End()
 	id := c.Param("id")
 	var body struct {
 		Owners []string `json:"owners"`
@@ -214,6 +220,7 @@ func updatePersonOwnership(c *gin.Context) {
 }
 
 func deletePersonById(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/deletePersonById").End()
 	id := c.Param("id")
 	p, err := deletePersonRepo(c, id)
 	if err != nil {

@@ -11,9 +11,11 @@ import (
 	"github.com/cloudinary/cloudinary-go/v2"
 	"github.com/cloudinary/cloudinary-go/v2/api/uploader"
 	"github.com/gin-gonic/gin"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func uploadImage(c *gin.Context, field string) (string, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "upload/uploadImage").End()
 	file, err := c.FormFile(field)
 	if err != nil {
 		fmt.Printf("[UPLOAD] Error getting form file '%s': %v\n", field, err)
@@ -62,6 +64,16 @@ func uploadImage(c *gin.Context, field string) (string, error) {
 }
 
 func uploadToCloudinary(c *gin.Context, fileHeader *multipart.FileHeader) (string, error) {
+	// Instrument this as an external segment to Cloudinary's API
+	txn := newrelic.FromContext(c.Request.Context())
+	seg := &newrelic.ExternalSegment{
+		StartTime: txn.StartSegmentNow(),
+		URL:       "https://api.cloudinary.com",
+		Procedure: "Upload",
+		Library:   "cloudinary-go",
+	}
+	defer seg.End()
+
 	// create cloudinary client from env CLOUDINARY_URL
 	cld, err := cloudinary.NewFromURL(os.Getenv("CLOUDINARY_URL"))
 	if err != nil {

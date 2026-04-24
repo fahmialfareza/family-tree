@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,6 +15,7 @@ import (
 )
 
 func findUserById(ctx context.Context, id string) (*User, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/findUserById").End()
 	col := MongoDB.Collection("users")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -35,6 +37,7 @@ func findUserById(ctx context.Context, id string) (*User, error) {
 }
 
 func findUserByUsername(ctx context.Context, username string) (*User, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/findUserByUsername").End()
 	col := MongoDB.Collection("users")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -66,6 +69,7 @@ func findUserByUsername(ctx context.Context, username string) (*User, error) {
 }
 
 func addUser(ctx context.Context, u *User) (*User, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/addUser").End()
 	col := MongoDB.Collection("users")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -79,6 +83,7 @@ func addUser(ctx context.Context, u *User) (*User, error) {
 }
 
 func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/repoGetAllPeople").End()
 	col := MongoDB.Collection("people")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -284,6 +289,7 @@ func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) 
 }
 
 func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getPersonByIdRepo").End()
 	col := MongoDB.Collection("people")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -390,6 +396,7 @@ func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
 }
 
 func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/createPersonRepo").End()
 	col := MongoDB.Collection("people")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -422,6 +429,7 @@ func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
 }
 
 func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/updatePersonRepo").End()
 	col := MongoDB.Collection("people")
 	oid, err := primitive.ObjectIDFromHex(p.ID)
 	if err != nil {
@@ -459,6 +467,7 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 }
 
 func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deletePersonRepo").End()
 	col := MongoDB.Collection("people")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -480,6 +489,7 @@ func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
 }
 
 func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getAllFamiliesRepo").End()
 	col := MongoDB.Collection("families")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -589,6 +599,7 @@ func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error
 }
 
 func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/createFamilyRepo").End()
 	col := MongoDB.Collection("families")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -701,6 +712,7 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 }
 
 func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deleteFamilyRepo").End()
 	col := MongoDB.Collection("families")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -803,6 +815,7 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 }
 
 func repoFindUsers(ctx context.Context, filter interface{}) ([]User, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/repoFindUsers").End()
 	col := MongoDB.Collection("users")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -848,6 +861,7 @@ func repoFindUsers(ctx context.Context, filter interface{}) ([]User, error) {
 
 // Relationship repository functions
 func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Relationship, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getRelationshipsByPersonIdRepo").End()
 	col := MongoDB.Collection("relationships")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -1007,6 +1021,7 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Re
 }
 
 func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/insertManyRelationshipsRepo").End()
 	if len(rels) == 0 {
 		return nil
 	}
@@ -1031,6 +1046,7 @@ func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error
 }
 
 func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/updateRelationshipRepo").End()
 	col := MongoDB.Collection("relationships")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -1060,6 +1076,7 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 }
 
 func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deleteRelationshipsRepo").End()
 	if len(ids) == 0 {
 		return nil
 	}

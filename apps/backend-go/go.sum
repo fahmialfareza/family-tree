@@ -83,6 +83,10 @@ github.com/newrelic/go-agent/v3 v3.42.0 h1:aA2Ea1RT5eD59LtOS1KGFXSmaDs6kM3Jeqo7P
 github.com/newrelic/go-agent/v3 v3.42.0/go.mod h1:sCgxDCVydoKD/C4S8BFxDtmFHvdWHtaIz/a3kiyNB/k=
 github.com/newrelic/go-agent/v3/integrations/nrgin v1.4.2 h1:AdWN/9G5fkIgAUfnMnChr2ZL1jKbicZxNSsn99s4wgc=
 github.com/newrelic/go-agent/v3/integrations/nrgin v1.4.2/go.mod h1:8mDVuKhV1U/NhuL8HLB0YxheDHCuo/dRqW4OgFiTMwI=
+github.com/newrelic/go-agent/v3/integrations/nrmongo v1.1.5 h1:ZA7VoeZTGiNUPf/SuDa9XeKFiuDmvEolOB9NWdsCYZE=
+github.com/newrelic/go-agent/v3/integrations/nrmongo v1.1.5/go.mod h1:LZ7t9qfeScR5xm4KEdIZWnETQBLyN+75QRuaeh4NE8s=
+github.com/newrelic/go-agent/v3/integrations/nrredis-v9 v1.1.2 h1:Yi8MH7fw8RqfILmGSc4yf0AysoNrlHdihJPMqfpT8xY=
+github.com/newrelic/go-agent/v3/integrations/nrredis-v9 v1.1.2/go.mod h1:8YQCdVir0v8y+Ovc7Oi/hwakevRAuymDNj806kjSE/k=
 github.com/pelletier/go-toml/v2 v2.2.4 h1:mye9XuhQ6gvn5h28+VilKrrPoQVanw5PMw/TB0t5Ec4=
 github.com/pelletier/go-toml/v2 v2.2.4/go.mod h1:2gIqNv+qfxSVS7cM2xJQKtLSTLUE9V8t9Stt+h56mCY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

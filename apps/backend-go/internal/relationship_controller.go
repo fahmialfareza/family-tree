@@ -2,9 +2,11 @@ package app
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
 func getRelationships(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/getRelationships").End()
 	id := c.Param("id")
 	rels, err := getRelationshipsByPersonIdRepo(c, id)
 	if err != nil {
@@ -24,6 +26,7 @@ func getRelationships(c *gin.Context) {
 }
 
 func crudRelationships(c *gin.Context) {
+	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/crudRelationships").End()
 	var body []struct {
 		From  *string `json:"from"`
 		To    string  `json:"to"`
