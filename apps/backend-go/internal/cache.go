@@ -16,9 +16,16 @@ const (
 	cacheTTLPeople        = 5 * time.Minute
 	cacheTTLRelationships = 10 * time.Minute
 	cacheTTLFamilies      = 5 * time.Minute
+	cacheTTLFamily        = 10 * time.Minute
+	cacheTTLUsers         = 5 * time.Minute
 )
 
-func cacheKeyUser(id string) string { return "ft:user:" + id }
+func cacheKeyUser(id string) string      { return "ft:user:" + id }
+func cacheKeyUsername(u string) string   { return "ft:username:" + u }
+
+// cacheKeyUsersList is the cache key for the non-admin user list (role=user, not deleted).
+// Scoped to the single call site in repoFindUsers — do not reuse for other filters.
+func cacheKeyUsersList() string { return "ft:users:list" }
 
 func cacheKeyPerson(id string) string {
 	return "ft:person:" + id
@@ -47,6 +54,8 @@ func cacheKeyFamilies(ownedBy []string) string {
 	sort.Strings(sorted)
 	return "ft:families:users:" + strings.Join(sorted, ",")
 }
+
+func cacheKeyFamily(id string) string { return "ft:family:" + id }
 
 // cacheGet deserializes a cached value. Returns (value, true) on hit, zero+false on miss.
 func cacheGet[T any](ctx context.Context, key string) (T, bool) {

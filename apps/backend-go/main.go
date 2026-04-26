@@ -31,6 +31,11 @@ func main() {
 		log.Fatalf("failed to init mongo: %v", err)
 	}
 
+	// Ensure indexes exist (idempotent — safe to run on every startup)
+	if err := app.InitIndexes(ctx); err != nil {
+		log.Fatalf("failed to init indexes: %v", err)
+	}
+
 	// initialize New Relic if configured (non-fatal)
 	nrApp, err := app.InitNewRelic()
 	if err != nil {

@@ -26,64 +26,37 @@ func HPPMiddleware() gin.HandlerFunc {
 	}
 }
 
-// simple in-memory rate limiter per IP
+// RateLimitMiddleware is a Redis-backed sliding-window rate limiter per IP.
+// redisURL is captured once at middleware creation time; the 4 Redis operations
+// are pipelined into a single round trip on every request.
 func RateLimitMiddleware(max int, per time.Duration) gin.HandlerFunc {
-	// Redis-backed sliding-window limiter using sorted sets
-	// Requires REDIS_URL env (e.g. redis://localhost:6379)
+	redisURL := os.Getenv("REDIS_URL")
 	return func(c *gin.Context) {
-		redisURL := os.Getenv("REDIS_URL")
-		if redisURL == "" {
-			// fallback: allow through (no redis configured)
+		if redisURL == "" || RedisClient == nil {
 			c.Next()
 			return
 		}
 		defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "middleware/RateLimit").End()
+
 		ip := c.ClientIP()
 		now := time.Now().Unix()
 		windowSec := int64(per.Seconds())
 		key := "rl:sz:" + ip
-
-		// ensure Redis client exists
-		if RedisClient == nil {
-			opt, err := redis.ParseURL(redisURL)
-			if err != nil {
-				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "rate limiter unavailable", "status": http.StatusServiceUnavailable})
-				return
-			}
-			RedisClient = redis.NewClient(opt)
-			// Attach nrredis hook for New Relic datastore instrumentation
-			RedisClient.AddHook(nrredisHook(opt))
-		}
-
-		// remove entries older than window
-		min := "-inf"
 		maxScore := fmt.Sprintf("%d", now-windowSec)
-		// ZREMRANGEBYSCORE key -inf (now-window)
-		if err := RedisClient.ZRemRangeByScore(c, key, min, maxScore).Err(); err != nil {
-			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "rate limiter unavailable", "status": http.StatusServiceUnavailable})
-			return
-		}
-
-		// add current timestamp as score and member (use timestamp+random to avoid dup)
 		member := fmt.Sprintf("%d-%d", now, time.Now().UnixNano()%1000)
-		if err := RedisClient.ZAdd(c, key, redis.Z{Score: float64(now), Member: member}).Err(); err != nil {
+
+		// pipeline: remove stale entries, add current, set TTL, count — 1 round trip
+		pipe := RedisClient.Pipeline()
+		pipe.ZRemRangeByScore(c, key, "-inf", maxScore)
+		pipe.ZAdd(c, key, redis.Z{Score: float64(now), Member: member})
+		pipe.Expire(c, key, per+5*time.Second)
+		zCardCmd := pipe.ZCard(c, key)
+		if _, err := pipe.Exec(c); err != nil {
 			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "rate limiter unavailable", "status": http.StatusServiceUnavailable})
 			return
 		}
 
-		// set TTL slightly longer than window
-		if err := RedisClient.Expire(c, key, per+time.Second*5).Err(); err != nil {
-			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "rate limiter unavailable", "status": http.StatusServiceUnavailable})
-			return
-		}
-
-		// get current count
-		cnt, err := RedisClient.ZCard(c, key).Result()
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "rate limiter unavailable", "status": http.StatusServiceUnavailable})
-			return
-		}
-		if cnt > int64(max) {
+		if zCardCmd.Val() > int64(max) {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"message": "Too many requests", "status": http.StatusTooManyRequests})
 			return
 		}

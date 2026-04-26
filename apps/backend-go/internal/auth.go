@@ -12,13 +12,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func getJWTSecret() []byte {
+// jwtSecret is resolved once at package init to avoid os.Getenv on every request.
+var jwtSecret = func() []byte {
 	s := os.Getenv("JWT_SECRET")
 	if s == "" {
 		s = "family-tree-secret"
 	}
 	return []byte(s)
-}
+}()
 
 func signIn(c *gin.Context) {
 	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/signIn").End()
@@ -46,7 +47,7 @@ func signIn(c *gin.Context) {
 		"id":  user.ID,
 		"exp": time.Now().Add(24 * time.Hour).Unix(),
 	})
-	s, err := token.SignedString(getJWTSecret())
+	s, err := token.SignedString(jwtSecret)
 	if err != nil {
 		responseError(c, "Failed to sign token", 500)
 		return
@@ -73,7 +74,7 @@ func authenticate(roles []string) gin.HandlerFunc {
 		}
 		tokenStr := parts[1]
 
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) { return getJWTSecret(), nil })
+		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) { return jwtSecret, nil })
 		if err != nil || !token.Valid {
 			responseError(c, "Invalid token", 401)
 			c.Abort()

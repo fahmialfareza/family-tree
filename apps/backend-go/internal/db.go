@@ -9,6 +9,7 @@ import (
 	nrmongo "github.com/newrelic/go-agent/v3/integrations/nrmongo"
 	nrredis "github.com/newrelic/go-agent/v3/integrations/nrredis-v9"
 	"github.com/redis/go-redis/v9"
+	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -18,6 +19,54 @@ var (
 	MongoDB     *mongo.Database
 	RedisClient *redis.Client
 )
+
+// InitIndexes creates all necessary indexes on startup. Safe to call multiple times (uses CreateIfNotExists semantics).
+func InitIndexes(ctx context.Context) error {
+	type indexDef struct {
+		collection string
+		model      mongo.IndexModel
+	}
+
+	indexes := []indexDef{
+		// users: fast login lookup and soft-delete filter
+		{
+			"users",
+			mongo.IndexModel{Keys: bson.D{{Key: "username", Value: 1}, {Key: "deleted", Value: 1}}},
+		},
+		// people: ownership filter used in list queries
+		{
+			"people",
+			mongo.IndexModel{Keys: bson.D{{Key: "ownedBy", Value: 1}, {Key: "deleted", Value: 1}}},
+		},
+		// families: ownership filter + person foreign key used in $lookup
+		{
+			"families",
+			mongo.IndexModel{Keys: bson.D{{Key: "ownedBy", Value: 1}, {Key: "deleted", Value: 1}}},
+		},
+		{
+			"families",
+			mongo.IndexModel{Keys: bson.D{{Key: "person", Value: 1}}},
+		},
+		// relationships: graph traversal queries filter by from/to + deleted
+		{
+			"relationships",
+			mongo.IndexModel{Keys: bson.D{{Key: "from", Value: 1}, {Key: "deleted", Value: 1}}},
+		},
+		{
+			"relationships",
+			mongo.IndexModel{Keys: bson.D{{Key: "to", Value: 1}, {Key: "deleted", Value: 1}}},
+		},
+	}
+
+	for _, idx := range indexes {
+		col := MongoDB.Collection(idx.collection)
+		if _, err := col.Indexes().CreateOne(ctx, idx.model); err != nil {
+			return fmt.Errorf("create index on %s: %w", idx.collection, err)
+		}
+	}
+	fmt.Println("MongoDB indexes ensured")
+	return nil
+}
 
 func InitMongo(ctx context.Context) error {
 	uri := os.Getenv("MONGO_URI")

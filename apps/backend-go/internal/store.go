@@ -46,6 +46,12 @@ func findUserById(ctx context.Context, id string) (*User, error) {
 
 func findUserByUsername(ctx context.Context, username string) (*User, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/findUserByUsername").End()
+
+	cacheKey := cacheKeyUsername(username)
+	if cached, ok := cacheGet[*User](ctx, cacheKey); ok {
+		return cached, nil
+	}
+
 	col := MongoDB.Collection("users")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -73,6 +79,7 @@ func findUserByUsername(ctx context.Context, username string) (*User, error) {
 	if r, ok := doc["role"].(string); ok {
 		u.Role = UserRole(r)
 	}
+	cacheSet(ctx, cacheKey, &u, cacheTTLUser)
 	return &u, nil
 }
 
@@ -87,6 +94,7 @@ func addUser(ctx context.Context, u *User) (*User, error) {
 		return nil, err
 	}
 	oid := res.InsertedID.(primitive.ObjectID)
+	cacheDel(ctx, cacheKeyUsersList(), cacheKeyUsername(u.Username))
 	return findUserById(ctx, oid.Hex())
 }
 
@@ -637,122 +645,15 @@ func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error
 	return res, nil
 }
 
-func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/createFamilyRepo").End()
-	col := MongoDB.Collection("families")
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
+// getFamilyByIdRepo fetches a single family by ID with person populated, using the cache.
+func getFamilyByIdRepo(ctx context.Context, id string) (*Family, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getFamilyByIdRepo").End()
 
-	// Convert person ID to ObjectID for storage
-	personOID, err := primitive.ObjectIDFromHex(f.Person.ID)
-	if err != nil {
-		return nil, err
+	cacheKey := cacheKeyFamily(id)
+	if cached, ok := cacheGet[*Family](ctx, cacheKey); ok {
+		return cached, nil
 	}
 
-	// Convert ownedBy string array to ObjectID array
-	ownedByOIDs := []primitive.ObjectID{}
-	for _, ownerID := range f.OwnedBy {
-		if oid, err := primitive.ObjectIDFromHex(ownerID); err == nil {
-			ownedByOIDs = append(ownedByOIDs, oid)
-		}
-	}
-
-	doc := bson.M{"name": f.Name, "person": personOID, "ownedBy": ownedByOIDs}
-	res, err := col.InsertOne(ctx, doc)
-	if err != nil {
-		return nil, err
-	}
-	oid := res.InsertedID.(primitive.ObjectID)
-
-	// Fetch created family with populated person using aggregation
-	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: bson.M{"_id": oid, "deleted": bson.M{"$ne": true}}}},
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "people"},
-			{Key: "localField", Value: "person"},
-			{Key: "foreignField", Value: "_id"},
-			{Key: "as", Value: "personDetails"},
-		}}},
-		{{Key: "$unwind", Value: bson.D{
-			{Key: "path", Value: "$personDetails"},
-			{Key: "preserveNullAndEmptyArrays", Value: true},
-		}}},
-	}
-
-	cur, err := col.Aggregate(ctx, pipeline)
-	if err != nil {
-		return nil, err
-	}
-	defer cur.Close(ctx)
-
-	if !cur.Next(ctx) {
-		return nil, mongo.ErrNoDocuments
-	}
-
-	var doc2 bson.M
-	if err := cur.Decode(&doc2); err != nil {
-		return nil, err
-	}
-
-	var out Family
-	if idv, ok := doc2["_id"].(primitive.ObjectID); ok {
-		out.ID = idv.Hex()
-	}
-	if n, ok := doc2["name"].(string); ok {
-		out.Name = n
-	}
-	if ob, ok := doc2["ownedBy"].(primitive.A); ok {
-		ids := []string{}
-		for _, it := range ob {
-			switch vv := it.(type) {
-			case primitive.ObjectID:
-				ids = append(ids, vv.Hex())
-			case string:
-				ids = append(ids, vv)
-			}
-		}
-		out.OwnedBy = ids
-	}
-
-	// Populate person
-	if pd, ok := doc2["personDetails"].(bson.M); ok {
-		var p Person
-		if idv, ok := pd["_id"].(primitive.ObjectID); ok {
-			p.ID = idv.Hex()
-		}
-		if n, ok := pd["name"].(string); ok {
-			p.Name = n
-		}
-		if nick, ok := pd["nickname"].(string); ok {
-			p.Nickname = nick
-		}
-		if address, ok := pd["address"].(string); ok {
-			p.Address = address
-		}
-		if ph, ok := pd["photoUrl"].(string); ok {
-			p.PhotoURL = ph
-		}
-		if bd, ok := pd["birthDate"].(primitive.DateTime); ok {
-			p.BirthDate = bd.Time()
-		}
-		if phn, ok := pd["phone"].(string); ok {
-			p.Phone = phn
-		}
-		if st, ok := pd["status"].(string); ok {
-			p.Status = st
-		}
-		if gd, ok := pd["gender"].(string); ok {
-			p.Gender = gd
-		}
-		out.Person = &p
-	}
-
-	cacheDelPattern(ctx, "ft:families:*")
-	return &out, nil
-}
-
-func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deleteFamilyRepo").End()
 	col := MongoDB.Collection("families")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -761,7 +662,6 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	// First, fetch the family with populated person before deleting
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: bson.M{"_id": oid, "deleted": bson.M{"$ne": true}}}},
 		{{Key: "$lookup", Value: bson.D{
@@ -810,8 +710,6 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 		}
 		out.OwnedBy = ids
 	}
-
-	// Populate person
 	if pd, ok := doc["personDetails"].(bson.M); ok {
 		var p Person
 		if idv, ok := pd["_id"].(primitive.ObjectID); ok {
@@ -831,6 +729,10 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 		}
 		if bd, ok := pd["birthDate"].(primitive.DateTime); ok {
 			p.BirthDate = bd.Time()
+		} else if bdStr, ok := pd["birthDate"].(string); ok {
+			if t, err := time.Parse(time.RFC3339, bdStr); err == nil {
+				p.BirthDate = t
+			}
 		}
 		if phn, ok := pd["phone"].(string); ok {
 			p.Phone = phn
@@ -844,19 +746,74 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 		out.Person = &p
 	}
 
-	// Soft delete: set deleted flag instead of removing
-	update := bson.M{"$set": bson.M{"deleted": true, "deletedAt": time.Now()}}
-	_, err = col.UpdateOne(ctx, bson.M{"_id": oid}, update)
+	cacheSet(ctx, cacheKey, &out, cacheTTLFamily)
+	return &out, nil
+}
+
+func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/createFamilyRepo").End()
+	col := MongoDB.Collection("families")
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Convert person ID to ObjectID for storage
+	personOID, err := primitive.ObjectIDFromHex(f.Person.ID)
 	if err != nil {
 		return nil, err
 	}
 
+	// Convert ownedBy string array to ObjectID array
+	ownedByOIDs := []primitive.ObjectID{}
+	for _, ownerID := range f.OwnedBy {
+		if oid, err := primitive.ObjectIDFromHex(ownerID); err == nil {
+			ownedByOIDs = append(ownedByOIDs, oid)
+		}
+	}
+
+	doc := bson.M{"name": f.Name, "person": personOID, "ownedBy": ownedByOIDs}
+	res, err := col.InsertOne(ctx, doc)
+	if err != nil {
+		return nil, err
+	}
+	oid := res.InsertedID.(primitive.ObjectID)
 	cacheDelPattern(ctx, "ft:families:*")
-	return &out, nil
+	return getFamilyByIdRepo(ctx, oid.Hex())
+}
+
+func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deleteFamilyRepo").End()
+
+	out, err := getFamilyByIdRepo(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	col := MongoDB.Collection("families")
+	oid, err := primitive.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	update := bson.M{"$set": bson.M{"deleted": true, "deletedAt": time.Now()}}
+	if _, err = col.UpdateOne(ctx, bson.M{"_id": oid}, update); err != nil {
+		return nil, err
+	}
+
+	cacheDel(ctx, cacheKeyFamily(id))
+	cacheDelPattern(ctx, "ft:families:*")
+	return out, nil
 }
 
 func repoFindUsers(ctx context.Context, filter interface{}) ([]User, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/repoFindUsers").End()
+
+	cacheKey := cacheKeyUsersList()
+	if cached, ok := cacheGet[[]User](ctx, cacheKey); ok {
+		return cached, nil
+	}
+
 	col := MongoDB.Collection("users")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -897,8 +854,10 @@ func repoFindUsers(ctx context.Context, filter interface{}) ([]User, error) {
 		u.Password = ""
 		res = append(res, u)
 	}
+	cacheSet(ctx, cacheKey, res, cacheTTLUsers)
 	return res, nil
 }
+
 
 // Relationship repository functions
 func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Relationship, error) {
@@ -1167,10 +1126,10 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 	update := bson.M{"$set": bson.M{"deleted": true, "deletedAt": time.Now()}}
 	_, err := col.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}}, update)
 	if err == nil {
-		// Person IDs are unknown from relationship IDs alone — flush all related caches.
-		cacheDelPattern(ctx, "ft:relationships:*")
-		cacheDelPattern(ctx, "ft:person:*")
-		cacheDelPattern(ctx, "ft:people:*")
+		// Person IDs are unknown from relationship IDs alone — flush all related caches in one pass each.
+		for _, pattern := range []string{"ft:relationships:*", "ft:person:*", "ft:people:*"} {
+			cacheDelPattern(ctx, pattern)
+		}
 	}
 	return err
 }

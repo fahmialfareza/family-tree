@@ -80,11 +80,6 @@ func getFamilyTree(c *gin.Context) {
 
 func buildFamilyTree(ctx context.Context, personId string, withChildren bool, withParent bool) (internalNode, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "service/buildFamilyTree").End()
-	person, err := getPersonByIdRepo(ctx, personId)
-	if err != nil {
-		return internalNode{}, err
-	}
-	// relationships are fetched per-node inside the recursive builder
 
 	// helper to recursively build node
 	var build func(id string, wc bool, wp bool) (internalNode, error)
@@ -267,7 +262,11 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 	if withParent {
 		return build(personId, false, true)
 	}
-	// default: return basic internal node
+	// default: return basic internal node (no flags set)
+	person, err := getPersonByIdRepo(ctx, personId)
+	if err != nil {
+		return internalNode{}, err
+	}
 	return internalNode{
 		ID:       person.ID,
 		Name:     person.Nickname,
