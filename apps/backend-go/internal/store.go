@@ -14,8 +14,15 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+
 func findUserById(ctx context.Context, id string) (*User, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/findUserById").End()
+
+	cacheKey := cacheKeyUser(id)
+	if cached, ok := cacheGet[*User](ctx, cacheKey); ok {
+		return cached, nil
+	}
+
 	col := MongoDB.Collection("users")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -33,6 +40,7 @@ func findUserById(ctx context.Context, id string) (*User, error) {
 		return nil, err
 	}
 	u.ID = id
+	cacheSet(ctx, cacheKey, &u, cacheTTLUser)
 	return &u, nil
 }
 
@@ -84,6 +92,12 @@ func addUser(ctx context.Context, u *User) (*User, error) {
 
 func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/repoGetAllPeople").End()
+
+	cacheKey := cacheKeyPeople(ownedBy)
+	if cached, ok := cacheGet[[]*Person](ctx, cacheKey); ok {
+		return cached, nil
+	}
+
 	col := MongoDB.Collection("people")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -285,11 +299,18 @@ func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) 
 		}
 		res = append(res, &p)
 	}
+	cacheSet(ctx, cacheKey, res, cacheTTLPeople)
 	return res, nil
 }
 
 func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getPersonByIdRepo").End()
+
+	cacheKey := cacheKeyPerson(id)
+	if cached, ok := cacheGet[*Person](ctx, cacheKey); ok {
+		return cached, nil
+	}
+
 	col := MongoDB.Collection("people")
 	oid, err := primitive.ObjectIDFromHex(id)
 	if err != nil {
@@ -390,6 +411,7 @@ func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
 			}
 			p.Owners = owners
 		}
+		cacheSet(ctx, cacheKey, &p, cacheTTLPerson)
 		return &p, nil
 	}
 	return nil, mongo.ErrNoDocuments
@@ -425,7 +447,11 @@ func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
 		return nil, err
 	}
 	oid := res.InsertedID.(primitive.ObjectID)
-	return getPersonByIdRepo(ctx, oid.Hex())
+	created, err := getPersonByIdRepo(ctx, oid.Hex())
+	if err == nil {
+		cacheDelPattern(ctx, "ft:people:*")
+	}
+	return created, err
 }
 
 func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
@@ -463,6 +489,9 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 		return nil, err
 	}
 	out.ID = p.ID
+	cacheDel(ctx, cacheKeyPerson(p.ID))
+	cacheDelPattern(ctx, "ft:people:*")
+	cacheDelPattern(ctx, "ft:relationships:*")
 	return &out, nil
 }
 
@@ -485,11 +514,20 @@ func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
 		return nil, err
 	}
 	out.ID = id
+	cacheDel(ctx, cacheKeyPerson(id))
+	cacheDelPattern(ctx, "ft:people:*")
+	cacheDelPattern(ctx, "ft:relationships:*")
 	return &out, nil
 }
 
 func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getAllFamiliesRepo").End()
+
+	cacheKey := cacheKeyFamilies(ownedBy)
+	if cached, ok := cacheGet[[]*Family](ctx, cacheKey); ok {
+		return cached, nil
+	}
+
 	col := MongoDB.Collection("families")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -595,6 +633,7 @@ func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error
 
 		res = append(res, &f)
 	}
+	cacheSet(ctx, cacheKey, res, cacheTTLFamilies)
 	return res, nil
 }
 
@@ -708,6 +747,7 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 		out.Person = &p
 	}
 
+	cacheDelPattern(ctx, "ft:families:*")
 	return &out, nil
 }
 
@@ -811,6 +851,7 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 		return nil, err
 	}
 
+	cacheDelPattern(ctx, "ft:families:*")
 	return &out, nil
 }
 
@@ -862,6 +903,12 @@ func repoFindUsers(ctx context.Context, filter interface{}) ([]User, error) {
 // Relationship repository functions
 func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Relationship, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getRelationshipsByPersonIdRepo").End()
+
+	cacheKey := cacheKeyRelationships(personId)
+	if cached, ok := cacheGet[[]*Relationship](ctx, cacheKey); ok {
+		return cached, nil
+	}
+
 	col := MongoDB.Collection("relationships")
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -1017,6 +1064,7 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Re
 		}
 	}
 
+	cacheSet(ctx, cacheKey, res, cacheTTLRelationships)
 	return res, nil
 }
 
@@ -1042,6 +1090,21 @@ func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	_, err := col.InsertMany(ctx, docs)
+	if err == nil {
+		// Invalidate cached relationships and individual person data for every person involved.
+		seen := map[string]struct{}{}
+		for _, r := range rels {
+			if _, ok := seen[r.From]; !ok {
+				cacheDel(ctx, cacheKeyRelationships(r.From), cacheKeyPerson(r.From))
+				seen[r.From] = struct{}{}
+			}
+			if _, ok := seen[r.To]; !ok {
+				cacheDel(ctx, cacheKeyRelationships(r.To), cacheKeyPerson(r.To))
+				seen[r.To] = struct{}{}
+			}
+		}
+		cacheDelPattern(ctx, "ft:people:*")
+	}
 	return err
 }
 
@@ -1072,6 +1135,11 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 		return nil, err
 	}
 	out.ID = r.ID
+	cacheDel(ctx,
+		cacheKeyRelationships(r.From), cacheKeyRelationships(r.To),
+		cacheKeyPerson(r.From), cacheKeyPerson(r.To),
+	)
+	cacheDelPattern(ctx, "ft:people:*")
 	return &out, nil
 }
 
@@ -1098,5 +1166,11 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 	// Soft delete: set deleted flag instead of removing
 	update := bson.M{"$set": bson.M{"deleted": true, "deletedAt": time.Now()}}
 	_, err := col.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}}, update)
+	if err == nil {
+		// Person IDs are unknown from relationship IDs alone — flush all related caches.
+		cacheDelPattern(ctx, "ft:relationships:*")
+		cacheDelPattern(ctx, "ft:person:*")
+		cacheDelPattern(ctx, "ft:people:*")
+	}
 	return err
 }
