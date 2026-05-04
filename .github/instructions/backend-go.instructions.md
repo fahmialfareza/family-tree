@@ -1,48 +1,34 @@
 ---
 name: "Backend Go coding conventions"
-description: "Coding conventions for Go files"
-applyTo: "apps/backend/**/*.go"
+description: "Coding conventions for Go files in apps/backend-go"
+applyTo: "apps/backend-go/**/*.go"
 ---
 
-# Copilot Instructions — apps/backend
+# Copilot Instructions — apps/backend-go
 
 ## Purpose
 
-Guidance for working in the Go backend:
-
-- Gin Gonic framework for HTTP handling.
-- MVC architecture and patterns which have `controllers/`, `models/`, and `pkg/`.
+Guidance for working in the primary Go backend.
 
 ## Key points
 
-- Language: Go. Use idiomatic Go patterns (`context.Context`, error handling). Run `gofmt`.
+- Language: Go. Use idiomatic Go patterns, including explicit error handling and `context.Context` where the surrounding code already uses it.
 - Structure:
-  - `docker` contains Docker-related files and configurations.
-  - `internal` contains internal packages not meant for external use.
-    - `auth.go` handles authentication logic.
-    - `cache.go` manages caching mechanisms.
-    - `db.go` manages database connections and queries.
-    - `*_controller.go` files define HTTP handlers for different routes.
-    - `middleware.go` contains middleware functions for request processing.
-    - `models.go` defines data models used across the application.
-    - `newrelic.go` integrates New Relic monitoring.
-    - `routes.go` sets up the routing for the application.
-    - `store.go` manages data storage and retrieval logic.
-    - `upload.go` handles file upload functionality.
-    - `utils.go` contains utility functions used across the application.
-  - `tmp` is for temporary files and should be ignored in version control.
-  - `go.mod` and `go.sum` manage dependencies.
-  - `main.go` is the entry point of the application.
-  - `Readme.md` provides documentation for the backend application.
+  - `internal/` contains the application packages and request handling logic.
+  - `*_controller.go` files handle routes and should stay thin.
+  - Shared logic should be reused through the existing `internal/` packages rather than duplicated in handlers.
+  - `main.go` is the entry point.
 
 ## Run
 
-- Common tasks: `cd apps/backend` and use existing `bin/` artifacts for reference.
-- Alternatively, run with VSCode debugger.
+- Build: `cd apps/backend-go && go build ./...`
+- Dev: `cd apps/backend-go && go run ./main.go`
 
 ## Style & safety
 
-- Use `gofmt`/`go vet`. Keep handlers thin; move business logic into usecases.
+- Run `gofmt` and prefer the narrowest useful validation command.
+- Keep handlers thin and push reusable behavior into the existing `internal/` packages.
+- Avoid creating parallel layers when an `internal/` package already owns the behavior.
 
 ## Examples of good prompts
 

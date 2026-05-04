@@ -1,27 +1,31 @@
 ---
-name: "Server App Coding Conventions"
-description: "Coding conventions for the Express.js server app"
-applyTo: "apps/server/**/*.ts"
+name: "Legacy Backend Coding Conventions"
+description: "Coding conventions for the legacy Express backend app"
+applyTo: "apps/backend/**/*.ts"
 ---
 
-# [Deprecated] Copilot Instructions — apps/server
+# [Deprecated] Copilot Instructions — apps/backend
 
 ## Purpose
 
-Guidance for working in the Express.js server app.
+Guidance for working in the legacy Express backend app.
 
 ## Key points
 
-- Language: TypeScript. Follow `tsconfig.json`, and existing component patterns.
+- This app is maintenance-only. Avoid adding new features here unless the task explicitly targets the legacy backend.
+- Language: TypeScript. Follow the existing Express, DTO, repository, and service patterns.
 
 ## Run & test
 
-- Install & dev: `pnpm --filter server install && pnpm --filter server dev`.
-- Lint/format: use repo ESLint/config rules present in the project.
+- Dev: `pnpm --filter backend dev`
+- Lint: `pnpm --filter backend lint`
+- Type-check: `pnpm --filter backend typecheck`
 
 ## Style & safety
 
-- Keep accessibility and responsiveness in mind.
+- Keep changes localized.
+- Reuse the existing controller, service, and repository structure.
+- Preserve API behavior unless the task explicitly changes it.
 
 ## Examples of good prompts
 
