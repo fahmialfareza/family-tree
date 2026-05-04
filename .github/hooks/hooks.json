@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "hooks": {
+    "postToolUse": [
+      {
+        "type": "command",
+        "bash": "./.github/hooks/scripts/post-edit-format.sh",
+        "comment": "Auto-format files after Copilot edits them",
+        "cwd": ".",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}
