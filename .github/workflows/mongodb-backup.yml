@@ -1,0 +1,102 @@
+name: Weekly MongoDB Backup
+
+on:
+  schedule:
+    - cron: "0 17 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      MONGODB_URI: ${{ secrets['MONGO_URI'] }}
+      R2_ACCOUNT_ID: ${{ secrets['R2_ACCOUNT_ID'] }}
+      R2_BUCKET: ${{ secrets['R2_BUCKET'] }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install MongoDB Database Tools
+        run: |
+          set -euo pipefail
+
+          tool_version="100.13.0"
+          archive_name="mongodb-database-tools-ubuntu2404-x86_64-${tool_version}.tgz"
+          download_url="https://fastdl.mongodb.org/tools/db/${archive_name}"
+
+          curl -fsSL "${download_url}" -o mongodb-database-tools.tgz
+          tar -xzf mongodb-database-tools.tgz
+          sudo install -m 0755 mongodb-database-tools-*/bin/mongodump /usr/local/bin/mongodump
+
+      - name: Install AWS CLI
+        run: |
+          set -euo pipefail
+
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+
+      - name: Create backup archive
+        id: backup
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${MONGODB_URI}" ]]; then
+            echo "MONGODB_URI secret is not set or empty." >&2
+            exit 1
+          fi
+
+          timestamp="$(date -u +'%Y-%m-%d-%H%M%S')"
+          backup_filename="catetin-mongodb-${timestamp}.archive.gz"
+          backup_path="${RUNNER_TEMP}/${backup_filename}"
+
+          mongodump --uri="${MONGODB_URI}" --archive="${backup_path}" --gzip
+
+          if [[ ! -s "${backup_path}" ]]; then
+            echo "Backup archive was not created." >&2
+            exit 1
+          fi
+
+          echo "backup_filename=${backup_filename}" >> "${GITHUB_OUTPUT}"
+          echo "backup_path=${backup_path}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload backup to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets['R2_ACCESS_KEY_ID'] }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets['R2_SECRET_ACCESS_KEY'] }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+
+          endpoint_url="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          aws s3 cp \
+            "${{ steps.backup.outputs.backup_path }}" \
+            "s3://${R2_BUCKET}/mongodb/weekly/${{ steps.backup.outputs.backup_filename }}" \
+            --endpoint-url "${endpoint_url}" \
+            --only-show-errors
+
+      - name: Delete backups older than 4 weeks
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets['R2_ACCESS_KEY_ID'] }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets['R2_SECRET_ACCESS_KEY'] }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+
+          endpoint_url="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          cutoff="$(date -u -d '28 days ago' +'%Y-%m-%d')"
+
+          aws s3 ls "s3://${R2_BUCKET}/mongodb/weekly/" \
+            --endpoint-url "${endpoint_url}" | \
+          while read -r date _time _size filename; do
+            if [[ "${date}" < "${cutoff}" ]]; then
+              echo "Deleting old backup: ${filename} (${date})"
+              aws s3 rm "s3://${R2_BUCKET}/mongodb/weekly/${filename}" \
+                --endpoint-url "${endpoint_url}" \
+                --only-show-errors
+            fi
+          done
