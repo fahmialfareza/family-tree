@@ -60,6 +60,7 @@ func getFamilyTree(c *gin.Context) {
 	withParent := mode == "child"
 	inode, err := buildFamilyTree(ctx, personId, withChildren, withParent)
 	if err != nil {
+		newrelic.FromContext(ctx).NoticeError(err)
 		responseError(c, "Failed to build family tree", 500)
 		return
 	}
@@ -80,23 +81,77 @@ func getFamilyTree(c *gin.Context) {
 
 func buildFamilyTree(ctx context.Context, personId string, withChildren bool, withParent bool) (internalNode, error) {
 	defer newrelic.StartSegment(newrelic.FromContext(ctx), "service/buildFamilyTree").End()
+	debug := os.Getenv("TREE_DEBUG") == "1"
 
-	// helper to recursively build node
+	// ── Phase 1: BFS to discover all person IDs and pre-load their relationships ────
+	// relsByPerson maps personID → all relationships where that person is From or To.
+	relsByPerson := map[string][]*Relationship{}
+	visited := map[string]struct{}{personId: {}}
+	frontier := []string{personId}
+
+	for len(frontier) > 0 {
+		batchRels, err := getRelationshipsByPersonIdsRepo(ctx, frontier)
+		if err != nil {
+			break // degrade gracefully; build() will use whatever was pre-loaded
+		}
+		var next []string
+		for _, id := range frontier {
+			rels := batchRels[id]
+			relsByPerson[id] = rels
+			for _, rel := range rels {
+				var candidate string
+				if withChildren {
+					if rel.Type == "spouse" {
+						if rel.From == id {
+							candidate = rel.To
+						} else if rel.To == id {
+							candidate = rel.From
+						}
+					} else if rel.Type == "parent" && rel.From == id {
+						candidate = rel.To
+					}
+				}
+				if withParent && rel.Type == "parent" && rel.To == id {
+					candidate = rel.From
+				}
+				if candidate != "" {
+					if _, ok := visited[candidate]; !ok {
+						visited[candidate] = struct{}{}
+						next = append(next, candidate)
+					}
+				}
+			}
+		}
+		frontier = next
+	}
+
+	if debug {
+		fmt.Printf("[TREE] pre-loaded %d person IDs via BFS\n", len(visited))
+	}
+
+	// ── Phase 2: Bulk-load all person documents in one DB round-trip ─────────────
+	allIDs := make([]string, 0, len(visited))
+	for id := range visited {
+		allIDs = append(allIDs, id)
+	}
+	personsByID, err := getPersonsByIdsRepo(ctx, allIDs)
+	if err != nil {
+		return internalNode{}, err
+	}
+
+	// ── Phase 3: Build tree in-memory using pre-loaded maps (no DB calls) ─────────
 	var build func(id string, wc bool, wp bool) (internalNode, error)
 	build = func(id string, wc bool, wp bool) (internalNode, error) {
-		p, err := getPersonByIdRepo(ctx, id)
-		if err != nil {
-			return internalNode{}, err
+		p, ok := personsByID[id]
+		if !ok {
+			return internalNode{}, fmt.Errorf("person %s not found in preloaded data", id)
 		}
-		debug := os.Getenv("TREE_DEBUG") == "1"
-		// fetch relationships for this node (important: per-node relationships)
-		rels, err := getRelationshipsByPersonIdRepo(ctx, id)
-		if err != nil {
-			rels = []*Relationship{}
-		}
+		rels := relsByPerson[id]
+
 		if debug {
 			fmt.Printf("[TREE] node=%s rels=%d wc=%v wp=%v\n", id, len(rels), wc, wp)
 		}
+
 		node := internalNode{
 			ID:     p.ID,
 			Name:   p.Nickname,
@@ -110,7 +165,6 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 		}
 
 		if wc {
-			// find spouse ids
 			spouseSet := map[string]struct{}{}
 			for _, rel := range rels {
 				if rel.Type == "spouse" {
@@ -122,9 +176,8 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				}
 			}
 
-			// get my children ids
 			myChildrenSet := map[string]struct{}{}
-			childOrderMap := map[string]int{} // Track order for each child
+			childOrderMap := map[string]int{}
 			for _, rel := range rels {
 				if rel.Type == "parent" && rel.From == id {
 					myChildrenSet[rel.To] = struct{}{}
@@ -132,11 +185,10 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				}
 			}
 
-			// For each spouse, find shared children and build spouse nodes
 			sharedChildrenSet := map[string]struct{}{}
 			spouseNodes := []internalNode{}
 			for spouseId := range spouseSet {
-				spouseRels, _ := getRelationshipsByPersonIdRepo(ctx, spouseId)
+				spouseRels := relsByPerson[spouseId] // pre-loaded; no DB call
 				spouseChildrenSet := map[string]struct{}{}
 				for _, srel := range spouseRels {
 					if srel.Type == "parent" && srel.From == spouseId {
@@ -144,7 +196,6 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 					}
 				}
 
-				// Create a list of shared children with their orders
 				type childWithOrder struct {
 					id    string
 					order int
@@ -152,15 +203,10 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				sharedChildrenList := []childWithOrder{}
 				for cid := range myChildrenSet {
 					if _, ok := spouseChildrenSet[cid]; ok {
-						sharedChildrenList = append(sharedChildrenList, childWithOrder{
-							id:    cid,
-							order: childOrderMap[cid],
-						})
+						sharedChildrenList = append(sharedChildrenList, childWithOrder{id: cid, order: childOrderMap[cid]})
 						sharedChildrenSet[cid] = struct{}{}
 					}
 				}
-
-				// Sort shared children by order
 				sort.Slice(sharedChildrenList, func(i, j int) bool {
 					return sharedChildrenList[i].order < sharedChildrenList[j].order
 				})
@@ -176,8 +222,8 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 					}
 				}
 
-				sp, err := getPersonByIdRepo(ctx, spouseId)
-				if err == nil {
+				sp, ok := personsByID[spouseId] // pre-loaded; no DB call
+				if ok {
 					if debug {
 						fmt.Printf("[TREE]  spouse node=%s has %d children\n", spouseId, len(children))
 					}
@@ -190,7 +236,6 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				}
 			}
 
-			// children not associated with any spouse
 			type childWithOrder struct {
 				id    string
 				order int
@@ -198,14 +243,9 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 			singleChildrenList := []childWithOrder{}
 			for cid := range myChildrenSet {
 				if _, ok := sharedChildrenSet[cid]; !ok {
-					singleChildrenList = append(singleChildrenList, childWithOrder{
-						id:    cid,
-						order: childOrderMap[cid],
-					})
+					singleChildrenList = append(singleChildrenList, childWithOrder{id: cid, order: childOrderMap[cid]})
 				}
 			}
-
-			// Sort single children by order
 			sort.Slice(singleChildrenList, func(i, j int) bool {
 				return singleChildrenList[i].order < singleChildrenList[j].order
 			})
@@ -221,7 +261,6 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				}
 			}
 
-			// assemble children: single children first, then spouse entries stored on Spouses
 			for _, sc := range singleChildren {
 				node.Children = append(node.Children, sc)
 			}
@@ -231,9 +270,7 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 		}
 
 		if wp {
-			// find parents (relationships where type==parent and rel.to == id)
 			parentIdsSet := map[string]struct{}{}
-			// find parents using relationships for this node
 			for _, rel := range rels {
 				if rel.Type == "parent" && rel.To == id {
 					parentIdsSet[rel.From] = struct{}{}
@@ -255,24 +292,22 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 		return node, nil
 	}
 
-	// kick off based on flags
+	if !withChildren && !withParent {
+		person, ok := personsByID[personId]
+		if !ok {
+			return internalNode{}, fmt.Errorf("person %s not found", personId)
+		}
+		return internalNode{
+			ID:       person.ID,
+			Name:     person.Nickname,
+			Gender:   person.Gender,
+			Children: []internalNode{},
+		}, nil
+	}
 	if withChildren {
 		return build(personId, true, false)
 	}
-	if withParent {
-		return build(personId, false, true)
-	}
-	// default: return basic internal node (no flags set)
-	person, err := getPersonByIdRepo(ctx, personId)
-	if err != nil {
-		return internalNode{}, err
-	}
-	return internalNode{
-		ID:       person.ID,
-		Name:     person.Nickname,
-		Gender:   person.Gender,
-		Children: []internalNode{},
-	}, nil
+	return build(personId, false, true)
 }
 
 // transformToD3Tree converts the intermediate internalNode into the D3-friendly node

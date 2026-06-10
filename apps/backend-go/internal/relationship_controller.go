@@ -10,6 +10,7 @@ func getRelationships(c *gin.Context) {
 	id := c.Param("id")
 	rels, err := getRelationshipsByPersonIdRepo(c, id)
 	if err != nil {
+		newrelic.FromContext(c.Request.Context()).NoticeError(err)
 		responseError(c, "Failed to fetch relationships", 500)
 		return
 	}
@@ -42,6 +43,7 @@ func crudRelationships(c *gin.Context) {
 	// implement upsert similar to Node: build inserts and updates
 	existing, err := getRelationshipsByPersonIdRepo(c, id)
 	if err != nil {
+		newrelic.FromContext(c.Request.Context()).NoticeError(err)
 		responseError(c, "Failed to fetch relationships", 500)
 		return
 	}
@@ -110,18 +112,21 @@ func crudRelationships(c *gin.Context) {
 
 	if len(toInsert) > 0 {
 		if err := insertManyRelationshipsRepo(c, toInsert); err != nil {
+			newrelic.FromContext(c.Request.Context()).NoticeError(err)
 			responseError(c, "Failed to insert relationships", 500)
 			return
 		}
 	}
 	for _, up := range toUpdate {
 		if _, err := updateRelationshipRepo(c, up); err != nil {
+			newrelic.FromContext(c.Request.Context()).NoticeError(err)
 			responseError(c, "Failed to update relationships", 500)
 			return
 		}
 	}
 	if len(toDelete) > 0 {
 		if err := deleteRelationshipsRepo(c, toDelete); err != nil {
+			newrelic.FromContext(c.Request.Context()).NoticeError(err)
 			responseError(c, "Failed to delete relationships", 500)
 			return
 		}

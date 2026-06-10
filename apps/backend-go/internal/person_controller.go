@@ -181,38 +181,25 @@ func updatePersonOwnership(c *gin.Context) {
 	p.OwnedBy = body.Owners
 	_, _ = updatePersonRepo(c, p)
 
-	// Get all relationships for this person
+	// Get all relationships for this person and batch-update ownership for related people.
 	rels, err := getRelationshipsByPersonIdRepo(c, id)
 	if err == nil && len(rels) > 0 {
-		// Collect all spouse and child IDs
-		relatedIDs := make(map[string]bool)
-
+		relatedIDs := make(map[string]struct{})
 		for _, rel := range rels {
-			// If this person is 'from' and relationship is spouse or parent (parent means they have children)
-			if rel.From == id {
-				if rel.Type == "spouse" || rel.Type == "parent" {
-					relatedIDs[rel.To] = true
-				}
+			if rel.From == id && (rel.Type == "spouse" || rel.Type == "parent") {
+				relatedIDs[rel.To] = struct{}{}
 			}
-			// If this person is 'to' and relationship is spouse or child
-			if rel.To == id {
-				if rel.Type == "spouse" {
-					relatedIDs[rel.From] = true
-				}
-				// If someone has a child relationship TO this person,
-				// that means this person is the parent, so we include them as child
-				if rel.Type == "child" {
-					relatedIDs[rel.From] = true
-				}
+			if rel.To == id && (rel.Type == "spouse" || rel.Type == "child") {
+				relatedIDs[rel.From] = struct{}{}
 			}
 		}
 
-		// Update ownership for all related people
-		for relatedID := range relatedIDs {
-			if relatedPerson, err := getPersonByIdRepo(c, relatedID); err == nil {
-				relatedPerson.OwnedBy = body.Owners
-				_, _ = updatePersonRepo(c, relatedPerson)
+		if len(relatedIDs) > 0 {
+			ids := make([]string, 0, len(relatedIDs))
+			for rid := range relatedIDs {
+				ids = append(ids, rid)
 			}
+			_ = updateOwnedByBatchRepo(c, ids, body.Owners)
 		}
 	}
 

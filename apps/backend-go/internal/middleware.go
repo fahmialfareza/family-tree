@@ -64,6 +64,21 @@ func RateLimitMiddleware(max int, per time.Duration) gin.HandlerFunc {
 	}
 }
 
+// PanicRecoveryMiddleware catches any unhandled panic, reports it to New Relic,
+// and returns a 500 so the server keeps running.
+func PanicRecoveryMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if r := recover(); r != nil {
+				txn := newrelic.FromContext(c.Request.Context())
+				txn.NoticeError(fmt.Errorf("panic: %v", r))
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error", "status": http.StatusInternalServerError})
+			}
+		}()
+		c.Next()
+	}
+}
+
 // nrredisHook returns a New Relic datastore hook for Redis.
 // Pass opts from redis.ParseURL so segments carry connection details.
 func nrredisHook(opts *redis.Options) redis.Hook {

@@ -60,6 +60,9 @@ func signIn(c *gin.Context) {
 
 func authenticate(roles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		txn := newrelic.FromContext(c.Request.Context())
+		defer newrelic.StartSegment(txn, "middleware/authenticate").End()
+
 		auth := c.GetHeader("Authorization")
 		if auth == "" {
 			responseError(c, "No token provided", 401)
@@ -91,7 +94,6 @@ func authenticate(roles []string) gin.HandlerFunc {
 		case string:
 			id = v
 		case interface{}:
-			// try to stringify
 			id = ""
 			if s, ok := v.(string); ok {
 				id = s
@@ -106,6 +108,7 @@ func authenticate(roles []string) gin.HandlerFunc {
 		}
 		user, err := findUserById(c, id)
 		if err != nil {
+			txn.NoticeError(err)
 			responseError(c, "User not found", 401)
 			c.Abort()
 			return
@@ -127,6 +130,8 @@ func authenticate(roles []string) gin.HandlerFunc {
 			}
 		}
 
+		txn.AddAttribute("user.id", user.ID)
+		txn.AddAttribute("user.role", string(user.Role))
 		c.Set("user", user)
 		c.Next()
 	}

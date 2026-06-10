@@ -457,7 +457,7 @@ func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
 	oid := res.InsertedID.(primitive.ObjectID)
 	created, err := getPersonByIdRepo(ctx, oid.Hex())
 	if err == nil {
-		cacheDelPattern(ctx, "ft:people:*")
+		cacheDel(ctx, cacheKeyPeople(nil), cacheKeyPeople(p.OwnedBy))
 	}
 	return created, err
 }
@@ -497,8 +497,7 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 		return nil, err
 	}
 	out.ID = p.ID
-	cacheDel(ctx, cacheKeyPerson(p.ID))
-	cacheDelPattern(ctx, "ft:people:*")
+	cacheDel(ctx, cacheKeyPerson(p.ID), cacheKeyPeople(nil), cacheKeyPeople(p.OwnedBy))
 	cacheDelPattern(ctx, "ft:relationships:*")
 	return &out, nil
 }
@@ -522,8 +521,7 @@ func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
 		return nil, err
 	}
 	out.ID = id
-	cacheDel(ctx, cacheKeyPerson(id))
-	cacheDelPattern(ctx, "ft:people:*")
+	cacheDel(ctx, cacheKeyPerson(id), cacheKeyPeople(nil))
 	cacheDelPattern(ctx, "ft:relationships:*")
 	return &out, nil
 }
@@ -1062,7 +1060,7 @@ func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error
 				seen[r.To] = struct{}{}
 			}
 		}
-		cacheDelPattern(ctx, "ft:people:*")
+		cacheDel(ctx, cacheKeyPeople(nil))
 	}
 	return err
 }
@@ -1098,7 +1096,7 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 		cacheKeyRelationships(r.From), cacheKeyRelationships(r.To),
 		cacheKeyPerson(r.From), cacheKeyPerson(r.To),
 	)
-	cacheDelPattern(ctx, "ft:people:*")
+	cacheDel(ctx, cacheKeyPeople(nil))
 	return &out, nil
 }
 
@@ -1126,10 +1124,195 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 	update := bson.M{"$set": bson.M{"deleted": true, "deletedAt": time.Now()}}
 	_, err := col.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}}, update)
 	if err == nil {
-		// Person IDs are unknown from relationship IDs alone — flush all related caches in one pass each.
-		for _, pattern := range []string{"ft:relationships:*", "ft:person:*", "ft:people:*"} {
-			cacheDelPattern(ctx, pattern)
+		// Person IDs are unknown from relationship IDs alone — flush relationship and people caches.
+		cacheDelPattern(ctx, "ft:relationships:*")
+		cacheDelPattern(ctx, "ft:person:*")
+		cacheDel(ctx, cacheKeyPeople(nil))
+	}
+	return err
+}
+
+// getRelationshipsByPersonIdsRepo fetches all non-deleted relationships for a batch of person IDs
+// in one DB round-trip. Returns a map of personID → []*Relationship; each relationship is indexed
+// under both its From and To IDs when they appear in the requested set.
+func getRelationshipsByPersonIdsRepo(ctx context.Context, ids []string) (map[string][]*Relationship, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getRelationshipsByPersonIdsRepo").End()
+
+	result := make(map[string][]*Relationship, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	// Build $in values covering both string and ObjectID storage formats.
+	idSet := make(map[string]struct{}, len(ids))
+	allVals := make([]interface{}, 0, len(ids)*2)
+	for _, id := range ids {
+		idSet[id] = struct{}{}
+		allVals = append(allVals, id)
+		if oid, err := primitive.ObjectIDFromHex(id); err == nil {
+			allVals = append(allVals, oid)
 		}
+	}
+
+	col := MongoDB.Collection("relationships")
+	ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	filter := bson.M{
+		"$or": []bson.M{
+			{"from": bson.M{"$in": allVals}},
+			{"to": bson.M{"$in": allVals}},
+		},
+		"deleted": bson.M{"$ne": true},
+	}
+
+	cur, err := col.Find(ctx2, filter)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx2)
+
+	for cur.Next(ctx2) {
+		var doc bson.M
+		if err := cur.Decode(&doc); err != nil {
+			continue
+		}
+		var r Relationship
+		if v, ok := doc["_id"].(primitive.ObjectID); ok {
+			r.ID = v.Hex()
+		}
+		if v, ok := doc["from"].(primitive.ObjectID); ok {
+			r.From = v.Hex()
+		} else if v, ok := doc["from"].(string); ok {
+			r.From = v
+		}
+		if v, ok := doc["to"].(primitive.ObjectID); ok {
+			r.To = v.Hex()
+		} else if v, ok := doc["to"].(string); ok {
+			r.To = v
+		}
+		if v, ok := doc["type"].(string); ok {
+			r.Type = v
+		}
+		if v, ok := doc["order"].(int32); ok {
+			r.Order = int(v)
+		}
+		// Index under both From and To when they appear in the requested ID set.
+		if _, ok := idSet[r.From]; ok {
+			result[r.From] = append(result[r.From], &r)
+		}
+		if _, ok := idSet[r.To]; ok {
+			result[r.To] = append(result[r.To], &r)
+		}
+	}
+	return result, nil
+}
+
+// getPersonsByIdsRepo fetches basic person data (ID, Name, Nickname, Gender) for a batch of IDs
+// in one DB round-trip. Uses individual cache entries where available; does not write back.
+// Returns a map of personID → *Person.
+func getPersonsByIdsRepo(ctx context.Context, ids []string) (map[string]*Person, error) {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getPersonsByIdsRepo").End()
+
+	result := make(map[string]*Person, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	// Use cached full-person entries where available (avoids a DB call per cache hit).
+	var missing []string
+	for _, id := range ids {
+		if cached, ok := cacheGet[*Person](ctx, cacheKeyPerson(id)); ok {
+			result[id] = cached
+		} else {
+			missing = append(missing, id)
+		}
+	}
+	if len(missing) == 0 {
+		return result, nil
+	}
+
+	oids := make([]primitive.ObjectID, 0, len(missing))
+	for _, id := range missing {
+		if oid, err := primitive.ObjectIDFromHex(id); err == nil {
+			oids = append(oids, oid)
+		}
+	}
+	if len(oids) == 0 {
+		return result, nil
+	}
+
+	col := MongoDB.Collection("people")
+	ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	cur, err := col.Find(ctx2, bson.M{"_id": bson.M{"$in": oids}, "deleted": bson.M{"$ne": true}})
+	if err != nil {
+		return result, err
+	}
+	defer cur.Close(ctx2)
+
+	for cur.Next(ctx2) {
+		var doc bson.M
+		if err := cur.Decode(&doc); err != nil {
+			continue
+		}
+		var p Person
+		if v, ok := doc["_id"].(primitive.ObjectID); ok {
+			p.ID = v.Hex()
+		}
+		if v, ok := doc["name"].(string); ok {
+			p.Name = v
+		}
+		if v, ok := doc["nickname"].(string); ok {
+			p.Nickname = v
+		}
+		if v, ok := doc["gender"].(string); ok {
+			p.Gender = v
+		}
+		if p.ID != "" {
+			result[p.ID] = &p
+		}
+	}
+	return result, nil
+}
+
+// updateOwnedByBatchRepo updates ownedBy for multiple people in a single UpdateMany call.
+func updateOwnedByBatchRepo(ctx context.Context, ids []string, owners []string) error {
+	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/updateOwnedByBatchRepo").End()
+	if len(ids) == 0 {
+		return nil
+	}
+
+	oids := make([]primitive.ObjectID, 0, len(ids))
+	for _, id := range ids {
+		if oid, err := primitive.ObjectIDFromHex(id); err == nil {
+			oids = append(oids, oid)
+		}
+	}
+	if len(oids) == 0 {
+		return nil
+	}
+
+	ownerOIDs := make([]primitive.ObjectID, 0, len(owners))
+	for _, ownerID := range owners {
+		if oid, err := primitive.ObjectIDFromHex(ownerID); err == nil {
+			ownerOIDs = append(ownerOIDs, oid)
+		}
+	}
+
+	col := MongoDB.Collection("people")
+	ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	_, err := col.UpdateMany(ctx2, bson.M{"_id": bson.M{"$in": oids}}, bson.M{"$set": bson.M{"ownedBy": ownerOIDs}})
+	if err == nil {
+		delKeys := make([]string, 0, len(ids)+2)
+		for _, id := range ids {
+			delKeys = append(delKeys, cacheKeyPerson(id))
+		}
+		delKeys = append(delKeys, cacheKeyPeople(nil), cacheKeyPeople(owners))
+		cacheDel(ctx, delKeys...)
 	}
 	return err
 }

@@ -57,8 +57,11 @@ func main() {
 
 	r.Use(cors.New(config))
 
-	// New Relic middleware
+	// New Relic middleware — must be registered before PanicRecovery so txn is in context
 	r.Use(nrgin.Middleware(nrApp))
+
+	// Panic recovery — reports panics to New Relic and returns 500
+	r.Use(app.PanicRecoveryMiddleware())
 
 	// Compression
 	r.Use(gzip.Gzip(gzip.DefaultCompression))
