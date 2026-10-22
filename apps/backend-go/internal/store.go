@@ -498,7 +498,7 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 	}
 	out.ID = p.ID
 	cacheDel(ctx, cacheKeyPerson(p.ID), cacheKeyPeople(nil), cacheKeyPeople(p.OwnedBy))
-	cacheDelPattern(ctx, "ft:relationships:*")
+	cacheDelPattern(ctx, redisKeyPrefix+"relationships:*")
 	return &out, nil
 }
 
@@ -522,7 +522,7 @@ func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
 	}
 	out.ID = id
 	cacheDel(ctx, cacheKeyPerson(id), cacheKeyPeople(nil))
-	cacheDelPattern(ctx, "ft:relationships:*")
+	cacheDelPattern(ctx, redisKeyPrefix+"relationships:*")
 	return &out, nil
 }
 
@@ -774,7 +774,7 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 		return nil, err
 	}
 	oid := res.InsertedID.(primitive.ObjectID)
-	cacheDelPattern(ctx, "ft:families:*")
+	cacheDelPattern(ctx, redisKeyPrefix+"families:*")
 	return getFamilyByIdRepo(ctx, oid.Hex())
 }
 
@@ -800,7 +800,7 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 	}
 
 	cacheDel(ctx, cacheKeyFamily(id))
-	cacheDelPattern(ctx, "ft:families:*")
+	cacheDelPattern(ctx, redisKeyPrefix+"families:*")
 	return out, nil
 }
 
@@ -1125,8 +1125,8 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 	_, err := col.UpdateMany(ctx, bson.M{"_id": bson.M{"$in": objIDs}}, update)
 	if err == nil {
 		// Person IDs are unknown from relationship IDs alone — flush relationship and people caches.
-		cacheDelPattern(ctx, "ft:relationships:*")
-		cacheDelPattern(ctx, "ft:person:*")
+		cacheDelPattern(ctx, redisKeyPrefix+"relationships:*")
+		cacheDelPattern(ctx, redisKeyPrefix+"person:*")
 		cacheDel(ctx, cacheKeyPeople(nil))
 	}
 	return err

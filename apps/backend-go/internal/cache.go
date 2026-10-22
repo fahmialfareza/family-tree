@@ -20,42 +20,45 @@ const (
 	cacheTTLUsers         = 5 * time.Minute
 )
 
-func cacheKeyUser(id string) string      { return "ft:user:" + id }
-func cacheKeyUsername(u string) string   { return "ft:username:" + u }
+// redisKeyPrefix namespaces every Redis key written by this service.
+const redisKeyPrefix = "family-tree:"
+
+func cacheKeyUser(id string) string    { return redisKeyPrefix + "user:" + id }
+func cacheKeyUsername(u string) string { return redisKeyPrefix + "username:" + u }
 
 // cacheKeyUsersList is the cache key for the non-admin user list (role=user, not deleted).
 // Scoped to the single call site in repoFindUsers — do not reuse for other filters.
-func cacheKeyUsersList() string { return "ft:users:list" }
+func cacheKeyUsersList() string { return redisKeyPrefix + "users:list" }
 
 func cacheKeyPerson(id string) string {
-	return "ft:person:" + id
+	return redisKeyPrefix + "person:" + id
 }
 
 func cacheKeyPeople(ownedBy []string) string {
 	if len(ownedBy) == 0 {
-		return "ft:people:all"
+		return redisKeyPrefix + "people:all"
 	}
 	sorted := make([]string, len(ownedBy))
 	copy(sorted, ownedBy)
 	sort.Strings(sorted)
-	return "ft:people:users:" + strings.Join(sorted, ",")
+	return redisKeyPrefix + "people:users:" + strings.Join(sorted, ",")
 }
 
 func cacheKeyRelationships(personID string) string {
-	return "ft:relationships:" + personID
+	return redisKeyPrefix + "relationships:" + personID
 }
 
 func cacheKeyFamilies(ownedBy []string) string {
 	if len(ownedBy) == 0 {
-		return "ft:families:all"
+		return redisKeyPrefix + "families:all"
 	}
 	sorted := make([]string, len(ownedBy))
 	copy(sorted, ownedBy)
 	sort.Strings(sorted)
-	return "ft:families:users:" + strings.Join(sorted, ",")
+	return redisKeyPrefix + "families:users:" + strings.Join(sorted, ",")
 }
 
-func cacheKeyFamily(id string) string { return "ft:family:" + id }
+func cacheKeyFamily(id string) string { return redisKeyPrefix + "family:" + id }
 
 // cacheGet deserializes a cached value. Returns (value, true) on hit, zero+false on miss.
 func cacheGet[T any](ctx context.Context, key string) (T, bool) {

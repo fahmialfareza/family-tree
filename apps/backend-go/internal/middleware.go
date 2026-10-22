@@ -41,7 +41,7 @@ func RateLimitMiddleware(max int, per time.Duration) gin.HandlerFunc {
 		ip := c.ClientIP()
 		now := time.Now().Unix()
 		windowSec := int64(per.Seconds())
-		key := "rl:sz:" + ip
+		key := redisKeyPrefix + "rl:sz:" + ip
 		maxScore := fmt.Sprintf("%d", now-windowSec)
 		member := fmt.Sprintf("%d-%d", now, time.Now().UnixNano()%1000)
 
