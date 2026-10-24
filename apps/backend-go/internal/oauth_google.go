@@ -318,7 +318,7 @@ func googleExchange(c *gin.Context) {
 		abortServerError(c, err)
 		return
 	}
-	pair, err := createSession(c, user, c.Request.UserAgent(), c.ClientIP(), true)
+	pair, err := createSession(c, user, c.Request.UserAgent(), clientIP(c), true)
 	if err != nil {
 		abortServerError(c, err)
 		return

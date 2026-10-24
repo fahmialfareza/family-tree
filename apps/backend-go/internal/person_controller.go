@@ -1,8 +1,11 @@
 package app
 
 import (
+	"errors"
 	"fmt"
-	"time"
+	"log/slog"
+	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -12,12 +15,50 @@ import (
 func getAllPeople(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getAllPeople").End()
 	access := currentAccess(c)
+	if _, paged := c.GetQuery("limit"); paged {
+		getPeoplePage(c, access)
+		return
+	}
 	people, err := repoGetAllPeople(c, access.TreeID, access.listOwnerFilter())
 	if err != nil {
 		abortServerError(c, err)
 		return
 	}
 	responseSuccess(c, people, 200)
+}
+
+const maxPeoplePageSize = 200
+
+// getPeoplePage serves ?limit=1..200[&cursor=...][&q=...]: {items, nextCursor} in (created_at, id) order.
+func getPeoplePage(c *gin.Context, access *treeAccess) {
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil || limit < 1 || limit > maxPeoplePageSize {
+		responseError(c, fmt.Sprintf("limit must be between 1 and %d", maxPeoplePageSize), 400)
+		return
+	}
+	var after *peopleCursor
+	if raw := c.Query("cursor"); raw != "" {
+		if after, err = decodePeopleCursor(raw); err != nil {
+			responseError(c, "Invalid cursor", 400)
+			return
+		}
+	}
+	q := strings.TrimSpace(c.Query("q"))
+	if tooLong(q, maxPersonNameLength) {
+		responseError(c, "Search query is too long", 400)
+		return
+	}
+	items, next, err := repoGetPeoplePage(c, access.TreeID, access.listOwnerFilter(), limit, after, q)
+	if err != nil {
+		abortServerError(c, err)
+		return
+	}
+	var nextCursor *string
+	if next != nil {
+		s := next.encode()
+		nextCursor = &s
+	}
+	responseSuccess(c, gin.H{"items": items, "nextCursor": nextCursor}, 200)
 }
 
 func getPersonById(c *gin.Context) {
@@ -33,64 +74,16 @@ func getPersonById(c *gin.Context) {
 
 func createPerson(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/createPerson").End()
-	// accept multipart/form-data or json
-	name := c.PostForm("name")
-	nickname := c.PostForm("nickname")
-	address := c.PostForm("address")
-	status := c.PostForm("status")
-	gender := c.PostForm("gender")
-	birthDateStr := c.PostForm("birthDate")
-	phone := c.PostForm("phone")
-
-	if name == "" || nickname == "" || address == "" || (status != "alive" && status != "deceased") || (gender != "male" && gender != "female") {
-		responseError(c, "Invalid request body", 400)
+	person := &Person{TreeID: currentAccess(c).TreeID, OwnedBy: []string{currentUser(c).ID}}
+	if msg := bindPersonForm(c, person, true); msg != "" {
+		responseError(c, msg, 400)
 		return
 	}
-
-	var birthDate time.Time
-	if birthDateStr != "" {
-		t, err := time.Parse(time.RFC3339, birthDateStr)
-		if err != nil {
-			// try parse date only
-			t2, err2 := time.Parse("2006-01-02", birthDateStr)
-			if err2 != nil {
-				responseError(c, "Invalid birth date", 400)
-				return
-			}
-			birthDate = t2
-		} else {
-			birthDate = t
-		}
+	photoURL, ok := receivePhoto(c)
+	if !ok {
+		return
 	}
-
-	var photoURL string
-	file, err := c.FormFile("photo")
-	if err == nil && file != nil {
-		url, err := uploadImage(c, "photo")
-		if err != nil {
-			fmt.Printf("[ERROR] createPerson - Failed to upload photo: %v\n", err)
-			responseError(c, fmt.Sprintf("Failed to upload photo: %v", err), 500)
-			return
-		}
-		photoURL = url
-	}
-
-	user := currentUser(c)
-
-	id := fmt.Sprintf("p-%d", time.Now().UnixNano())
-	person := &Person{
-		ID:        id,
-		TreeID:    currentAccess(c).TreeID,
-		Name:      name,
-		Nickname:  nickname,
-		Address:   address,
-		Status:    status,
-		Gender:    gender,
-		BirthDate: birthDate,
-		Phone:     phone,
-		PhotoURL:  photoURL,
-		OwnedBy:   []string{user.ID},
-	}
+	person.PhotoURL = photoURL
 
 	newPerson, err := createPersonRepo(c, person)
 	if err != nil {
@@ -107,59 +100,19 @@ func updatePerson(c *gin.Context) {
 	if !requireWritePerson(c, id) {
 		return
 	}
-	name := c.PostForm("name")
-	nickname := c.PostForm("nickname")
-	address := c.PostForm("address")
-	status := c.PostForm("status")
-	gender := c.PostForm("gender")
-	birthDateStr := c.PostForm("birthDate")
-	phone := c.PostForm("phone")
-
-	if name == "" || nickname == "" || address == "" || (status != "alive" && status != "deceased") || (gender != "male" && gender != "female") {
-		responseError(c, "Invalid request body", 400)
-		return
-	}
-
-	var birthDate time.Time
-	if birthDateStr != "" {
-		t, err := time.Parse(time.RFC3339, birthDateStr)
-		if err != nil {
-			t2, err2 := time.Parse("2006-01-02", birthDateStr)
-			if err2 != nil {
-				responseError(c, "Invalid birth date", 400)
-				return
-			}
-			birthDate = t2
-		} else {
-			birthDate = t
-		}
-	}
-
 	p, err := getPersonByIdRepo(c, currentAccess(c).TreeID, id)
 	if err != nil {
 		responseError(c, "Person not found", 404)
 		return
 	}
-
-	var photoURL string
-	file, err := c.FormFile("photo")
-	if err == nil && file != nil {
-		url, err := uploadImage(c, "photo")
-		if err != nil {
-			fmt.Printf("[ERROR] updatePerson - Failed to upload photo: %v\n", err)
-			responseError(c, fmt.Sprintf("Failed to upload photo: %v", err), 500)
-			return
-		}
-		photoURL = url
+	if msg := bindPersonForm(c, p, false); msg != "" {
+		responseError(c, msg, 400)
+		return
 	}
-
-	p.Name = name
-	p.Nickname = nickname
-	p.Address = address
-	p.Status = status
-	p.Gender = gender
-	p.BirthDate = birthDate
-	p.Phone = phone
+	photoURL, ok := receivePhoto(c)
+	if !ok {
+		return
+	}
 	if photoURL != "" {
 		p.PhotoURL = photoURL
 	}
@@ -170,6 +123,27 @@ func updatePerson(c *gin.Context) {
 		return
 	}
 	responseSuccess(c, updated, 200)
+}
+
+// receivePhoto uploads the optional "photo" file. It returns "" when none was sent, and false after
+// writing an error response.
+func receivePhoto(c *gin.Context) (string, bool) {
+	if file, err := c.FormFile("photo"); err != nil || file == nil {
+		return "", true
+	}
+	url, err := uploadImage(c, "photo")
+	if err != nil {
+		var uerr *uploadError
+		if errors.As(err, &uerr) {
+			responseError(c, uerr.message, uerr.status)
+			return "", false
+		}
+		newrelic.FromContext(c.Request.Context()).NoticeError(err)
+		slog.ErrorContext(c, "photo upload failed", "request_id", requestID(c), "error", err)
+		responseError(c, "Failed to upload photo", 500)
+		return "", false
+	}
+	return url, true
 }
 
 func updatePersonOwnership(c *gin.Context) {

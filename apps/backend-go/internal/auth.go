@@ -146,7 +146,7 @@ func signIn(c *gin.Context) {
 	if user == nil {
 		return
 	}
-	pair, err := createSession(c, user, c.Request.UserAgent(), c.ClientIP(), false)
+	pair, err := createSession(c, user, c.Request.UserAgent(), clientIP(c), false)
 	if err != nil {
 		abortServerError(c, err)
 		return
@@ -169,7 +169,7 @@ func login(c *gin.Context) {
 	if user == nil {
 		return
 	}
-	pair, err := createSession(c, user, c.Request.UserAgent(), c.ClientIP(), true)
+	pair, err := createSession(c, user, c.Request.UserAgent(), clientIP(c), true)
 	if err != nil {
 		abortServerError(c, err)
 		return
@@ -253,7 +253,7 @@ func refreshTokens(c *gin.Context) {
 		responseError(c, "Invalid request body", 400)
 		return
 	}
-	pair, err := rotateRefreshToken(c, body.RefreshToken, c.Request.UserAgent(), c.ClientIP())
+	pair, err := rotateRefreshToken(c, body.RefreshToken, c.Request.UserAgent(), clientIP(c))
 	if errors.Is(err, errSessionInvalid) {
 		responseError(c, "Session expired, please sign in again", 401)
 		return
@@ -374,7 +374,7 @@ func verifyEmail(c *gin.Context) {
 		return
 	}
 	activated.EmailVerified, activated.Pending = true, false
-	pair, err := createSession(c, activated, c.Request.UserAgent(), c.ClientIP(), true)
+	pair, err := createSession(c, activated, c.Request.UserAgent(), clientIP(c), true)
 	if err != nil {
 		abortServerError(c, err)
 		return

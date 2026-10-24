@@ -78,17 +78,26 @@ func (treeMemberRow) TableName() string { return "tree_members" }
 
 type personRow struct {
 	RowBase
-	TreeID        string `gorm:"type:text"`
-	Name          string
-	Nickname      string
-	Address       string
-	Status        string
-	Gender        string
-	BirthDate     *time.Time
-	Phone         string
-	PhotoURL      string
-	OwnerLinks    []personOwner     `gorm:"foreignKey:PersonID;constraint:OnDelete:CASCADE"`
-	Relationships []relationshipRow `gorm:"foreignKey:FromID"`
+	TreeID    string `gorm:"type:text"`
+	Name      string
+	Nickname  string
+	Address   string
+	Status    string
+	Gender    string
+	BirthDate *time.Time
+	// Partial dates and details (migration 00004); NULL when unknown.
+	BirthDatePrecision *string
+	BirthDateQualifier *string
+	DeathDate          *time.Time
+	DeathDatePrecision *string
+	DeathDateQualifier *string
+	BirthPlace         *string
+	DeathPlace         *string
+	Notes              *string
+	Phone              string
+	PhotoURL           string
+	OwnerLinks         []personOwner     `gorm:"foreignKey:PersonID;constraint:OnDelete:CASCADE"`
+	Relationships      []relationshipRow `gorm:"foreignKey:FromID"`
 }
 
 func (personRow) TableName() string { return "people" }
@@ -168,9 +177,21 @@ func (p *personRow) toModel() *Person {
 		PhotoURL: p.PhotoURL,
 		OwnedBy:  []string{},
 	}
+	// pgx returns timestamptz in the server's local zone; dates are periods anchored in UTC.
 	if p.BirthDate != nil {
-		out.BirthDate = *p.BirthDate
+		out.BirthDate = p.BirthDate.UTC()
 	}
+	if p.DeathDate != nil {
+		dd := p.DeathDate.UTC()
+		out.DeathDate = &dd
+	}
+	out.BirthDatePrecision = deref(p.BirthDatePrecision)
+	out.BirthDateQualifier = deref(p.BirthDateQualifier)
+	out.DeathDatePrecision = deref(p.DeathDatePrecision)
+	out.DeathDateQualifier = deref(p.DeathDateQualifier)
+	out.BirthPlace = deref(p.BirthPlace)
+	out.DeathPlace = deref(p.DeathPlace)
+	out.Notes = deref(p.Notes)
 	for _, l := range p.OwnerLinks {
 		out.OwnedBy = append(out.OwnedBy, l.UserID)
 		if l.Owner != nil {
@@ -199,12 +220,32 @@ func newPersonRow(p *Person) *personRow {
 		Gender:   p.Gender,
 		Phone:    p.Phone,
 		PhotoURL: p.PhotoURL,
+
+		BirthDatePrecision: nullable(p.BirthDatePrecision),
+		BirthDateQualifier: nullable(p.BirthDateQualifier),
+		DeathDatePrecision: nullable(p.DeathDatePrecision),
+		DeathDateQualifier: nullable(p.DeathDateQualifier),
+		BirthPlace:         nullable(p.BirthPlace),
+		DeathPlace:         nullable(p.DeathPlace),
+		Notes:              nullable(p.Notes),
 	}
 	if !p.BirthDate.IsZero() {
 		bd := p.BirthDate
 		row.BirthDate = &bd
 	}
+	if p.DeathDate != nil && !p.DeathDate.IsZero() {
+		dd := *p.DeathDate
+		row.DeathDate = &dd
+	}
 	return row
+}
+
+// nullable maps "" to NULL for optional text columns.
+func nullable(s string) *string {
+	if s == "" {
+		return nil
+	}
+	return &s
 }
 
 func (f *familyRow) toModel() *Family {

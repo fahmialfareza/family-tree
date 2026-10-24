@@ -18,5 +18,9 @@ func responseError(c *gin.Context, message string, status int) {
 	if status == 0 {
 		status = http.StatusInternalServerError
 	}
+	// A body cut off by BodyLimitMiddleware fails parsing; report the real cause.
+	if status >= 400 && bodyWasTooLarge(c) {
+		message, status = "Request body too large", http.StatusRequestEntityTooLarge
+	}
 	c.JSON(status, gin.H{"message": message, "status": status})
 }

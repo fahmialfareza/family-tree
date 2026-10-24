@@ -19,4 +19,6 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certifi
 COPY --from=builder /app/backend /app/backend
 
 EXPOSE 4000
+# The image has no shell or curl: the binary probes its own /healthz (on $PORT, default 4000).
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 CMD ["/app/backend", "-healthcheck"]
 ENTRYPOINT ["/app/backend"]

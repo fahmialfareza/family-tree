@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"log"
+	"log/slog"
 	"os"
 	"time"
 
@@ -38,16 +38,24 @@ func InitPostgres(ctx context.Context) error {
 		return fmt.Errorf("parse DATABASE_URL: %w", err)
 	}
 	cfg.Tracer = nrpgx5.NewTracer()
+	maxOpen, err := envInt("DB_MAX_OPEN_CONNS", 20)
+	if err != nil {
+		return err
+	}
+	maxIdle, err := envInt("DB_MAX_IDLE_CONNS", 10)
+	if err != nil {
+		return err
+	}
 	sqlDB := stdlib.OpenDB(*cfg)
-	sqlDB.SetMaxOpenConns(10)
-	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetMaxOpenConns(maxOpen)
+	sqlDB.SetMaxIdleConns(min(maxIdle, maxOpen))
 	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
 	if err := sqlDB.PingContext(ctx); err != nil {
 		return err
 	}
 	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{
 		// Not-found lookups are normal (404s, membership checks), so they are not logged as errors.
-		Logger: logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
+		Logger: logger.New(slog.NewLogLogger(slog.Default().Handler(), slog.LevelWarn), logger.Config{
 			SlowThreshold:             200 * time.Millisecond,
 			LogLevel:                  logger.Warn,
 			IgnoreRecordNotFoundError: true,
@@ -59,7 +67,7 @@ func InitPostgres(ctx context.Context) error {
 		return err
 	}
 	DB = db
-	fmt.Println("Connected to Postgres", cfg.Host, "db", cfg.Database)
+	slog.Info("connected to Postgres", "host", cfg.Host, "db", cfg.Database, "max_open_conns", maxOpen)
 	return nil
 }
 
@@ -90,13 +98,13 @@ func InitSchema(ctx context.Context) error {
 		return fmt.Errorf("migrate: %w", err)
 	}
 	for _, r := range results {
-		fmt.Printf("Applied migration %s (%s)\n", r.Source.Path, r.Duration)
+		slog.Info("applied migration", "path", r.Source.Path, "duration", r.Duration.String())
 	}
 	version, err := provider.GetDBVersion(ctx)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Postgres schema at version", version)
+	slog.Info("Postgres schema ready", "version", version)
 	return nil
 }
 
@@ -108,15 +116,31 @@ func InitRedis(ctx context.Context) {
 	}
 	opt, err := redis.ParseURL(redisURL)
 	if err != nil {
-		fmt.Println("warning: invalid REDIS_URL", err)
+		slog.Warn("invalid REDIS_URL; Redis disabled")
 		return
 	}
 	RedisClient = redis.NewClient(opt)
 	// nrredis hook instruments all Redis commands with New Relic datastore segments
 	RedisClient.AddHook(nrredis.NewHook(opt))
 	if err := RedisClient.Ping(ctx).Err(); err != nil {
-		fmt.Println("warning: redis ping failed:", err)
+		slog.Warn("redis ping failed", "error", err)
 	} else {
-		fmt.Println("Connected to Redis", opt.Addr)
+		slog.Info("connected to Redis", "addr", opt.Addr)
+	}
+}
+
+// CloseConnections closes the Postgres pool and the Redis client (on shutdown).
+func CloseConnections() {
+	if DB != nil {
+		if sqlDB, err := DB.DB(); err == nil {
+			if err := sqlDB.Close(); err != nil {
+				slog.Warn("closing Postgres", "error", err)
+			}
+		}
+	}
+	if RedisClient != nil {
+		if err := RedisClient.Close(); err != nil {
+			slog.Warn("closing Redis", "error", err)
+		}
 	}
 }

@@ -2,10 +2,14 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"log"
+	"io"
+	"log/slog"
 	"math/rand/v2"
 	"net/http"
+	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -52,13 +56,13 @@ func rateLimitAllow(ctx context.Context, key string, max int, per time.Duration)
 // general traffic fails open so a Redis outage does not take the whole API down.
 func RateLimitMiddleware(name string, max int, per time.Duration, failClosed bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		ok, err := rateLimitAllow(c, name+":ip:"+c.ClientIP(), max, per)
+		ok, err := rateLimitAllow(c, name+":ip:"+clientIP(c), max, per)
 		if err != nil {
 			if failClosed {
 				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "Service temporarily unavailable", "status": http.StatusServiceUnavailable})
 				return
 			}
-			log.Printf("rate limiter unavailable: %v", err)
+			slog.WarnContext(c, "rate limiter unavailable", "request_id", requestID(c), "error", err)
 			c.Next()
 			return
 		}
@@ -93,9 +97,88 @@ func PanicRecoveryMiddleware() gin.HandlerFunc {
 			if r := recover(); r != nil {
 				txn := newrelic.FromContext(c.Request.Context())
 				txn.NoticeError(fmt.Errorf("panic: %v", r))
+				slog.ErrorContext(c, "panic", "request_id", requestID(c), "panic", fmt.Sprint(r), "stack", string(debug.Stack()))
 				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"message": "Internal Server Error", "status": http.StatusInternalServerError})
 			}
 		}()
 		c.Next()
 	}
+}
+
+// SecurityHeadersMiddleware sets headers for a JSON API that is never framed or rendered as a page.
+func SecurityHeadersMiddleware() gin.HandlerFunc {
+	production := IsProduction()
+	return func(c *gin.Context) {
+		h := c.Writer.Header()
+		if production {
+			h.Set("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+		}
+		h.Set("X-Content-Type-Options", "nosniff")
+		h.Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		h.Set("X-Frame-Options", "DENY")
+		h.Set("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+		h.Set("Cross-Origin-Resource-Policy", "same-site")
+		c.Next()
+	}
+}
+
+const (
+	maxJSONBodyBytes      = 1 << 20 // JSON and other non-multipart bodies
+	maxMultipartBodyBytes = 6 << 20 // person forms with a photo (photos are capped at 5 MB)
+)
+
+const bodyTooLargeKey = "bodyTooLarge"
+
+// limitedBody records when the wrapped http.MaxBytesReader hit its limit, so the error response can say 413.
+type limitedBody struct {
+	io.ReadCloser
+	exceeded *bool
+}
+
+func (b limitedBody) Read(p []byte) (int, error) {
+	n, err := b.ReadCloser.Read(p)
+	var tooLarge *http.MaxBytesError
+	if errors.As(err, &tooLarge) {
+		*b.exceeded = true
+	}
+	return n, err
+}
+
+// BodyLimitMiddleware caps request bodies: 1 MB, or 6 MB for multipart forms. Bodies that declare a larger
+// Content-Length are rejected with 413 before anything is read; streamed bodies are cut off by
+// http.MaxBytesReader and the handler's error response is turned into a 413 (see responseError).
+func BodyLimitMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.Body == nil || c.Request.Body == http.NoBody {
+			c.Next()
+			return
+		}
+		limit := int64(maxJSONBodyBytes)
+		if strings.HasPrefix(strings.ToLower(c.ContentType()), "multipart/") {
+			limit = maxMultipartBodyBytes
+		}
+		if c.Request.ContentLength > limit {
+			abortTooLarge(c)
+			return
+		}
+		exceeded := new(bool)
+		c.Set(bodyTooLargeKey, exceeded)
+		c.Request.Body = limitedBody{ReadCloser: http.MaxBytesReader(c.Writer, c.Request.Body, limit), exceeded: exceeded}
+		c.Next()
+	}
+}
+
+func abortTooLarge(c *gin.Context) {
+	c.Header("Connection", "close")
+	c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"message": "Request body too large", "status": http.StatusRequestEntityTooLarge})
+}
+
+// bodyWasTooLarge reports whether the request body was cut off by BodyLimitMiddleware.
+func bodyWasTooLarge(c *gin.Context) bool {
+	v, ok := c.Get(bodyTooLargeKey)
+	if !ok {
+		return false
+	}
+	exceeded, _ := v.(*bool)
+	return exceeded != nil && *exceeded
 }

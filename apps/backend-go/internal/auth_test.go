@@ -2,12 +2,14 @@ package app
 
 import (
 	"context"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -438,19 +440,54 @@ func TestAccountDeletionAndExport(t *testing.T) {
 }
 
 func TestProductionConfigCheck(t *testing.T) {
-	for _, k := range []string{"JWT_SECRET", "REDIS_URL", "RESEND_API_KEY", "TRUSTED_PROXIES", "CLIENT_IP_HEADER", "APP_BASE_URL", "API_BASE_URL"} {
+	for _, k := range []string{"JWT_SECRET", "REDIS_URL", "RESEND_API_KEY", "TRUSTED_PROXIES", "CLIENT_IP_HEADER", "APP_BASE_URL", "API_BASE_URL", "ALLOWED_ORIGINS", "BFF_SHARED_SECRET"} {
 		t.Setenv(k, "")
 	}
-	if err := CheckProductionConfig(); err == nil || !strings.Contains(err.Error(), "REDIS_URL") {
+	if err := CheckProductionConfig(); err == nil || !strings.Contains(err.Error(), "REDIS_URL") || !strings.Contains(err.Error(), "ALLOWED_ORIGINS") {
 		t.Errorf("empty production config accepted: %v", err)
 	}
 	t.Setenv("JWT_SECRET", strings.Repeat("s", 40))
 	t.Setenv("REDIS_URL", "redis://r")
 	t.Setenv("RESEND_API_KEY", "re_x")
 	t.Setenv("TRUSTED_PROXIES", "none")
+	t.Setenv("BFF_SHARED_SECRET", strings.Repeat("b", 40))
 	t.Setenv("APP_BASE_URL", "https://app.example")
 	t.Setenv("API_BASE_URL", "https://api.example")
+	t.Setenv("ALLOWED_ORIGINS", "https://app.example/path")
+	if err := CheckProductionConfig(); err == nil || !strings.Contains(err.Error(), "ALLOWED_ORIGINS") {
+		t.Errorf("origin with a path accepted: %v", err)
+	}
+	t.Setenv("ALLOWED_ORIGINS", "https://app.example, https://www.app.example")
 	if err := CheckProductionConfig(); err != nil {
 		t.Errorf("complete production config rejected: %v", err)
+	}
+}
+
+func TestBFFClientIP(t *testing.T) {
+	t.Setenv("BFF_SHARED_SECRET", "bff-secret-for-tests-0123456789abcdef")
+	r := gin.New()
+	r.Use(BFFClientIPMiddleware())
+	r.GET("/ip", func(c *gin.Context) { c.String(200, clientIP(c)) })
+	ip := func(headers map[string]string) string {
+		req := httptest.NewRequest("GET", "/ip", nil)
+		req.RemoteAddr = "10.1.2.3:5555"
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		rec := httptest.NewRecorder()
+		r.ServeHTTP(rec, req)
+		return rec.Body.String()
+	}
+	if got := ip(map[string]string{"X-BFF-Secret": "bff-secret-for-tests-0123456789abcdef", "X-Client-IP": "203.0.113.9"}); got != "203.0.113.9" {
+		t.Errorf("verified BFF client IP = %s", got)
+	}
+	if got := ip(map[string]string{"X-BFF-Secret": "wrong", "X-Client-IP": "203.0.113.9"}); got == "203.0.113.9" {
+		t.Error("client IP accepted with a wrong secret")
+	}
+	if got := ip(map[string]string{"X-Client-IP": "203.0.113.9"}); got == "203.0.113.9" {
+		t.Error("client IP accepted without the secret")
+	}
+	if got := ip(map[string]string{"X-BFF-Secret": "bff-secret-for-tests-0123456789abcdef", "X-Client-IP": "not-an-ip"}); got == "not-an-ip" {
+		t.Error("invalid client IP accepted")
 	}
 }

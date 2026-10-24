@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html"
-	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -39,7 +39,7 @@ func InitMailer() {
 	}
 	key := os.Getenv("RESEND_API_KEY")
 	if key == "" {
-		log.Println("warning: RESEND_API_KEY is not set; emails (with their links) are printed to the log instead of sent")
+		slog.Warn("RESEND_API_KEY is not set; emails (with their links) are printed to the log instead of sent")
 		mailer = consoleMailer{}
 		return
 	}
@@ -53,7 +53,8 @@ func InitMailer() {
 type consoleMailer struct{}
 
 func (consoleMailer) Send(_ context.Context, msg Email) error {
-	log.Printf("[email] to=%s subject=%q\n%s", msg.To, msg.Subject, msg.Text)
+	// Development only (production requires RESEND_API_KEY): the link is needed to finish the flow locally.
+	slog.Info("email (not sent)", "to", msg.To, "subject", msg.Subject, "text", msg.Text)
 	return nil
 }
 
@@ -105,7 +106,7 @@ func sendMail(msg Email) {
 		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 		defer cancel()
 		if err := mailer.Send(ctx, msg); err != nil {
-			log.Printf("email to %s failed: %v", msg.To, err)
+			slog.Error("email delivery failed", "subject", msg.Subject, "error", err)
 		}
 	}()
 }

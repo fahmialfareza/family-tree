@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
-	"os"
+	"log/slog"
 	"sort"
 
 	"github.com/gin-gonic/gin"
@@ -99,7 +99,7 @@ const maxTreeNodes = 5000
 
 func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren bool, withParent bool) (internalNode, error) {
 	defer newrelic.FromContext(ctx).StartSegment("service/buildFamilyTree").End()
-	debug := os.Getenv("TREE_DEBUG") == "1"
+	debug := treeDebug()
 
 	// ── Phase 1: BFS to discover all person IDs and pre-load their relationships ────
 	// relsByPerson maps personID → all relationships where that person is From or To.
@@ -144,7 +144,7 @@ func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren 
 	}
 
 	if debug {
-		fmt.Printf("[TREE] pre-loaded %d person IDs via BFS\n", len(visited))
+		slog.DebugContext(ctx, "tree: pre-loaded people via BFS", "count", len(visited))
 	}
 
 	// ── Phase 2: Bulk-load all person documents in one DB round-trip ─────────────
@@ -167,7 +167,7 @@ func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren 
 		rels := relsByPerson[id]
 
 		if debug {
-			fmt.Printf("[TREE] node=%s rels=%d wc=%v wp=%v\n", id, len(rels), wc, wp)
+			slog.DebugContext(ctx, "tree: node", "id", id, "rels", len(rels), "with_children", wc, "with_parents", wp)
 		}
 
 		node := internalNode{
@@ -237,7 +237,7 @@ func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren 
 					childNode, err := build(child.id, true, false)
 					if err == nil {
 						if debug {
-							fmt.Printf("[TREE]  node=%s spouse=%s child=%s order=%d found\n", id, spouseId, child.id, child.order)
+							slog.DebugContext(ctx, "tree: couple child", "id", id, "spouse", spouseId, "child", child.id, "order", child.order)
 						}
 						children = append(children, childNode)
 					}
@@ -246,7 +246,7 @@ func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren 
 				sp, ok := personsByID[spouseId] // pre-loaded; no DB call
 				if ok {
 					if debug {
-						fmt.Printf("[TREE]  spouse node=%s has %d children\n", spouseId, len(children))
+						slog.DebugContext(ctx, "tree: spouse children", "spouse", spouseId, "count", len(children))
 					}
 					spouseNodes = append(spouseNodes, internalNode{
 						ID:       sp.ID,
@@ -279,7 +279,7 @@ func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren 
 				childNode, err := build(child.id, true, false)
 				if err == nil {
 					if debug {
-						fmt.Printf("[TREE]  node=%s singleChild=%s order=%d found\n", id, child.id, child.order)
+						slog.DebugContext(ctx, "tree: single-parent child", "id", id, "child", child.id, "order", child.order)
 					}
 					singleChildren = append(singleChildren, childNode)
 				}
@@ -306,7 +306,7 @@ func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren 
 				parentNode, err := build(pid, false, true)
 				if err == nil {
 					if debug {
-						fmt.Printf("[TREE]  node=%s parent=%s found\n", id, pid)
+						slog.DebugContext(ctx, "tree: parent", "id", id, "parent", pid)
 					}
 					parents = append(parents, parentNode)
 				}

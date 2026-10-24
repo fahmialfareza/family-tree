@@ -2,9 +2,12 @@ package app
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
+	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -117,7 +120,9 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 	row := newPersonRow(p)
 	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		res := tx.Model(&personRow{}).Scopes(inTree(p.TreeID)).Where("id = ?", p.ID).
-			Select("name", "nickname", "address", "status", "gender", "birth_date", "phone", "photo_url").
+			Select("name", "nickname", "address", "status", "gender", "birth_date", "phone", "photo_url",
+				"birth_date_precision", "birth_date_qualifier", "death_date", "death_date_precision", "death_date_qualifier",
+				"birth_place", "death_place", "notes").
 			Updates(row)
 		if res.Error != nil {
 			return res.Error
@@ -267,11 +272,6 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, treeID, personId string
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	debug := os.Getenv("TREE_DEBUG") == "1"
-	if debug {
-		fmt.Printf("[STORE] getRelationshipsByPersonId: personId=%s\n", personId)
-	}
-
 	var rows []relationshipRow
 	if err := DB.WithContext(ctx).
 		Preload("From", unscoped).
@@ -287,10 +287,10 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, treeID, personId string
 		res = append(res, rows[i].toModel())
 	}
 
-	if debug {
-		fmt.Printf("[STORE] getRelationshipsByPersonId: found %d relationships\n", len(res))
+	if treeDebug() {
+		slog.DebugContext(ctx, "getRelationshipsByPersonId", "person_id", personId, "count", len(res))
 		for _, r := range res {
-			fmt.Printf("[STORE]   rel: from=%s to=%s type=%s\n", r.From, r.To, r.Type)
+			slog.DebugContext(ctx, "relationship", "from", r.From, "to", r.To, "type", r.Type)
 		}
 	}
 
@@ -504,4 +504,75 @@ func replacePersonOwners(tx *gorm.DB, personIDs, owners []string) error {
 		return tx.Create(&links).Error
 	}
 	return nil
+}
+
+// peopleCursor is the keyset position after the last returned person: (created_at, id), the list order.
+type peopleCursor struct {
+	CreatedAt time.Time `json:"t"`
+	ID        string    `json:"id"`
+}
+
+// encode returns an opaque cursor for clients.
+func (pc *peopleCursor) encode() string {
+	data, _ := json.Marshal(pc)
+	return base64.RawURLEncoding.EncodeToString(data)
+}
+
+func decodePeopleCursor(s string) (*peopleCursor, error) {
+	data, err := base64.RawURLEncoding.DecodeString(s)
+	if err != nil {
+		return nil, err
+	}
+	var pc peopleCursor
+	if err := json.Unmarshal(data, &pc); err != nil {
+		return nil, err
+	}
+	if pc.ID == "" || pc.CreatedAt.IsZero() {
+		return nil, errors.New("incomplete cursor")
+	}
+	return &pc, nil
+}
+
+// escapeLike escapes LIKE wildcards so a search matches literally (backslash is Postgres' default escape).
+func escapeLike(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
+}
+
+// repoGetPeoplePage returns up to limit people after the cursor in list order, optionally filtered by a
+// case-insensitive name/nickname search, plus the cursor of the next page (nil on the last page).
+// Pages are not cached: cursors and searches make poor cache keys, and each page is one indexed query.
+func repoGetPeoplePage(ctx context.Context, treeID string, ownedBy []string, limit int, after *peopleCursor, search string) ([]*Person, *peopleCursor, error) {
+	defer newrelic.FromContext(ctx).StartSegment("store/repoGetPeoplePage").End()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	q := preloadOwners(DB.WithContext(ctx)).
+		Preload("Relationships", byCreation).
+		Preload("Relationships.To", unscoped).
+		Scopes(inTree(treeID))
+	if len(ownedBy) > 0 {
+		q = q.Where("id IN (?)", DB.Model(&personOwner{}).Select("person_id").Where("user_id IN ?", ownedBy))
+	}
+	if search != "" {
+		pattern := "%" + escapeLike(search) + "%"
+		q = q.Where("(name ILIKE ? OR nickname ILIKE ?)", pattern, pattern)
+	}
+	if after != nil {
+		q = q.Where("(created_at, id) > (?, ?)", after.CreatedAt, after.ID)
+	}
+	var rows []personRow
+	if err := byCreation(q).Limit(limit + 1).Find(&rows).Error; err != nil {
+		return nil, nil, err
+	}
+	var next *peopleCursor
+	if len(rows) > limit {
+		rows = rows[:limit]
+		last := rows[len(rows)-1]
+		next = &peopleCursor{CreatedAt: last.CreatedAt, ID: last.ID}
+	}
+	res := make([]*Person, 0, len(rows))
+	for i := range rows {
+		res = append(res, rows[i].toModel())
+	}
+	return res, next, nil
 }

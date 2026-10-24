@@ -59,20 +59,31 @@ type TreeInvite struct {
 	CreatedAt time.Time `json:"createdAt"`
 }
 
+// Person is the API shape. Dates hold the first instant (UTC) of their period; *Precision ("day", "month",
+// "year") says which period and *Qualifier ("exact", "about", "before", "after") how certain it is.
+// BirthDate stays a non-pointer for the legacy frontend (zero time when unknown).
 type Person struct {
-	ID            string          `json:"_id"`
-	TreeID        string          `json:"treeId,omitempty"`
-	Name          string          `json:"name"`
-	Nickname      string          `json:"nickname"`
-	Address       string          `json:"address"`
-	Status        string          `json:"status"`
-	Gender        string          `json:"gender"`
-	BirthDate     time.Time       `json:"birthDate"`
-	Phone         string          `json:"phone,omitempty"`
-	PhotoURL      string          `json:"photoUrl,omitempty"`
-	OwnedBy       []string        `json:"ownedBy"`
-	Owners        []User          `json:"owners,omitempty"`
-	Relationships []*Relationship `json:"relationships,omitempty"`
+	ID                 string          `json:"_id"`
+	TreeID             string          `json:"treeId,omitempty"`
+	Name               string          `json:"name"`
+	Nickname           string          `json:"nickname"`
+	Address            string          `json:"address"`
+	Status             string          `json:"status"`
+	Gender             string          `json:"gender"`
+	BirthDate          time.Time       `json:"birthDate"`
+	BirthDatePrecision string          `json:"birthDatePrecision,omitempty"`
+	BirthDateQualifier string          `json:"birthDateQualifier,omitempty"`
+	DeathDate          *time.Time      `json:"deathDate,omitempty"`
+	DeathDatePrecision string          `json:"deathDatePrecision,omitempty"`
+	DeathDateQualifier string          `json:"deathDateQualifier,omitempty"`
+	BirthPlace         string          `json:"birthPlace,omitempty"`
+	DeathPlace         string          `json:"deathPlace,omitempty"`
+	Notes              string          `json:"notes,omitempty"`
+	Phone              string          `json:"phone,omitempty"`
+	PhotoURL           string          `json:"photoUrl,omitempty"`
+	OwnedBy            []string        `json:"ownedBy"`
+	Owners             []User          `json:"owners,omitempty"`
+	Relationships      []*Relationship `json:"relationships,omitempty"`
 }
 
 type Family struct {

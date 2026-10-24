@@ -48,6 +48,12 @@ func crudRelationships(c *gin.Context) {
 		responseError(c, "Invalid request body", 400)
 		return
 	}
+	for _, rel := range body {
+		if rel.Type != "" && rel.Type != "parent" && rel.Type != "child" && rel.Type != "spouse" {
+			responseError(c, "Relationship type must be parent, child or spouse", 400)
+			return
+		}
+	}
 	id := c.Param("id")
 	treeID := currentAccess(c).TreeID
 	if _, err := getPersonByIdRepo(c, treeID, id); err != nil {
