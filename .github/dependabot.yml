@@ -1,0 +1,28 @@
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /apps/backend-go
+    schedule:
+      interval: weekly
+    groups:
+      go-minor:
+        update-types: ["minor", "patch"]
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor:
+        update-types: ["minor", "patch"]
+    ignore:
+      # Major upgrades are reviewed and done by hand.
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+  - package-ecosystem: docker
+    directory: /apps/backend-go/docker
+    schedule:
+      interval: monthly

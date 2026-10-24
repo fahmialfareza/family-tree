@@ -1,8 +1,9 @@
-name: Weekly Postgres Backup
+name: Daily Postgres Backup
 
+# Daily dumps (kept 14 days) plus a weekly copy every Saturday (kept 8 weeks).
 on:
   schedule:
-    - cron: "0 17 * * 6"
+    - cron: "0 17 * * *"
   workflow_dispatch:
 
 permissions:
@@ -75,11 +76,20 @@ jobs:
 
           aws s3 cp \
             "${{ steps.backup.outputs.backup_path }}" \
-            "s3://${R2_BUCKET}/postgres/weekly/${{ steps.backup.outputs.backup_filename }}" \
+            "s3://${R2_BUCKET}/postgres/daily/${{ steps.backup.outputs.backup_filename }}" \
             --endpoint-url "${endpoint_url}" \
             --only-show-errors
 
-      - name: Delete backups older than 4 weeks
+          # Saturdays (UTC) and manual runs also keep a weekly copy.
+          if [[ "$(date -u +%u)" == "6" || "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            aws s3 cp \
+              "${{ steps.backup.outputs.backup_path }}" \
+              "s3://${R2_BUCKET}/postgres/weekly/${{ steps.backup.outputs.backup_filename }}" \
+              --endpoint-url "${endpoint_url}" \
+              --only-show-errors
+          fi
+
+      - name: Delete expired backups
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets['R2_ACCESS_KEY_ID'] }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets['R2_SECRET_ACCESS_KEY'] }}
@@ -88,15 +98,21 @@ jobs:
           set -euo pipefail
 
           endpoint_url="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
-          cutoff="$(date -u -d '28 days ago' +'%Y-%m-%d')"
 
-          aws s3 ls "s3://${R2_BUCKET}/postgres/weekly/" \
-            --endpoint-url "${endpoint_url}" | \
-          while read -r date _time _size filename; do
-            if [[ "${date}" < "${cutoff}" ]]; then
-              echo "Deleting old backup: ${filename} (${date})"
-              aws s3 rm "s3://${R2_BUCKET}/postgres/weekly/${filename}" \
-                --endpoint-url "${endpoint_url}" \
-                --only-show-errors
-            fi
-          done
+          prune() {
+            local prefix="$1" cutoff
+            cutoff="$(date -u -d "$2 days ago" +'%Y-%m-%d')"
+            aws s3 ls "s3://${R2_BUCKET}/postgres/${prefix}/" \
+              --endpoint-url "${endpoint_url}" | \
+            while read -r date _time _size filename; do
+              if [[ -n "${filename}" && "${date}" < "${cutoff}" ]]; then
+                echo "Deleting old ${prefix} backup: ${filename} (${date})"
+                aws s3 rm "s3://${R2_BUCKET}/postgres/${prefix}/${filename}" \
+                  --endpoint-url "${endpoint_url}" \
+                  --only-show-errors
+              fi
+            done
+          }
+
+          prune daily 14
+          prune weekly 56

@@ -41,4 +41,4 @@ The browser only talks to this app. Tokens never reach page JavaScript:
 ## Environment
 
 See `.env.example`. Production needs `BACKEND_URL` and `NEXT_PUBLIC_APP_URL` (https). The full list for both apps
-is in `docs/deployment.md`.
+is in `docs/production-setup.md`.

@@ -28,10 +28,13 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
 - Prefer context-aware operations where the surrounding code uses them.
 - Reuse existing `internal/` packages and controller or store patterns instead of creating parallel layers.
 - Validate Go changes with the narrowest useful command, usually from `apps/backend-go` with `go build ./...`.
+- Schema changes go in a new numbered SQL migration under `apps/backend-go/internal/migrations/`; never edit an applied one.
 
 ### Frontend (`apps/frontend`)
 
-- Follow the existing Next.js App Router structure, component patterns, and Zustand organization.
+- Follow the existing Next.js App Router structure (`(marketing)`, `(auth)`, `(app)` route groups) and component patterns; see `apps/frontend/README.md`.
+- The browser never calls the Go API directly: use the TanStack Query hooks in `src/lib/api/hooks.ts`, which go through the `/api/proxy` BFF route; sessions live in httpOnly cookies.
+- Every UI string goes in both `messages/en.json` and `messages/id.json`; use the design tokens in `src/app/globals.css`.
 - Use `pnpm` for dependencies and scripts.
 - Respect the current TypeScript and lint configuration instead of introducing alternative tooling.
 - Validate with the narrowest relevant `pnpm` script, usually lint, type-check, or build for the affected surface.

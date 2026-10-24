@@ -13,30 +13,24 @@ Guidance for working in the Next.js frontend app.
 ## Key points
 
 - Language: TypeScript/JavaScript with Next.js. Follow `tsconfig.json` and existing component patterns.
-- Structure:
-  - `.vscode/` for editor settings and launch configurations.
-  - `public/` for static assets.
-  - `src/` for application code, organized into:
-    - `app/` for Next.js app directory structure (if using Next.js 13+).
-    - `components/` for reusable components.
-    - `lib/` for utility functions and hooks.
-    - `models/` for TypeScript types and interfaces.
-    - `service/` for API calls and business logic.
-    - `zustand/` for state management using Zustand (if applicable).
-  - `components.json` for component metadata (if applicable).
-  - `eslint.config.mjs` for linting rules.
-  - `next.config.ts` for Next.js configuration.
-  - `open-next.config.ts` for OpenNext configuration (if applicable).
-  - `package.json` for dependencies and scripts.
-  - `postcss.config.mjs` for PostCSS configuration (if using Tailwind CSS or similar).
-  - `Readme.md` for documentation specific to the frontend app.
-  - `tsconfig.json` for TypeScript configuration.
-  - `wrangler.jsonc` for Cloudflare Workers configuration (if applicable).
+- Structure (see `apps/frontend/README.md`):
+  - `src/app/(marketing)`, `src/app/(auth)`, `src/app/(app)/app` route groups; `src/app/api/session/*` and
+    `src/app/api/proxy/[...path]` are the BFF: the browser never calls the Go API or sees tokens.
+  - `src/components/ui/` shadcn/ui primitives (generate new ones with the shadcn CLI); feature components under
+    `src/components/<feature>/`.
+  - `src/lib/api/` types, fetch client and TanStack Query hooks; `src/lib/server/` server-only helpers.
+  - `messages/en.json` and `messages/id.json` hold every UI string; add new keys to both.
+  - Design tokens are CSS variables in `src/app/globals.css`; use semantic Tailwind classes (`bg-card`,
+    `text-muted-foreground`, `bg-primary`), not raw colors.
+- Data fetching: use the hooks in `src/lib/api/hooks.ts`; invalidate with the per-tree keys after mutations.
+- Accessibility: label every control (the `Field` helper wires `aria-describedby`/`aria-invalid`), keep visible focus
+  states, and use Radix-based dialogs/sheets so focus trapping and Esc work.
 
 ## Run & test
 
 - Dev: `pnpm --filter frontend install && pnpm --filter frontend dev` (or `next dev` in `apps/frontend`).
 - Build: `pnpm --filter frontend install && pnpm --filter frontend build` (or `next build` in `apps/frontend`).
+- Lint / types: `pnpm --filter frontend lint` and `pnpm --filter frontend check-types`.
 
 ## Style & safety
 
