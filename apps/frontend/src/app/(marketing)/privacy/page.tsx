@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import { getLocale } from "next-intl/server";
 import { LegalPage } from "@/components/common/legal";
-import { privacyPolicy } from "@/lib/legal-content";
+import { privacyPolicy, terms } from "@/lib/legal-content";
 
 export async function generateMetadata(): Promise<Metadata> {
-  return { title: privacyPolicy(await getLocale()).title };
+  const doc = privacyPolicy(await getLocale());
+  return { title: doc.title, description: doc.intro };
 }
 
 export default async function Page() {
-  return <LegalPage {...privacyPolicy(await getLocale())} />;
+  const locale = await getLocale();
+  return <LegalPage doc={privacyPolicy(locale)} otherDoc={{ href: "/terms", title: terms(locale).title }} />;
 }

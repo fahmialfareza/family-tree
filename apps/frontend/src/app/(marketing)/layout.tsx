@@ -3,9 +3,8 @@ import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/common/logo";
 import { PreferencesMenu } from "@/components/common/preferences";
 import { Button } from "@/components/ui/button";
+import { contactEmail } from "@/lib/legal-content";
 import { getAccessToken } from "@/lib/server/session";
-
-const contactEmail = process.env.NEXT_PUBLIC_CONTACT_EMAIL;
 
 export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
   const t = await getTranslations("marketing");

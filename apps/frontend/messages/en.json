@@ -52,7 +52,7 @@
     "verificationResent": "If a signup is waiting for that email, a new link is on its way.",
     "checkInbox": "Check your inbox",
     "checkInboxBody": "We sent a link to {email}. Open it and confirm with your password to finish creating your account.",
-    "agree": "By creating an account you agree to the <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
+    "agree": "By creating an account you confirm you are at least {age} and agree to the <terms>Terms</terms> and <privacy>Privacy Policy</privacy>.",
     "verifyTitle": "Confirm your email",
     "verifying": "Checking your link…",
     "confirmWithPassword": "Enter the password you chose when signing up to confirm this email address.",

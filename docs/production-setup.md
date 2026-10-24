@@ -44,8 +44,8 @@ The others are read at runtime: set them in the Worker (`wrangler secret put` fo
 | `BACKEND_PUBLIC_URL` | runtime | Go API URL for browsers (Google sign-in); defaults to `BACKEND_URL` |
 | `BFF_SHARED_SECRET` | runtime secret | Same value as the API's |
 | `NEXT_PUBLIC_APP_URL` | build (required) | This site's origin, `https://…` |
-| `NEXT_PUBLIC_CONTACT_EMAIL` | build | Footer and legal pages |
-| `NEXT_PUBLIC_OPERATOR_NAME` | build | Named in the Privacy Policy and Terms |
+| `NEXT_PUBLIC_CONTACT_EMAIL` | build | Footer and legal pages (default `fahmialfareza97@gmail.com`) |
+| `NEXT_PUBLIC_OPERATOR_NAME` | build | Named in the Privacy Policy and Terms (default `Fahmi Alfareza`) |
 | `NEXT_PUBLIC_IMAGE_HOSTS` | build | Extra image origins for the CSP (Cloudinary is built in) |
 
 Local development needs none of these: both apps fall back to `http://localhost:3000` / `http://localhost:4000`.

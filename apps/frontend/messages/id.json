@@ -52,7 +52,7 @@
     "verificationResent": "Jika ada pendaftaran untuk email itu, tautan baru sedang dikirim.",
     "checkInbox": "Periksa kotak masuk Anda",
     "checkInboxBody": "Kami mengirim tautan ke {email}. Buka tautan itu dan konfirmasi dengan kata sandi Anda untuk menyelesaikan pendaftaran.",
-    "agree": "Dengan membuat akun, Anda menyetujui <terms>Ketentuan</terms> dan <privacy>Kebijakan Privasi</privacy>.",
+    "agree": "Dengan membuat akun, Anda menyatakan berusia minimal {age} tahun dan menyetujui <terms>Ketentuan</terms> serta <privacy>Kebijakan Privasi</privacy>.",
     "verifyTitle": "Konfirmasi email Anda",
     "verifying": "Memeriksa tautan…",
     "confirmWithPassword": "Masukkan kata sandi yang Anda buat saat mendaftar untuk mengonfirmasi email ini.",

@@ -8,6 +8,7 @@ import { Field, FormError, PasswordInput } from "@/components/common/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, errorMessage, sessionRequest } from "@/lib/api/client";
+import { MIN_AGE } from "@/lib/legal-content";
 import { GoogleIcon } from "./auth-card";
 
 export function SignupForm({ next, google }: { next: string; google: boolean }) {
@@ -93,6 +94,7 @@ export function SignupForm({ next, google }: { next: string; google: boolean }) 
         </Button>
         <p className="text-center text-xs text-muted-foreground">
           {t.rich("agree", {
+            age: MIN_AGE,
             terms: (c) => (
               <a href="/terms" className="underline underline-offset-2">
                 {c}
