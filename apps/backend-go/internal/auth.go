@@ -1,6 +1,7 @@
 package app
 
 import (
+	"errors"
 	"os"
 	"strings"
 	"time"
@@ -149,7 +150,15 @@ func createUser(c *gin.Context) {
 	}
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
 	u := &User{ID: "", Name: body.Name, Username: body.Username, Password: string(hashed), Role: RoleUser}
-	newUser, err := addUser(c, u)
+
+	// Users created by an admin join the admin's tree as editors, limited to the branches shared with them.
+	admin, _ := c.Get("user")
+	treeID, err := defaultTreeIDForUser(c, admin.(*User).ID)
+	if err != nil && !errors.Is(err, errNoTree) {
+		responseError(c, "Failed to create user", 500)
+		return
+	}
+	newUser, err := addUser(c, u, treeID, TreeRoleEditor)
 	if err != nil {
 		responseError(c, "Failed to create user", 500)
 		return

@@ -38,7 +38,7 @@ go build -o backend ./main.go
 ## Features
 
 - JWT authentication with bcrypt password hashing
-- Postgres via GORM with soft delete support (all tables); schema managed by `AutoMigrate` on startup
+- Postgres via GORM with soft delete support (all tables); schema managed by versioned SQL migrations (goose) applied on startup
 - Cloudinary image upload integration with local fallback
 - Redis-based rate limiting (600 requests/minute, sliding window)
 - New Relic APM integration
@@ -55,7 +55,15 @@ All tables (users, people, families, relationships) implement soft delete via `g
 
 ## Database
 
-- Schema lives in `internal/schema.go`; API structs in `internal/models.go` are mapped from those rows.
+- Schema is defined by SQL migrations in `internal/migrations/` (embedded in the binary, applied by goose on
+  startup under a Postgres advisory lock). Add a new numbered file for every schema change; never edit an applied one.
+  Inspect or roll back with the goose CLI, e.g.
+  `go run github.com/pressly/goose/v3/cmd/goose@v3.29.0 -dir internal/migrations postgres "$DATABASE_URL" status`.
+- GORM row types live in `internal/schema.go`; API structs in `internal/models.go` are mapped from those rows.
+- Tree workspaces: every person, family and relationship has a `tree_id`; users reach a tree through `tree_members`
+  (`owner` / `editor` / `viewer`). Trees with `branch_scoped = true` additionally limit editors and viewers to the
+  people shared with them through `person_owners`. Pre-workspace data lives in one branch-scoped tree (migration 00002).
+  Until the API is tree-scoped, legacy routes place new rows in the creating user's first tree.
 - IDs are `text`: rows migrated from MongoDB keep their 24-char hex ObjectIDs, new rows get UUIDv7 strings.
 - `cmd/mongo2pg` is a one-off tool that copies the legacy MongoDB data into Postgres
   (`MONGO_URI`, `MONGO_DB`, `DATABASE_URL`; truncates and reloads, safe to re-run). Remove it after the cutover.

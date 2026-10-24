@@ -37,7 +37,12 @@ func createFamily(c *gin.Context) {
 	u, _ := c.Get("user")
 	user := u.(*User)
 	f := &Family{Name: body.Name, Person: person, OwnedBy: []string{user.ID}}
-	newF, _ := createFamilyRepo(c, f)
+	newF, err := createFamilyRepo(c, f)
+	if err != nil {
+		newrelic.FromContext(c.Request.Context()).NoticeError(err)
+		responseError(c, "Failed to create family", 500)
+		return
+	}
 	responseSuccess(c, newF, 201)
 }
 

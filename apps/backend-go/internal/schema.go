@@ -24,18 +24,33 @@ func (b *RowBase) BeforeCreate(tx *gorm.DB) error {
 	return nil
 }
 
+// Tables and indexes are defined by the SQL files in internal/migrations; gorm tags here only describe mappings.
+
 type userRow struct {
 	RowBase
-	Name     string
-	Username string `gorm:"uniqueIndex:idx_users_username_active,where:deleted_at IS NULL"`
-	Password string
-	Role     string
+	Name            string
+	Username        string
+	Password        string
+	Role            string
+	Email           *string
+	EmailVerifiedAt *time.Time
+	GoogleSub       *string
 }
 
 func (userRow) TableName() string { return "users" }
 
+type treeMemberRow struct {
+	TreeID    string `gorm:"primaryKey;type:text"`
+	UserID    string `gorm:"primaryKey;type:text"`
+	Role      string
+	CreatedAt time.Time
+}
+
+func (treeMemberRow) TableName() string { return "tree_members" }
+
 type personRow struct {
 	RowBase
+	TreeID        string `gorm:"type:text"`
 	Name          string
 	Nickname      string
 	Address       string
@@ -60,6 +75,7 @@ func (personOwner) TableName() string { return "person_owners" }
 
 type familyRow struct {
 	RowBase
+	TreeID     string `gorm:"type:text"`
 	Name       string
 	PersonID   *string       `gorm:"type:text;index"`
 	Person     *personRow    `gorm:"foreignKey:PersonID"`
@@ -78,8 +94,9 @@ func (familyOwner) TableName() string { return "family_owners" }
 
 type relationshipRow struct {
 	RowBase
-	FromID    string     `gorm:"type:text;not null;index"`
-	ToID      string     `gorm:"type:text;not null;index"`
+	TreeID    string     `gorm:"type:text"`
+	FromID    string     `gorm:"type:text"`
+	ToID      string     `gorm:"type:text"`
 	From      *personRow `gorm:"foreignKey:FromID"`
 	To        *personRow `gorm:"foreignKey:ToID"`
 	Type      string
@@ -87,11 +104,6 @@ type relationshipRow struct {
 }
 
 func (relationshipRow) TableName() string { return "relationships" }
-
-// schemaModels lists every table managed by AutoMigrate, in dependency order.
-var schemaModels = []any{
-	&userRow{}, &personRow{}, &personOwner{}, &familyRow{}, &familyOwner{}, &relationshipRow{},
-}
 
 func (u *userRow) toModel() *User {
 	return &User{ID: u.ID, Name: u.Name, Username: u.Username, Password: u.Password, Role: UserRole(u.Role)}
@@ -101,6 +113,7 @@ func (u *userRow) toModel() *User {
 func (p *personRow) toModel() *Person {
 	out := &Person{
 		ID:       p.ID,
+		TreeID:   p.TreeID,
 		Name:     p.Name,
 		Nickname: p.Nickname,
 		Address:  p.Address,
@@ -133,6 +146,7 @@ func (p *personRow) toModel() *Person {
 func newPersonRow(p *Person) *personRow {
 	row := &personRow{
 		RowBase:  RowBase{ID: p.ID},
+		TreeID:   p.TreeID,
 		Name:     p.Name,
 		Nickname: p.Nickname,
 		Address:  p.Address,
@@ -149,7 +163,7 @@ func newPersonRow(p *Person) *personRow {
 }
 
 func (f *familyRow) toModel() *Family {
-	out := &Family{ID: f.ID, Name: f.Name, OwnedBy: []string{}}
+	out := &Family{ID: f.ID, TreeID: f.TreeID, Name: f.Name, OwnedBy: []string{}}
 	if f.Person != nil {
 		out.Person = f.Person.toModel()
 		out.Person.OwnedBy = nil

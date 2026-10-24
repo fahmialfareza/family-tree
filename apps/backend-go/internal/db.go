@@ -2,8 +2,10 @@ package app
 
 import (
 	"context"
+	"embed"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"time"
 
@@ -11,6 +13,8 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/newrelic/go-agent/v3/integrations/nrpgx5"
 	nrredis "github.com/newrelic/go-agent/v3/integrations/nrredis-v9"
+	"github.com/pressly/goose/v3"
+	"github.com/pressly/goose/v3/lock"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -51,12 +55,40 @@ func InitPostgres(ctx context.Context) error {
 	return nil
 }
 
-// InitSchema creates or updates tables and indexes. Safe to call on every startup.
+//go:embed migrations/*.sql
+var migrationFiles embed.FS
+
+// InitSchema applies pending SQL migrations from internal/migrations. Safe to call on every startup:
+// a Postgres advisory lock keeps concurrent instances from migrating at the same time.
 func InitSchema(ctx context.Context) error {
-	if err := DB.WithContext(ctx).AutoMigrate(schemaModels...); err != nil {
-		return fmt.Errorf("auto migrate: %w", err)
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
 	}
-	fmt.Println("Postgres schema ensured")
+	migrations, err := fs.Sub(migrationFiles, "migrations")
+	if err != nil {
+		return err
+	}
+	locker, err := lock.NewPostgresSessionLocker()
+	if err != nil {
+		return err
+	}
+	provider, err := goose.NewProvider(goose.DialectPostgres, sqlDB, migrations, goose.WithSessionLocker(locker))
+	if err != nil {
+		return fmt.Errorf("init migrations: %w", err)
+	}
+	results, err := provider.Up(ctx)
+	if err != nil {
+		return fmt.Errorf("migrate: %w", err)
+	}
+	for _, r := range results {
+		fmt.Printf("Applied migration %s (%s)\n", r.Source.Path, r.Duration)
+	}
+	version, err := provider.GetDBVersion(ctx)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Postgres schema at version", version)
 	return nil
 }
 

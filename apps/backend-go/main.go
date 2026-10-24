@@ -34,7 +34,7 @@ func main() {
 	// Redis cache is optional
 	app.InitRedis(ctx)
 
-	// Ensure tables and indexes exist (idempotent — safe to run on every startup)
+	// Apply pending SQL migrations (idempotent — safe to run on every startup)
 	if err := app.InitSchema(context.Background()); err != nil {
 		log.Fatalf("failed to init schema: %v", err)
 	}

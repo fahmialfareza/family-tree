@@ -208,7 +208,10 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 					}
 				}
 				sort.Slice(sharedChildrenList, func(i, j int) bool {
-					return sharedChildrenList[i].order < sharedChildrenList[j].order
+					if sharedChildrenList[i].order != sharedChildrenList[j].order {
+						return sharedChildrenList[i].order < sharedChildrenList[j].order
+					}
+					return sharedChildrenList[i].id < sharedChildrenList[j].id // stable tie-break for equal order
 				})
 
 				children := []internalNode{}
@@ -247,7 +250,10 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				}
 			}
 			sort.Slice(singleChildrenList, func(i, j int) bool {
-				return singleChildrenList[i].order < singleChildrenList[j].order
+				if singleChildrenList[i].order != singleChildrenList[j].order {
+					return singleChildrenList[i].order < singleChildrenList[j].order
+				}
+				return singleChildrenList[i].id < singleChildrenList[j].id // stable tie-break for equal order
 			})
 
 			singleChildren := []internalNode{}

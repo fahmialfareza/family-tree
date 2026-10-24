@@ -1,6 +1,7 @@
 // Command mongo2pg copies family-tree data from MongoDB into Postgres.
 //
-// One-off cutover tool: it truncates the Postgres tables and reloads everything, so it is safe to re-run.
+// One-off cutover tool: it truncates the Postgres tables (trees included) and reloads everything into a
+// single tree, so it is safe to re-run.
 // Existing MongoDB ObjectIDs are kept as text primary keys. Delete this command after the cutover.
 //
 // Env: MONGO_URI, MONGO_DB (default "family-tree"), DATABASE_URL.
@@ -14,6 +15,7 @@ import (
 	"time"
 
 	app "github.com/fahmialfareza/family-tree/backend/internal"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
@@ -37,6 +39,7 @@ type user struct {
 
 type person struct {
 	Base
+	TreeID                                  string
 	Name, Nickname, Address, Status, Gender string
 	BirthDate                               *time.Time
 	Phone, PhotoURL                         string
@@ -44,15 +47,25 @@ type person struct {
 
 type family struct {
 	Base
+	TreeID   string
 	Name     string
 	PersonID *string
 }
 
 type relationship struct {
 	Base
+	TreeID             string
 	FromID, ToID, Type string
 	SortOrder          int
 }
+
+type tree struct {
+	ID, Name     string
+	CreatedBy    *string
+	BranchScoped bool
+}
+
+type treeMember struct{ TreeID, UserID, Role string }
 
 type personOwner struct{ PersonID, UserID string }
 type familyOwner struct{ FamilyID, UserID string }
@@ -91,6 +104,11 @@ func main() {
 	families := load(ctx, mdb, "families")
 	rels := load(ctx, mdb, "relationships")
 
+	// Everything lands in one branch-scoped tree, matching migration 00002.
+	treeID := uuid.Must(uuid.NewV7()).String()
+	tRow := tree{ID: treeID, Name: app.DefaultFamilyTreeName, BranchScoped: true}
+	var tmRows []treeMember
+
 	userIDs := map[string]bool{}
 	personIDs := map[string]bool{}
 	var (
@@ -110,10 +128,22 @@ func main() {
 		}
 		userIDs[u.ID] = true
 		uRows = append(uRows, u)
+		if u.DeletedAt.Valid {
+			continue
+		}
+		role := app.TreeRoleEditor
+		if u.Role == "admin" {
+			role = app.TreeRoleOwner
+			if tRow.CreatedBy == nil {
+				id := u.ID
+				tRow.CreatedBy = &id
+			}
+		}
+		tmRows = append(tmRows, treeMember{TreeID: treeID, UserID: u.ID, Role: string(role)})
 	}
 	for _, d := range people {
 		p := person{
-			Base: baseOf(d), Name: str(d["name"]), Nickname: str(d["nickname"]), Address: str(d["address"]),
+			Base: baseOf(d), TreeID: treeID, Name: str(d["name"]), Nickname: str(d["nickname"]), Address: str(d["address"]),
 			Status: str(d["status"]), Gender: str(d["gender"]), BirthDate: timeOf(d["birthDate"]),
 			Phone: str(d["phone"]), PhotoURL: str(d["photoUrl"]),
 		}
@@ -128,7 +158,7 @@ func main() {
 		}
 	}
 	for _, d := range families {
-		f := family{Base: baseOf(d), Name: str(d["name"])}
+		f := family{Base: baseOf(d), TreeID: treeID, Name: str(d["name"])}
 		if pid := idOf(d["person"]); pid != "" {
 			if personIDs[pid] {
 				f.PersonID = &pid
@@ -146,7 +176,7 @@ func main() {
 		}
 	}
 	for _, d := range rels {
-		r := relationship{Base: baseOf(d), FromID: idOf(d["from"]), ToID: idOf(d["to"]), Type: str(d["type"]), SortOrder: intOf(d["order"])}
+		r := relationship{Base: baseOf(d), TreeID: treeID, FromID: idOf(d["from"]), ToID: idOf(d["to"]), Type: str(d["type"]), SortOrder: intOf(d["order"])}
 		if !personIDs[r.FromID] || !personIDs[r.ToID] {
 			skipped["relationships (missing person)"]++
 			continue
@@ -155,7 +185,7 @@ func main() {
 	}
 
 	err = app.DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Exec("TRUNCATE relationships, family_owners, families, person_owners, people, users CASCADE").Error; err != nil {
+		if err := tx.Exec("TRUNCATE relationships, family_owners, families, person_owners, people, tree_invites, tree_members, trees, users CASCADE").Error; err != nil {
 			return err
 		}
 		steps := []struct {
@@ -164,6 +194,8 @@ func main() {
 			n     int
 		}{
 			{"users", uRows, len(uRows)},
+			{"trees", []tree{tRow}, 1},
+			{"tree_members", tmRows, len(tmRows)},
 			{"people", pRows, len(pRows)},
 			{"person_owners", poRows, len(poRows)},
 			{"families", fRows, len(fRows)},

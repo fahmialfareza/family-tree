@@ -79,9 +79,17 @@ func createPerson(c *gin.Context) {
 	u, _ := c.Get("user")
 	user := u.(*User)
 
+	treeID, err := defaultTreeIDForUser(c, user.ID)
+	if err != nil {
+		newrelic.FromContext(c.Request.Context()).NoticeError(err)
+		responseError(c, "You are not a member of any family tree", 403)
+		return
+	}
+
 	id := fmt.Sprintf("p-%d", time.Now().UnixNano())
 	person := &Person{
 		ID:        id,
+		TreeID:    treeID,
 		Name:      name,
 		Nickname:  nickname,
 		Address:   address,
@@ -93,7 +101,12 @@ func createPerson(c *gin.Context) {
 		OwnedBy:   []string{user.ID},
 	}
 
-	newPerson, _ := createPersonRepo(c, person)
+	newPerson, err := createPersonRepo(c, person)
+	if err != nil {
+		newrelic.FromContext(c.Request.Context()).NoticeError(err)
+		responseError(c, "Failed to create person", 500)
+		return
+	}
 	responseSuccess(c, newPerson, 200)
 }
 

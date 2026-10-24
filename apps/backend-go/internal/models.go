@@ -17,8 +17,20 @@ type User struct {
 	Role     UserRole `json:"role"`
 }
 
+type TreeRole string
+
+const (
+	TreeRoleOwner  TreeRole = "owner"
+	TreeRoleEditor TreeRole = "editor"
+	TreeRoleViewer TreeRole = "viewer"
+)
+
+// DefaultFamilyTreeName names the tree that pre-workspace data was moved into.
+const DefaultFamilyTreeName = "Alfareza Family"
+
 type Person struct {
 	ID            string          `json:"_id"`
+	TreeID        string          `json:"treeId,omitempty"`
 	Name          string          `json:"name"`
 	Nickname      string          `json:"nickname"`
 	Address       string          `json:"address"`
@@ -34,6 +46,7 @@ type Person struct {
 
 type Family struct {
 	ID      string   `json:"_id"`
+	TreeID  string   `json:"treeId,omitempty"`
 	Name    string   `json:"name"`
 	Person  *Person  `json:"person,omitempty"`
 	OwnedBy []string `json:"ownedBy"`

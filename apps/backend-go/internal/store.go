@@ -9,12 +9,17 @@ import (
 
 	"github.com/newrelic/go-agent/v3/newrelic"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // preloadOwners loads ownership links plus the (non-deleted) owning users.
 func preloadOwners(db *gorm.DB) *gorm.DB {
 	return db.Preload("OwnerLinks").Preload("OwnerLinks.Owner")
 }
+
+// byCreation gives list queries a stable order. Without it Postgres returns rows in physical order,
+// which shifts whenever a row is rewritten.
+func byCreation(db *gorm.DB) *gorm.DB { return db.Order("created_at, id") }
 
 // unscoped lets populated person details include soft-deleted people, matching the old $lookup behavior.
 func unscoped(db *gorm.DB) *gorm.DB { return db.Unscoped() }
@@ -60,12 +65,22 @@ func findUserByUsername(ctx context.Context, username string) (*User, error) {
 	return u, nil
 }
 
-func addUser(ctx context.Context, u *User) (*User, error) {
+// addUser creates a user and, when treeID is set, adds them to that tree with the given role.
+func addUser(ctx context.Context, u *User, treeID string, role TreeRole) (*User, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/addUser").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	row := userRow{Name: u.Name, Username: u.Username, Password: u.Password, Role: string(u.Role)}
-	if err := DB.WithContext(ctx).Create(&row).Error; err != nil {
+	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		if treeID == "" {
+			return nil
+		}
+		return tx.Create(&treeMemberRow{TreeID: treeID, UserID: row.ID, Role: string(role)}).Error
+	})
+	if err != nil {
 		return nil, err
 	}
 	cacheDel(ctx, cacheKeyUsersList(), cacheKeyUsername(u.Username))
@@ -84,13 +99,13 @@ func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) 
 	defer cancel()
 
 	q := preloadOwners(DB.WithContext(ctx)).
-		Preload("Relationships").
+		Preload("Relationships", byCreation).
 		Preload("Relationships.To", unscoped)
 	if len(ownedBy) > 0 {
 		q = q.Where("id IN (?)", DB.Model(&personOwner{}).Select("person_id").Where("user_id IN ?", ownedBy))
 	}
 	var rows []personRow
-	if err := q.Find(&rows).Error; err != nil {
+	if err := byCreation(q).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	res := make([]*Person, 0, len(rows))
@@ -126,6 +141,9 @@ func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
+	if p.TreeID == "" {
+		return nil, errNoTree
+	}
 	row := newPersonRow(p)
 	row.ID = ""
 	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
@@ -207,7 +225,7 @@ func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error
 		q = q.Where("id IN (?)", DB.Model(&familyOwner{}).Select("family_id").Where("user_id IN ?", ownedBy))
 	}
 	var rows []familyRow
-	if err := q.Find(&rows).Error; err != nil {
+	if err := byCreation(q).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	res := make([]*Family, 0, len(rows))
@@ -251,6 +269,15 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 	personID := f.Person.ID
 	row := familyRow{Name: f.Name, PersonID: &personID}
 	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		trees, err := treeIDsOfPeople(tx, []string{personID})
+		if err != nil {
+			return err
+		}
+		treeID, ok := trees[personID]
+		if !ok {
+			return gorm.ErrRecordNotFound
+		}
+		row.TreeID = treeID
 		if err := tx.Omit("Person").Create(&row).Error; err != nil {
 			return err
 		}
@@ -298,7 +325,7 @@ func repoFindUsers(ctx context.Context, role UserRole) ([]User, error) {
 	defer cancel()
 
 	var rows []userRow
-	if err := DB.WithContext(ctx).Where("role = ?", string(role)).Find(&rows).Error; err != nil {
+	if err := byCreation(DB.WithContext(ctx)).Where("role = ?", string(role)).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	res := make([]User, 0, len(rows))
@@ -333,6 +360,7 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Re
 		Preload("From", unscoped).
 		Preload("To", unscoped).
 		Where("from_id = ? OR to_id = ?", personId, personId).
+		Scopes(byCreation).
 		Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -354,19 +382,33 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Re
 
 func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error {
 	defer newrelic.FromContext(ctx).StartSegment("store/insertManyRelationshipsRepo").End()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	ids := make([]string, 0, len(rels)*2)
+	for _, r := range rels {
+		ids = append(ids, r.From, r.To)
+	}
+	trees, err := treeIDsOfPeople(DB.WithContext(ctx), ids)
+	if err != nil {
+		return err
+	}
 	rows := make([]relationshipRow, 0, len(rels))
 	for _, r := range rels {
 		if r.From == "" || r.To == "" {
 			continue // Skip invalid IDs
 		}
-		rows = append(rows, relationshipRow{FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order})
+		treeID, err := sameTreeID(trees, r.From, r.To)
+		if err != nil {
+			return err
+		}
+		rows = append(rows, relationshipRow{TreeID: treeID, FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order})
 	}
 	if len(rows) == 0 {
 		return nil
 	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	err := DB.WithContext(ctx).Omit("From", "To").Create(&rows).Error
+	// A relationship that already exists is skipped instead of failing the whole batch.
+	err = DB.WithContext(ctx).Omit("From", "To").Clauses(clause.OnConflict{DoNothing: true}).Create(&rows).Error
 	if err == nil {
 		// Invalidate cached relationships and individual person data for every person involved.
 		seen := map[string]struct{}{}
@@ -397,7 +439,16 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 		return nil, fmt.Errorf("invalid from or to ID")
 	}
 
-	res := DB.WithContext(ctx).Model(&relationshipRow{}).Where("id = ?", r.ID).
+	trees, err := treeIDsOfPeople(DB.WithContext(ctx), []string{r.From, r.To})
+	if err != nil {
+		return nil, err
+	}
+	treeID, err := sameTreeID(trees, r.From, r.To)
+	if err != nil {
+		return nil, err
+	}
+
+	res := DB.WithContext(ctx).Model(&relationshipRow{}).Where("id = ? AND tree_id = ?", r.ID, treeID).
 		Select("from_id", "to_id", "type", "sort_order").
 		Updates(relationshipRow{FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order})
 	if res.Error != nil {
@@ -457,7 +508,7 @@ func getRelationshipsByPersonIdsRepo(ctx context.Context, ids []string) (map[str
 	defer cancel()
 
 	var rows []relationshipRow
-	if err := DB.WithContext(ctx2).Where("from_id IN ? OR to_id IN ?", ids, ids).Find(&rows).Error; err != nil {
+	if err := byCreation(DB.WithContext(ctx2)).Where("from_id IN ? OR to_id IN ?", ids, ids).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	for i := range rows {
