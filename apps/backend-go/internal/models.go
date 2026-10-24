@@ -28,6 +28,32 @@ const (
 // DefaultFamilyTreeName names the tree that pre-workspace data was moved into.
 const DefaultFamilyTreeName = "Alfareza Family"
 
+type Tree struct {
+	ID           string    `json:"_id"`
+	Name         string    `json:"name"`
+	BranchScoped bool      `json:"branchScoped"`
+	Role         TreeRole  `json:"role,omitempty"` // the caller's role in this tree
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type TreeMember struct {
+	UserID   string    `json:"userId"`
+	Name     string    `json:"name"`
+	Username string    `json:"username,omitempty"`
+	Email    string    `json:"email,omitempty"`
+	Role     TreeRole  `json:"role"`
+	JoinedAt time.Time `json:"joinedAt"`
+}
+
+type TreeInvite struct {
+	ID        string    `json:"_id"`
+	TreeID    string    `json:"treeId"`
+	Email     string    `json:"email"`
+	Role      TreeRole  `json:"role"`
+	ExpiresAt time.Time `json:"expiresAt"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type Person struct {
 	ID            string          `json:"_id"`
 	TreeID        string          `json:"treeId,omitempty"`

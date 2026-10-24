@@ -24,7 +24,7 @@ This file contains GitHub Copilot-specific guidance for working inside this repo
 - `apps/backend-go` and `apps/frontend` are the active apps.
 - `apps/backend` is a deprecated Express service; avoid new feature work there unless explicitly requested.
 - Use `pnpm` for JavaScript and TypeScript dependency changes.
-- There is no established automated test suite in this repository; prefer targeted lint, build, or type-check commands and include manual verification steps.
+- `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite; prefer targeted lint, build, or type-check commands and include manual verification steps.
 - Use Conventional Commits; see `.github/skills/commit-standards.skill.md`.
 
 ## Git Hooks

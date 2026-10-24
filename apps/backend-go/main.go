@@ -22,6 +22,10 @@ func main() {
 		}
 	}
 
+	if err := app.InitAuth(); err != nil {
+		log.Fatalf("auth config: %v", err)
+	}
+
 	// graceful shutdown example
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

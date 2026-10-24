@@ -16,7 +16,7 @@ This file is the entrypoint for Codex and other OpenAI agents working in this re
 - Deprecated backend: `apps/backend`
 - JavaScript and TypeScript work should use `pnpm` from the repo root.
 - Go backend work should follow existing `internal/` package patterns and stay `gofmt` compatible.
-- There is no established automated test suite, so use targeted lint, build, or type-check commands and provide manual verification when needed.
+- `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite, so use targeted lint, build, or type-check commands and provide manual verification when needed.
 
 ## Working Expectations
 

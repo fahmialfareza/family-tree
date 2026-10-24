@@ -8,23 +8,22 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
+// getAllPeople lists the tree's people; editors and viewers of a branch-scoped tree only see their own branch.
 func getAllPeople(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getAllPeople").End()
-	u, _ := c.Get("user")
-	user := u.(*User)
-	if user.Role == RoleAdmin {
-		people, _ := repoGetAllPeople(c, nil)
-		responseSuccess(c, people, 200)
+	access := currentAccess(c)
+	people, err := repoGetAllPeople(c, access.TreeID, access.listOwnerFilter())
+	if err != nil {
+		abortServerError(c, err)
 		return
 	}
-	people, _ := repoGetAllPeople(c, []string{user.ID})
 	responseSuccess(c, people, 200)
 }
 
 func getPersonById(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getPersonById").End()
 	id := c.Param("id")
-	p, err := getPersonByIdRepo(c, id)
+	p, err := getPersonByIdRepo(c, currentAccess(c).TreeID, id)
 	if err != nil {
 		responseError(c, "Person not found", 404)
 		return
@@ -76,20 +75,12 @@ func createPerson(c *gin.Context) {
 		photoURL = url
 	}
 
-	u, _ := c.Get("user")
-	user := u.(*User)
-
-	treeID, err := defaultTreeIDForUser(c, user.ID)
-	if err != nil {
-		newrelic.FromContext(c.Request.Context()).NoticeError(err)
-		responseError(c, "You are not a member of any family tree", 403)
-		return
-	}
+	user := currentUser(c)
 
 	id := fmt.Sprintf("p-%d", time.Now().UnixNano())
 	person := &Person{
 		ID:        id,
-		TreeID:    treeID,
+		TreeID:    currentAccess(c).TreeID,
 		Name:      name,
 		Nickname:  nickname,
 		Address:   address,
@@ -113,6 +104,9 @@ func createPerson(c *gin.Context) {
 func updatePerson(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/updatePerson").End()
 	id := c.Param("id")
+	if !requireWritePerson(c, id) {
+		return
+	}
 	name := c.PostForm("name")
 	nickname := c.PostForm("nickname")
 	address := c.PostForm("address")
@@ -141,7 +135,7 @@ func updatePerson(c *gin.Context) {
 		}
 	}
 
-	p, err := getPersonByIdRepo(c, id)
+	p, err := getPersonByIdRepo(c, currentAccess(c).TreeID, id)
 	if err != nil {
 		responseError(c, "Person not found", 404)
 		return
@@ -170,7 +164,11 @@ func updatePerson(c *gin.Context) {
 		p.PhotoURL = photoURL
 	}
 
-	updated, _ := updatePersonRepo(c, p)
+	updated, err := updatePersonRepo(c, p)
+	if err != nil {
+		abortServerError(c, err)
+		return
+	}
 	responseSuccess(c, updated, 200)
 }
 
@@ -184,18 +182,29 @@ func updatePersonOwnership(c *gin.Context) {
 		responseError(c, "Invalid request body", 400)
 		return
 	}
-	p, err := getPersonByIdRepo(c, id)
+	access := currentAccess(c)
+	members, err := areMembers(c, access.TreeID, body.Owners)
 	if err != nil {
+		abortServerError(c, err)
+		return
+	}
+	if !members {
+		responseError(c, "Owners must be members of this tree", 400)
+		return
+	}
+	if _, err := getPersonByIdRepo(c, access.TreeID, id); err != nil {
 		responseError(c, "Person not found", 404)
 		return
 	}
 
 	// Update ownership for the person
-	p.OwnedBy = body.Owners
-	_, _ = updatePersonRepo(c, p)
+	if err := updateOwnedByBatchRepo(c, access.TreeID, []string{id}, body.Owners); err != nil {
+		abortServerError(c, err)
+		return
+	}
 
 	// Get all relationships for this person and batch-update ownership for related people.
-	rels, err := getRelationshipsByPersonIdRepo(c, id)
+	rels, err := getRelationshipsByPersonIdRepo(c, access.TreeID, id)
 	if err == nil && len(rels) > 0 {
 		relatedIDs := make(map[string]struct{})
 		for _, rel := range rels {
@@ -212,7 +221,10 @@ func updatePersonOwnership(c *gin.Context) {
 			for rid := range relatedIDs {
 				ids = append(ids, rid)
 			}
-			_ = updateOwnedByBatchRepo(c, ids, body.Owners)
+			if err := updateOwnedByBatchRepo(c, access.TreeID, ids, body.Owners); err != nil {
+				abortServerError(c, err)
+				return
+			}
 		}
 	}
 
@@ -222,7 +234,10 @@ func updatePersonOwnership(c *gin.Context) {
 func deletePersonById(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/deletePersonById").End()
 	id := c.Param("id")
-	p, err := deletePersonRepo(c, id)
+	if !requireWritePerson(c, id) {
+		return
+	}
+	p, err := deletePersonRepo(c, currentAccess(c).TreeID, id)
 	if err != nil {
 		responseError(c, "Person not found", 404)
 		return

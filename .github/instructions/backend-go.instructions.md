@@ -22,6 +22,7 @@ Guidance for working in the primary Go backend.
 ## Run
 
 - Build: `cd apps/backend-go && go build ./...`
+- Test: `cd apps/backend-go && TEST_DATABASE_URL=postgres://...family_tree_test go test ./...` (database name must contain `test`; tables are truncated)
 - Dev: `cd apps/backend-go && go run ./main.go`
 
 ## Style & safety

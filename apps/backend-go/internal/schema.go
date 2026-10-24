@@ -39,6 +39,34 @@ type userRow struct {
 
 func (userRow) TableName() string { return "users" }
 
+type treeRow struct {
+	RowBase
+	Name         string
+	CreatedBy    *string `gorm:"type:text"`
+	BranchScoped bool
+}
+
+func (treeRow) TableName() string { return "trees" }
+
+type treeInviteRow struct {
+	ID         string `gorm:"primaryKey;type:text"`
+	TreeID     string `gorm:"type:text"`
+	Email      string
+	Role       string
+	TokenHash  string
+	InvitedBy  *string `gorm:"type:text"`
+	ExpiresAt  time.Time
+	AcceptedAt *time.Time
+	RevokedAt  *time.Time
+	CreatedAt  time.Time
+}
+
+func (treeInviteRow) TableName() string { return "tree_invites" }
+
+func (r *treeInviteRow) toModel() *TreeInvite {
+	return &TreeInvite{ID: r.ID, TreeID: r.TreeID, Email: r.Email, Role: TreeRole(r.Role), ExpiresAt: r.ExpiresAt, CreatedAt: r.CreatedAt}
+}
+
 type treeMemberRow struct {
 	TreeID    string `gorm:"primaryKey;type:text"`
 	UserID    string `gorm:"primaryKey;type:text"`

@@ -17,7 +17,7 @@ This file is the entrypoint for Claude Code when working in this repository.
 - Deprecated backend: `apps/backend`
 - Use `pnpm` for JavaScript and TypeScript workflows.
 - Reuse existing Go code under `apps/backend-go/internal/` instead of introducing parallel packages.
-- There is no established automated test suite, so prefer focused lint, build, or type-check commands and include manual verification when needed.
+- `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite, so prefer focused lint, build, or type-check commands and include manual verification when needed.
 
 ## Working Expectations
 

@@ -5,16 +5,15 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
+// getFamilies lists the tree's families; editors and viewers of a branch-scoped tree only see their own.
 func getFamilies(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getFamilies").End()
-	u, _ := c.Get("user")
-	user := u.(*User)
-	if user.Role == RoleUser {
-		families, _ := getAllFamiliesRepo(c, []string{user.ID})
-		responseSuccess(c, families, 200)
+	access := currentAccess(c)
+	families, err := getAllFamiliesRepo(c, access.TreeID, access.listOwnerFilter())
+	if err != nil {
+		abortServerError(c, err)
 		return
 	}
-	families, _ := getAllFamiliesRepo(c, nil)
 	responseSuccess(c, families, 200)
 }
 
@@ -28,15 +27,17 @@ func createFamily(c *gin.Context) {
 		responseError(c, "Invalid request body", 400)
 		return
 	}
-	// ensure person exists
-	person, err := getPersonByIdRepo(c, body.Person)
+	access := currentAccess(c)
+	// ensure person exists in this tree and the caller may change them
+	person, err := getPersonByIdRepo(c, access.TreeID, body.Person)
 	if err != nil {
 		responseError(c, "Person not found", 400)
 		return
 	}
-	u, _ := c.Get("user")
-	user := u.(*User)
-	f := &Family{Name: body.Name, Person: person, OwnedBy: []string{user.ID}}
+	if !requireWritePerson(c, person.ID) {
+		return
+	}
+	f := &Family{TreeID: access.TreeID, Name: body.Name, Person: person, OwnedBy: []string{currentUser(c).ID}}
 	newF, err := createFamilyRepo(c, f)
 	if err != nil {
 		newrelic.FromContext(c.Request.Context()).NoticeError(err)
@@ -49,7 +50,17 @@ func createFamily(c *gin.Context) {
 func deleteFamily(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/deleteFamily").End()
 	id := c.Param("id")
-	f, err := deleteFamilyRepo(c, id)
+	access := currentAccess(c)
+	ok, err := access.canWriteFamily(c, id)
+	if err != nil {
+		abortServerError(c, err)
+		return
+	}
+	if !ok {
+		responseError(c, "Forbidden", 403)
+		return
+	}
+	f, err := deleteFamilyRepo(c, access.TreeID, id)
 	if err != nil {
 		responseError(c, "Family not found", 404)
 		return

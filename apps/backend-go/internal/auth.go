@@ -12,14 +12,19 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// jwtSecret is resolved once at package init to avoid os.Getenv on every request.
-var jwtSecret = func() []byte {
+// jwtSecret is set by InitAuth. It must not be read at package init: that runs before main loads .env,
+// which previously made local runs fall back to a hardcoded, public secret.
+var jwtSecret []byte
+
+// InitAuth loads JWT_SECRET; call it after the environment (including .env) is loaded.
+func InitAuth() error {
 	s := os.Getenv("JWT_SECRET")
 	if s == "" {
-		s = "family-tree-secret"
+		return errors.New("JWT_SECRET is required")
 	}
-	return []byte(s)
-}()
+	jwtSecret = []byte(s)
+	return nil
+}
 
 func signIn(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/signIn").End()
@@ -77,7 +82,8 @@ func authenticate(roles []string) gin.HandlerFunc {
 		}
 		tokenStr := parts[1]
 
-		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) { return jwtSecret, nil })
+		token, err := jwt.Parse(tokenStr, func(t *jwt.Token) (interface{}, error) { return jwtSecret, nil },
+			jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 		if err != nil || !token.Valid {
 			responseError(c, "Invalid token", 401)
 			c.Abort()
@@ -151,12 +157,23 @@ func createUser(c *gin.Context) {
 	hashed, _ := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
 	u := &User{ID: "", Name: body.Name, Username: body.Username, Password: string(hashed), Role: RoleUser}
 
-	// Users created by an admin join the admin's tree as editors, limited to the branches shared with them.
-	admin, _ := c.Get("user")
-	treeID, err := defaultTreeIDForUser(c, admin.(*User).ID)
+	// Users created by an admin join the admin's tree as editors (limited to the branches shared with them),
+	// but only when the admin owns that tree; otherwise they start without a tree.
+	admin := currentUser(c)
+	treeID, err := defaultTreeIDForUser(c, admin.ID)
 	if err != nil && !errors.Is(err, errNoTree) {
 		responseError(c, "Failed to create user", 500)
 		return
+	}
+	if treeID != "" {
+		access, err := loadTreeAccess(c, treeID, admin.ID)
+		if err != nil {
+			responseError(c, "Failed to create user", 500)
+			return
+		}
+		if access == nil || access.Role != TreeRoleOwner {
+			treeID = ""
+		}
 	}
 	newUser, err := addUser(c, u, treeID, TreeRoleEditor)
 	if err != nil {
@@ -177,13 +194,21 @@ func profile(c *gin.Context) {
 	responseSuccess(c, gin.H{"user": userCopy, "token": t}, 200)
 }
 
+// users is the legacy owner picker: the other members of the caller's tree, in the old User shape.
 func users(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/users").End()
-	// only admin allowed by middleware
-	us, err := repoFindUsers(c, RoleUser)
+	access := currentAccess(c)
+	members, err := listMembersRepo(c, access.TreeID)
 	if err != nil {
 		responseError(c, "Failed to fetch users", 500)
 		return
+	}
+	us := make([]User, 0, len(members))
+	for _, m := range members {
+		if m.UserID == access.UserID {
+			continue
+		}
+		us = append(us, User{ID: m.UserID, Name: m.Name, Username: m.Username, Role: RoleUser})
 	}
 	responseSuccess(c, us, 200)
 }

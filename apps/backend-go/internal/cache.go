@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -17,7 +18,8 @@ const (
 	cacheTTLRelationships = 10 * time.Minute
 	cacheTTLFamilies      = 5 * time.Minute
 	cacheTTLFamily        = 10 * time.Minute
-	cacheTTLUsers         = 5 * time.Minute
+	// cacheTTLTreeVersion outlives every data TTL so an expired version key can never resurrect stale entries.
+	cacheTTLTreeVersion = 24 * time.Hour
 )
 
 // redisKeyPrefix namespaces every Redis key written by this service.
@@ -26,39 +28,48 @@ const redisKeyPrefix = "family-tree:"
 func cacheKeyUser(id string) string    { return redisKeyPrefix + "user:" + id }
 func cacheKeyUsername(u string) string { return redisKeyPrefix + "username:" + u }
 
-// cacheKeyUsersList is the cache key for the non-admin user list (role=user, not deleted).
-// Scoped to the single call site in repoFindUsers — do not reuse for other filters.
-func cacheKeyUsersList() string { return redisKeyPrefix + "users:list" }
+// Tree data is cached under a per-tree version: tree:{id}:v{n}:<suffix>. Any write in a tree bumps n
+// (bumpTreeCache), which invalidates everything cached for that tree at once; old entries expire by TTL.
 
-func cacheKeyPerson(id string) string {
-	return redisKeyPrefix + "person:" + id
+func cacheKeyTreeVersion(treeID string) string { return redisKeyPrefix + "tree:" + treeID + ":ver" }
+
+func treeCacheKey(ctx context.Context, treeID, suffix string) string {
+	version := "0"
+	if RedisClient != nil {
+		if v, err := RedisClient.Get(ctx, cacheKeyTreeVersion(treeID)).Result(); err == nil {
+			version = v
+		}
+	}
+	return fmt.Sprintf("%stree:%s:v%s:%s", redisKeyPrefix, treeID, version, suffix)
 }
 
-func cacheKeyPeople(ownedBy []string) string {
+// bumpTreeCache invalidates every cached entry for the tree.
+func bumpTreeCache(ctx context.Context, treeID string) {
+	defer newrelic.FromContext(ctx).StartSegment("cache/bump-tree").End()
+	if RedisClient == nil || treeID == "" {
+		return
+	}
+	key := cacheKeyTreeVersion(treeID)
+	pipe := RedisClient.Pipeline()
+	pipe.Incr(ctx, key)
+	pipe.Expire(ctx, key, cacheTTLTreeVersion)
+	_, _ = pipe.Exec(ctx)
+}
+
+func cacheSuffixPerson(id string) string        { return "person:" + id }
+func cacheSuffixRelationships(id string) string { return "relationships:" + id }
+func cacheSuffixFamily(id string) string        { return "family:" + id }
+
+// cacheSuffixList names a people/families list; ownedBy nil means the whole tree.
+func cacheSuffixList(kind string, ownedBy []string) string {
 	if len(ownedBy) == 0 {
-		return redisKeyPrefix + "people:all"
+		return kind + ":all"
 	}
 	sorted := make([]string, len(ownedBy))
 	copy(sorted, ownedBy)
 	sort.Strings(sorted)
-	return redisKeyPrefix + "people:users:" + strings.Join(sorted, ",")
+	return kind + ":users:" + strings.Join(sorted, ",")
 }
-
-func cacheKeyRelationships(personID string) string {
-	return redisKeyPrefix + "relationships:" + personID
-}
-
-func cacheKeyFamilies(ownedBy []string) string {
-	if len(ownedBy) == 0 {
-		return redisKeyPrefix + "families:all"
-	}
-	sorted := make([]string, len(ownedBy))
-	copy(sorted, ownedBy)
-	sort.Strings(sorted)
-	return redisKeyPrefix + "families:users:" + strings.Join(sorted, ",")
-}
-
-func cacheKeyFamily(id string) string { return redisKeyPrefix + "family:" + id }
 
 // cacheGet deserializes a cached value. Returns (value, true) on hit, zero+false on miss.
 func cacheGet[T any](ctx context.Context, key string) (T, bool) {
@@ -98,26 +109,4 @@ func cacheDel(ctx context.Context, keys ...string) {
 		return
 	}
 	RedisClient.Del(ctx, keys...)
-}
-
-// cacheDelPattern removes all keys matching the given glob pattern via SCAN+DEL.
-func cacheDelPattern(ctx context.Context, pattern string) {
-	defer newrelic.FromContext(ctx).StartSegment("cache/del-pattern").End()
-	if RedisClient == nil {
-		return
-	}
-	var cursor uint64
-	for {
-		keys, cur, err := RedisClient.Scan(ctx, cursor, pattern, 100).Result()
-		if err != nil {
-			break
-		}
-		if len(keys) > 0 {
-			RedisClient.Del(ctx, keys...)
-		}
-		cursor = cur
-		if cursor == 0 {
-			break
-		}
-	}
 }

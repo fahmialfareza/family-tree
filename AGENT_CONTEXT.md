@@ -55,7 +55,7 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
   - `pnpm format`
 - Frontend scripts live in `apps/frontend/package.json`.
 - Legacy backend scripts live in `apps/backend/package.json`.
-- There is no established automated test suite in this repository today. Prefer focused lint, build, or type-check commands and include manual verification steps when automation is not available.
+- `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite. Prefer focused lint, build, or type-check commands and include manual verification steps when automation is not available. Extend the authorization tests in `apps/backend-go/internal/authz_test.go` when adding or changing tree-scoped routes.
 
 ## Commit and PR Guidance
 

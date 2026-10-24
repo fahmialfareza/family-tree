@@ -12,6 +12,9 @@ import (
 	"gorm.io/gorm/clause"
 )
 
+// All person/family/relationship functions take the tree ID and only touch rows inside that tree;
+// callers get it from the request's treeAccess, so a row in another tree behaves as if it did not exist.
+
 // preloadOwners loads ownership links plus the (non-deleted) owning users.
 func preloadOwners(db *gorm.DB) *gorm.DB {
 	return db.Preload("OwnerLinks").Preload("OwnerLinks.Owner")
@@ -23,6 +26,10 @@ func byCreation(db *gorm.DB) *gorm.DB { return db.Order("created_at, id") }
 
 // unscoped lets populated person details include soft-deleted people, matching the old $lookup behavior.
 func unscoped(db *gorm.DB) *gorm.DB { return db.Unscoped() }
+
+func inTree(treeID string) func(*gorm.DB) *gorm.DB {
+	return func(db *gorm.DB) *gorm.DB { return db.Where("tree_id = ?", treeID) }
+}
 
 func findUserById(ctx context.Context, id string) (*User, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/findUserById").End()
@@ -83,14 +90,14 @@ func addUser(ctx context.Context, u *User, treeID string, role TreeRole) (*User,
 	if err != nil {
 		return nil, err
 	}
-	cacheDel(ctx, cacheKeyUsersList(), cacheKeyUsername(u.Username))
+	cacheDel(ctx, cacheKeyUsername(u.Username))
 	return findUserById(ctx, row.ID)
 }
 
-func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) {
+func repoGetAllPeople(ctx context.Context, treeID string, ownedBy []string) ([]*Person, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/repoGetAllPeople").End()
 
-	cacheKey := cacheKeyPeople(ownedBy)
+	cacheKey := treeCacheKey(ctx, treeID, cacheSuffixList("people", ownedBy))
 	if cached, ok := cacheGet[[]*Person](ctx, cacheKey); ok {
 		return cached, nil
 	}
@@ -100,7 +107,8 @@ func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) 
 
 	q := preloadOwners(DB.WithContext(ctx)).
 		Preload("Relationships", byCreation).
-		Preload("Relationships.To", unscoped)
+		Preload("Relationships.To", unscoped).
+		Scopes(inTree(treeID))
 	if len(ownedBy) > 0 {
 		q = q.Where("id IN (?)", DB.Model(&personOwner{}).Select("person_id").Where("user_id IN ?", ownedBy))
 	}
@@ -116,10 +124,10 @@ func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) 
 	return res, nil
 }
 
-func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
+func getPersonByIdRepo(ctx context.Context, treeID, id string) (*Person, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/getPersonByIdRepo").End()
 
-	cacheKey := cacheKeyPerson(id)
+	cacheKey := treeCacheKey(ctx, treeID, cacheSuffixPerson(id))
 	if cached, ok := cacheGet[*Person](ctx, cacheKey); ok {
 		return cached, nil
 	}
@@ -128,7 +136,7 @@ func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
 	defer cancel()
 
 	var row personRow
-	if err := preloadOwners(DB.WithContext(ctx)).Where("id = ?", id).First(&row).Error; err != nil {
+	if err := preloadOwners(DB.WithContext(ctx)).Scopes(inTree(treeID)).Where("id = ?", id).First(&row).Error; err != nil {
 		return nil, err
 	}
 	p := row.toModel()
@@ -158,13 +166,12 @@ func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
 	if err != nil {
 		return nil, err
 	}
-	created, err := getPersonByIdRepo(ctx, row.ID)
-	if err == nil {
-		cacheDel(ctx, cacheKeyPeople(nil), cacheKeyPeople(p.OwnedBy))
-	}
-	return created, err
+	bumpTreeCache(ctx, p.TreeID)
+	return getPersonByIdRepo(ctx, p.TreeID, row.ID)
 }
 
+// updatePersonRepo updates a person's own fields. Owners are only changed through updateOwnedByBatchRepo,
+// so an edit can never resurrect an ownership that was revoked meanwhile.
 func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/updatePersonRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -172,7 +179,7 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 
 	row := newPersonRow(p)
 	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		res := tx.Model(&personRow{}).Where("id = ?", p.ID).
+		res := tx.Model(&personRow{}).Scopes(inTree(p.TreeID)).Where("id = ?", p.ID).
 			Select("name", "nickname", "address", "status", "gender", "birth_date", "phone", "photo_url").
 			Updates(row)
 		if res.Error != nil {
@@ -181,38 +188,36 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 		if res.RowsAffected == 0 {
 			return gorm.ErrRecordNotFound
 		}
-		return replacePersonOwners(tx, []string{p.ID}, p.OwnedBy)
+		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	cacheDel(ctx, cacheKeyPerson(p.ID), cacheKeyPeople(nil), cacheKeyPeople(p.OwnedBy))
-	cacheDelPattern(ctx, redisKeyPrefix+"relationships:*")
-	return getPersonByIdRepo(ctx, p.ID)
+	bumpTreeCache(ctx, p.TreeID)
+	return getPersonByIdRepo(ctx, p.TreeID, p.ID)
 }
 
-func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
+func deletePersonRepo(ctx context.Context, treeID, id string) (*Person, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/deletePersonRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
 	// Soft delete: return the person as it was before deletion
 	var row personRow
-	if err := preloadOwners(DB.WithContext(ctx)).Where("id = ?", id).First(&row).Error; err != nil {
+	if err := preloadOwners(DB.WithContext(ctx)).Scopes(inTree(treeID)).Where("id = ?", id).First(&row).Error; err != nil {
 		return nil, err
 	}
-	if err := DB.WithContext(ctx).Delete(&personRow{}, "id = ?", id).Error; err != nil {
+	if err := DB.WithContext(ctx).Scopes(inTree(treeID)).Delete(&personRow{}, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-	cacheDel(ctx, cacheKeyPerson(id), cacheKeyPeople(nil))
-	cacheDelPattern(ctx, redisKeyPrefix+"relationships:*")
+	bumpTreeCache(ctx, treeID)
 	return row.toModel(), nil
 }
 
-func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error) {
+func getAllFamiliesRepo(ctx context.Context, treeID string, ownedBy []string) ([]*Family, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/getAllFamiliesRepo").End()
 
-	cacheKey := cacheKeyFamilies(ownedBy)
+	cacheKey := treeCacheKey(ctx, treeID, cacheSuffixList("families", ownedBy))
 	if cached, ok := cacheGet[[]*Family](ctx, cacheKey); ok {
 		return cached, nil
 	}
@@ -220,7 +225,7 @@ func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	q := DB.WithContext(ctx).Preload("OwnerLinks").Preload("Person", unscoped)
+	q := DB.WithContext(ctx).Preload("OwnerLinks").Preload("Person", unscoped).Scopes(inTree(treeID))
 	if len(ownedBy) > 0 {
 		q = q.Where("id IN (?)", DB.Model(&familyOwner{}).Select("family_id").Where("user_id IN ?", ownedBy))
 	}
@@ -237,10 +242,10 @@ func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error
 }
 
 // getFamilyByIdRepo fetches a single family by ID with person populated, using the cache.
-func getFamilyByIdRepo(ctx context.Context, id string) (*Family, error) {
+func getFamilyByIdRepo(ctx context.Context, treeID, id string) (*Family, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/getFamilyByIdRepo").End()
 
-	cacheKey := cacheKeyFamily(id)
+	cacheKey := treeCacheKey(ctx, treeID, cacheSuffixFamily(id))
 	if cached, ok := cacheGet[*Family](ctx, cacheKey); ok {
 		return cached, nil
 	}
@@ -250,7 +255,7 @@ func getFamilyByIdRepo(ctx context.Context, id string) (*Family, error) {
 
 	var row familyRow
 	if err := DB.WithContext(ctx).Preload("OwnerLinks").Preload("Person", unscoped).
-		Where("id = ?", id).First(&row).Error; err != nil {
+		Scopes(inTree(treeID)).Where("id = ?", id).First(&row).Error; err != nil {
 		return nil, err
 	}
 	out := row.toModel()
@@ -258,6 +263,7 @@ func getFamilyByIdRepo(ctx context.Context, id string) (*Family, error) {
 	return out, nil
 }
 
+// createFamilyRepo creates a family in f.TreeID; its person must belong to the same tree.
 func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/createFamilyRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
@@ -266,18 +272,19 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 	if f.Person == nil || f.Person.ID == "" {
 		return nil, errors.New("person is required")
 	}
+	if f.TreeID == "" {
+		return nil, errNoTree
+	}
 	personID := f.Person.ID
-	row := familyRow{Name: f.Name, PersonID: &personID}
+	row := familyRow{TreeID: f.TreeID, Name: f.Name, PersonID: &personID}
 	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		trees, err := treeIDsOfPeople(tx, []string{personID})
 		if err != nil {
 			return err
 		}
-		treeID, ok := trees[personID]
-		if !ok {
+		if trees[personID] != f.TreeID {
 			return gorm.ErrRecordNotFound
 		}
-		row.TreeID = treeID
 		if err := tx.Omit("Person").Create(&row).Error; err != nil {
 			return err
 		}
@@ -289,14 +296,14 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 	if err != nil {
 		return nil, err
 	}
-	cacheDelPattern(ctx, redisKeyPrefix+"families:*")
-	return getFamilyByIdRepo(ctx, row.ID)
+	bumpTreeCache(ctx, f.TreeID)
+	return getFamilyByIdRepo(ctx, f.TreeID, row.ID)
 }
 
-func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
+func deleteFamilyRepo(ctx context.Context, treeID, id string) (*Family, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/deleteFamilyRepo").End()
 
-	out, err := getFamilyByIdRepo(ctx, id)
+	out, err := getFamilyByIdRepo(ctx, treeID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -304,45 +311,18 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
-	if err := DB.WithContext(ctx).Delete(&familyRow{}, "id = ?", id).Error; err != nil {
+	if err := DB.WithContext(ctx).Scopes(inTree(treeID)).Delete(&familyRow{}, "id = ?", id).Error; err != nil {
 		return nil, err
 	}
-
-	cacheDel(ctx, cacheKeyFamily(id))
-	cacheDelPattern(ctx, redisKeyPrefix+"families:*")
+	bumpTreeCache(ctx, treeID)
 	return out, nil
 }
 
-func repoFindUsers(ctx context.Context, role UserRole) ([]User, error) {
-	defer newrelic.FromContext(ctx).StartSegment("store/repoFindUsers").End()
-
-	cacheKey := cacheKeyUsersList()
-	if cached, ok := cacheGet[[]User](ctx, cacheKey); ok {
-		return cached, nil
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	var rows []userRow
-	if err := byCreation(DB.WithContext(ctx)).Where("role = ?", string(role)).Find(&rows).Error; err != nil {
-		return nil, err
-	}
-	res := make([]User, 0, len(rows))
-	for i := range rows {
-		u := rows[i].toModel()
-		u.Password = ""
-		res = append(res, *u)
-	}
-	cacheSet(ctx, cacheKey, res, cacheTTLUsers)
-	return res, nil
-}
-
 // Relationship repository functions
-func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Relationship, error) {
+func getRelationshipsByPersonIdRepo(ctx context.Context, treeID, personId string) ([]*Relationship, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/getRelationshipsByPersonIdRepo").End()
 
-	cacheKey := cacheKeyRelationships(personId)
+	cacheKey := treeCacheKey(ctx, treeID, cacheSuffixRelationships(personId))
 	if cached, ok := cacheGet[[]*Relationship](ctx, cacheKey); ok {
 		return cached, nil
 	}
@@ -359,6 +339,7 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Re
 	if err := DB.WithContext(ctx).
 		Preload("From", unscoped).
 		Preload("To", unscoped).
+		Scopes(inTree(treeID)).
 		Where("from_id = ? OR to_id = ?", personId, personId).
 		Scopes(byCreation).
 		Find(&rows).Error; err != nil {
@@ -380,7 +361,9 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Re
 	return res, nil
 }
 
-func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error {
+// insertManyRelationshipsRepo inserts relationships between people of treeID. Any person outside the
+// tree fails the whole batch; relationships that already exist are skipped.
+func insertManyRelationshipsRepo(ctx context.Context, treeID string, rels []Relationship) error {
 	defer newrelic.FromContext(ctx).StartSegment("store/insertManyRelationshipsRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -398,36 +381,26 @@ func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error
 		if r.From == "" || r.To == "" {
 			continue // Skip invalid IDs
 		}
-		treeID, err := sameTreeID(trees, r.From, r.To)
+		relTree, err := sameTreeID(trees, r.From, r.To)
 		if err != nil {
 			return err
+		}
+		if relTree != treeID {
+			return errCrossTree
 		}
 		rows = append(rows, relationshipRow{TreeID: treeID, FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order})
 	}
 	if len(rows) == 0 {
 		return nil
 	}
-	// A relationship that already exists is skipped instead of failing the whole batch.
 	err = DB.WithContext(ctx).Omit("From", "To").Clauses(clause.OnConflict{DoNothing: true}).Create(&rows).Error
 	if err == nil {
-		// Invalidate cached relationships and individual person data for every person involved.
-		seen := map[string]struct{}{}
-		for _, r := range rels {
-			if _, ok := seen[r.From]; !ok {
-				cacheDel(ctx, cacheKeyRelationships(r.From), cacheKeyPerson(r.From))
-				seen[r.From] = struct{}{}
-			}
-			if _, ok := seen[r.To]; !ok {
-				cacheDel(ctx, cacheKeyRelationships(r.To), cacheKeyPerson(r.To))
-				seen[r.To] = struct{}{}
-			}
-		}
-		cacheDel(ctx, cacheKeyPeople(nil))
+		bumpTreeCache(ctx, treeID)
 	}
 	return err
 }
 
-func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship, error) {
+func updateRelationshipRepo(ctx context.Context, treeID string, r Relationship) (*Relationship, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/updateRelationshipRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -443,12 +416,15 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 	if err != nil {
 		return nil, err
 	}
-	treeID, err := sameTreeID(trees, r.From, r.To)
+	relTree, err := sameTreeID(trees, r.From, r.To)
 	if err != nil {
 		return nil, err
 	}
+	if relTree != treeID {
+		return nil, errCrossTree
+	}
 
-	res := DB.WithContext(ctx).Model(&relationshipRow{}).Where("id = ? AND tree_id = ?", r.ID, treeID).
+	res := DB.WithContext(ctx).Model(&relationshipRow{}).Scopes(inTree(treeID)).Where("id = ?", r.ID).
 		Select("from_id", "to_id", "type", "sort_order").
 		Updates(relationshipRow{FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order})
 	if res.Error != nil {
@@ -461,15 +437,11 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 	if err := DB.WithContext(ctx).Where("id = ?", r.ID).First(&row).Error; err != nil {
 		return nil, err
 	}
-	cacheDel(ctx,
-		cacheKeyRelationships(r.From), cacheKeyRelationships(r.To),
-		cacheKeyPerson(r.From), cacheKeyPerson(r.To),
-	)
-	cacheDel(ctx, cacheKeyPeople(nil))
+	bumpTreeCache(ctx, treeID)
 	return row.toModel(), nil
 }
 
-func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
+func deleteRelationshipsRepo(ctx context.Context, treeID string, ids []string) error {
 	defer newrelic.FromContext(ctx).StartSegment("store/deleteRelationshipsRepo").End()
 	if len(ids) == 0 {
 		return nil
@@ -478,12 +450,9 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 	defer cancel()
 
 	// Soft delete: sets deleted_at instead of removing
-	err := DB.WithContext(ctx).Where("id IN ?", ids).Delete(&relationshipRow{}).Error
+	err := DB.WithContext(ctx).Scopes(inTree(treeID)).Where("id IN ?", ids).Delete(&relationshipRow{}).Error
 	if err == nil {
-		// Person IDs are unknown from relationship IDs alone — flush relationship and people caches.
-		cacheDelPattern(ctx, redisKeyPrefix+"relationships:*")
-		cacheDelPattern(ctx, redisKeyPrefix+"person:*")
-		cacheDel(ctx, cacheKeyPeople(nil))
+		bumpTreeCache(ctx, treeID)
 	}
 	return err
 }
@@ -491,7 +460,7 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 // getRelationshipsByPersonIdsRepo fetches all non-deleted relationships for a batch of person IDs
 // in one DB round-trip. Returns a map of personID → []*Relationship; each relationship is indexed
 // under both its From and To IDs when they appear in the requested set.
-func getRelationshipsByPersonIdsRepo(ctx context.Context, ids []string) (map[string][]*Relationship, error) {
+func getRelationshipsByPersonIdsRepo(ctx context.Context, treeID string, ids []string) (map[string][]*Relationship, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/getRelationshipsByPersonIdsRepo").End()
 
 	result := make(map[string][]*Relationship, len(ids))
@@ -508,7 +477,8 @@ func getRelationshipsByPersonIdsRepo(ctx context.Context, ids []string) (map[str
 	defer cancel()
 
 	var rows []relationshipRow
-	if err := byCreation(DB.WithContext(ctx2)).Where("from_id IN ? OR to_id IN ?", ids, ids).Find(&rows).Error; err != nil {
+	if err := byCreation(DB.WithContext(ctx2)).Scopes(inTree(treeID)).
+		Where("from_id IN ? OR to_id IN ?", ids, ids).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	for i := range rows {
@@ -527,7 +497,7 @@ func getRelationshipsByPersonIdsRepo(ctx context.Context, ids []string) (map[str
 // getPersonsByIdsRepo fetches basic person data (ID, Name, Nickname, Gender) for a batch of IDs
 // in one DB round-trip. Uses individual cache entries where available; does not write back.
 // Returns a map of personID → *Person.
-func getPersonsByIdsRepo(ctx context.Context, ids []string) (map[string]*Person, error) {
+func getPersonsByIdsRepo(ctx context.Context, treeID string, ids []string) (map[string]*Person, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/getPersonsByIdsRepo").End()
 
 	result := make(map[string]*Person, len(ids))
@@ -538,7 +508,7 @@ func getPersonsByIdsRepo(ctx context.Context, ids []string) (map[string]*Person,
 	// Use cached full-person entries where available (avoids a DB call per cache hit).
 	var missing []string
 	for _, id := range ids {
-		if cached, ok := cacheGet[*Person](ctx, cacheKeyPerson(id)); ok {
+		if cached, ok := cacheGet[*Person](ctx, treeCacheKey(ctx, treeID, cacheSuffixPerson(id))); ok {
 			result[id] = cached
 		} else {
 			missing = append(missing, id)
@@ -552,18 +522,18 @@ func getPersonsByIdsRepo(ctx context.Context, ids []string) (map[string]*Person,
 	defer cancel()
 
 	var rows []personRow
-	if err := DB.WithContext(ctx2).Select("id", "name", "nickname", "gender").
+	if err := DB.WithContext(ctx2).Select("id", "name", "nickname", "gender").Scopes(inTree(treeID)).
 		Where("id IN ?", missing).Find(&rows).Error; err != nil {
 		return result, err
 	}
 	for _, row := range rows {
-		result[row.ID] = &Person{ID: row.ID, Name: row.Name, Nickname: row.Nickname, Gender: row.Gender}
+		result[row.ID] = &Person{ID: row.ID, TreeID: treeID, Name: row.Name, Nickname: row.Nickname, Gender: row.Gender}
 	}
 	return result, nil
 }
 
-// updateOwnedByBatchRepo replaces the owners of multiple people in one transaction.
-func updateOwnedByBatchRepo(ctx context.Context, ids []string, owners []string) error {
+// updateOwnedByBatchRepo replaces the owners of multiple people of one tree in one transaction.
+func updateOwnedByBatchRepo(ctx context.Context, treeID string, ids []string, owners []string) error {
 	defer newrelic.FromContext(ctx).StartSegment("store/updateOwnedByBatchRepo").End()
 	if len(ids) == 0 {
 		return nil
@@ -573,15 +543,17 @@ func updateOwnedByBatchRepo(ctx context.Context, ids []string, owners []string) 
 	defer cancel()
 
 	err := DB.WithContext(ctx2).Transaction(func(tx *gorm.DB) error {
-		return replacePersonOwners(tx, ids, owners)
+		var inTreeIDs []string
+		if err := tx.Model(&personRow{}).Scopes(inTree(treeID)).Where("id IN ?", ids).Pluck("id", &inTreeIDs).Error; err != nil {
+			return err
+		}
+		if len(inTreeIDs) == 0 {
+			return nil
+		}
+		return replacePersonOwners(tx, inTreeIDs, owners)
 	})
 	if err == nil {
-		delKeys := make([]string, 0, len(ids)+2)
-		for _, id := range ids {
-			delKeys = append(delKeys, cacheKeyPerson(id))
-		}
-		delKeys = append(delKeys, cacheKeyPeople(nil), cacheKeyPeople(owners))
-		cacheDel(ctx, delKeys...)
+		bumpTreeCache(ctx, treeID)
 	}
 	return err
 }

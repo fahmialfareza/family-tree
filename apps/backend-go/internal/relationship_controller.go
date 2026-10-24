@@ -1,14 +1,22 @@
 package app
 
 import (
+	"errors"
+
 	"github.com/gin-gonic/gin"
 	"github.com/newrelic/go-agent/v3/newrelic"
+	"gorm.io/gorm"
 )
 
 func getRelationships(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getRelationships").End()
 	id := c.Param("id")
-	rels, err := getRelationshipsByPersonIdRepo(c, id)
+	treeID := currentAccess(c).TreeID
+	if _, err := getPersonByIdRepo(c, treeID, id); err != nil {
+		responseError(c, "Person not found", 404)
+		return
+	}
+	rels, err := getRelationshipsByPersonIdRepo(c, treeID, id)
 	if err != nil {
 		newrelic.FromContext(c.Request.Context()).NoticeError(err)
 		responseError(c, "Failed to fetch relationships", 500)
@@ -28,6 +36,7 @@ func getRelationships(c *gin.Context) {
 
 func crudRelationships(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/crudRelationships").End()
+	// "from" is accepted for backwards compatibility but ignored: relationships are always written for :id.
 	var body []struct {
 		From  *string `json:"from"`
 		To    string  `json:"to"`
@@ -40,8 +49,16 @@ func crudRelationships(c *gin.Context) {
 		return
 	}
 	id := c.Param("id")
+	treeID := currentAccess(c).TreeID
+	if _, err := getPersonByIdRepo(c, treeID, id); err != nil {
+		responseError(c, "Person not found", 404)
+		return
+	}
+	if !requireWritePerson(c, id) {
+		return
+	}
 	// implement upsert similar to Node: build inserts and updates
-	existing, err := getRelationshipsByPersonIdRepo(c, id)
+	existing, err := getRelationshipsByPersonIdRepo(c, treeID, id)
 	if err != nil {
 		newrelic.FromContext(c.Request.Context()).NoticeError(err)
 		responseError(c, "Failed to fetch relationships", 500)
@@ -67,12 +84,8 @@ func crudRelationships(c *gin.Context) {
 		if rel.Order != nil {
 			order = *rel.Order
 		}
-		from := id
-		if rel.From != nil && *rel.From != "" {
-			from = *rel.From
-		}
 		if ex, ok := existingMap[key]; !ok {
-			toInsert = append(toInsert, Relationship{From: from, To: rel.To, Type: rel.Type, Order: order})
+			toInsert = append(toInsert, Relationship{From: id, To: rel.To, Type: rel.Type, Order: order})
 		} else {
 			if ex.Order != order {
 				ex.Order = order
@@ -110,22 +123,54 @@ func crudRelationships(c *gin.Context) {
 		}
 	}
 
+	// Every relationship is stored on both people, so the caller must be allowed to change the other side
+	// too; otherwise a branch-scoped editor could rewire people outside their branch.
+	touched := []string{}
+	for _, r := range toInsert {
+		touched = append(touched, r.From, r.To)
+	}
+	for _, r := range toUpdate {
+		touched = append(touched, r.From, r.To)
+	}
+	deleteSet := map[string]struct{}{}
+	for _, d := range toDelete {
+		deleteSet[d] = struct{}{}
+	}
+	for _, ex := range existing {
+		if _, ok := deleteSet[ex.ID]; ok {
+			touched = append(touched, ex.From, ex.To)
+		}
+	}
+	allowed, err := currentAccess(c).canWritePeople(c, touched)
+	if err != nil {
+		abortServerError(c, err)
+		return
+	}
+	if !allowed {
+		responseError(c, "Forbidden", 403)
+		return
+	}
+
 	if len(toInsert) > 0 {
-		if err := insertManyRelationshipsRepo(c, toInsert); err != nil {
+		if err := insertManyRelationshipsRepo(c, treeID, toInsert); err != nil {
+			if errors.Is(err, errCrossTree) || errors.Is(err, gorm.ErrRecordNotFound) {
+				responseError(c, "Related person not found in this tree", 400)
+				return
+			}
 			newrelic.FromContext(c.Request.Context()).NoticeError(err)
 			responseError(c, "Failed to insert relationships", 500)
 			return
 		}
 	}
 	for _, up := range toUpdate {
-		if _, err := updateRelationshipRepo(c, up); err != nil {
+		if _, err := updateRelationshipRepo(c, treeID, up); err != nil {
 			newrelic.FromContext(c.Request.Context()).NoticeError(err)
 			responseError(c, "Failed to update relationships", 500)
 			return
 		}
 	}
 	if len(toDelete) > 0 {
-		if err := deleteRelationshipsRepo(c, toDelete); err != nil {
+		if err := deleteRelationshipsRepo(c, treeID, toDelete); err != nil {
 			newrelic.FromContext(c.Request.Context()).NoticeError(err)
 			responseError(c, "Failed to delete relationships", 500)
 			return

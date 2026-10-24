@@ -46,19 +46,22 @@ type internalNode struct {
 
 func getFamilyTree(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getFamilyTree").End()
-	personId := c.Param("personId")
+	personId := c.Param("id")
+	treeID := currentAccess(c).TreeID
+	if _, err := getPersonByIdRepo(c, treeID, personId); err != nil {
+		responseError(c, "Person not found", 404)
+		return
+	}
 	mode := c.Query("mode")
 	// Default to "parent" mode if not specified (matching Node.js)
 	if mode == "" {
 		mode = "parent"
 	}
-	// unconditional handler-level log to confirm invocation
-	fmt.Printf("[TREE] handler invoked person=%s mode=%s\n", personId, mode)
 	ctx := c.Request.Context()
 	// Match Node.js logic: mode=="parent" shows children, mode=="child" shows parents
 	withChildren := mode == "parent"
 	withParent := mode == "child"
-	inode, err := buildFamilyTree(ctx, personId, withChildren, withParent)
+	inode, err := buildFamilyTree(ctx, treeID, personId, withChildren, withParent)
 	if err != nil {
 		newrelic.FromContext(ctx).NoticeError(err)
 		responseError(c, "Failed to build family tree", 500)
@@ -79,7 +82,22 @@ func getFamilyTree(c *gin.Context) {
 	responseSuccess(c, result, 200)
 }
 
-func buildFamilyTree(ctx context.Context, personId string, withChildren bool, withParent bool) (internalNode, error) {
+// sortedKeys returns set members in a stable order; map iteration order is random in Go.
+func sortedKeys(set map[string]struct{}) []string {
+	keys := make([]string, 0, len(set))
+	for k := range set {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+func isMale(p *Person) bool { return p != nil && p.Gender == "male" }
+
+// maxTreeNodes bounds the traversal so one request cannot walk an arbitrarily large graph.
+const maxTreeNodes = 5000
+
+func buildFamilyTree(ctx context.Context, treeID, personId string, withChildren bool, withParent bool) (internalNode, error) {
 	defer newrelic.FromContext(ctx).StartSegment("service/buildFamilyTree").End()
 	debug := os.Getenv("TREE_DEBUG") == "1"
 
@@ -90,7 +108,7 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 	frontier := []string{personId}
 
 	for len(frontier) > 0 {
-		batchRels, err := getRelationshipsByPersonIdsRepo(ctx, frontier)
+		batchRels, err := getRelationshipsByPersonIdsRepo(ctx, treeID, frontier)
 		if err != nil {
 			break // degrade gracefully; build() will use whatever was pre-loaded
 		}
@@ -114,7 +132,7 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				if withParent && rel.Type == "parent" && rel.To == id {
 					candidate = rel.From
 				}
-				if candidate != "" {
+				if candidate != "" && len(visited) < maxTreeNodes {
 					if _, ok := visited[candidate]; !ok {
 						visited[candidate] = struct{}{}
 						next = append(next, candidate)
@@ -134,7 +152,7 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 	for id := range visited {
 		allIDs = append(allIDs, id)
 	}
-	personsByID, err := getPersonsByIdsRepo(ctx, allIDs)
+	personsByID, err := getPersonsByIdsRepo(ctx, treeID, allIDs)
 	if err != nil {
 		return internalNode{}, err
 	}
@@ -187,7 +205,7 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 
 			sharedChildrenSet := map[string]struct{}{}
 			spouseNodes := []internalNode{}
-			for spouseId := range spouseSet {
+			for _, spouseId := range sortedKeys(spouseSet) {
 				spouseRels := relsByPerson[spouseId] // pre-loaded; no DB call
 				spouseChildrenSet := map[string]struct{}{}
 				for _, srel := range spouseRels {
@@ -278,8 +296,13 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 					parentIdsSet[rel.From] = struct{}{}
 				}
 			}
+			// Father first, then by ID, so parents do not swap places between requests.
+			parentIDs := sortedKeys(parentIdsSet)
+			sort.SliceStable(parentIDs, func(i, j int) bool {
+				return isMale(personsByID[parentIDs[i]]) && !isMale(personsByID[parentIDs[j]])
+			})
 			parents := []internalNode{}
-			for pid := range parentIdsSet {
+			for _, pid := range parentIDs {
 				parentNode, err := build(pid, false, true)
 				if err == nil {
 					if debug {
