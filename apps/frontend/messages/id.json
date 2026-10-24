@@ -19,7 +19,8 @@
     "theme": "Tema",
     "light": "Terang",
     "dark": "Gelap",
-    "system": "Ikuti sistem"
+    "system": "Ikuti sistem",
+    "toggleTheme": "Ganti mode gelap/terang"
   },
   "roles": {
     "owner": "Pemilik",

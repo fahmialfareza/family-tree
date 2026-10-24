@@ -1,12 +1,16 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/common/logo";
-import { PreferencesMenu } from "@/components/common/preferences";
+import { PreferencesMenu, ThemeToggle } from "@/components/common/preferences";
 import { Button } from "@/components/ui/button";
 import { contactEmail } from "@/lib/legal-content";
 import { getAccessToken } from "@/lib/server/session";
 
-export default async function MarketingLayout({ children }: { children: React.ReactNode }) {
+export default async function MarketingLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const t = await getTranslations("marketing");
   const tm = await getTranslations("meta");
   const signedIn = !!(await getAccessToken());
@@ -15,7 +19,11 @@ export default async function MarketingLayout({ children }: { children: React.Re
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Logo label={tm("brand")} />
-          <nav className="flex items-center gap-1 sm:gap-2" aria-label={t("nav")}>
+          <nav
+            className="flex items-center gap-1 sm:gap-2"
+            aria-label={t("nav")}
+          >
+            <ThemeToggle />
             <PreferencesMenu />
             {signedIn ? (
               <Button asChild>
@@ -23,7 +31,11 @@ export default async function MarketingLayout({ children }: { children: React.Re
               </Button>
             ) : (
               <>
-                <Button asChild variant="ghost" className="hidden sm:inline-flex">
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="hidden sm:inline-flex"
+                >
                   <Link href="/auth/login">{t("signIn")}</Link>
                 </Button>
                 <Button asChild>
@@ -48,7 +60,10 @@ export default async function MarketingLayout({ children }: { children: React.Re
               {t("terms")}
             </Link>
             {contactEmail ? (
-              <a href={`mailto:${contactEmail}`} className="hover:text-foreground">
+              <a
+                href={`mailto:${contactEmail}`}
+                className="hover:text-foreground"
+              >
                 {t("contact")}
               </a>
             ) : null}

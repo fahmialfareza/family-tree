@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { LogoMark } from "@/components/common/logo";
+import { ThemeToggle } from "@/components/common/preferences";
 import { useMe } from "@/lib/api/hooks";
 import type { Me } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -41,9 +42,12 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
 
       {/* Desktop sidebar */}
       <aside className="sticky top-0 hidden h-dvh w-64 shrink-0 flex-col gap-4 border-r bg-card/70 p-4 backdrop-blur md:flex">
-        <Link href="/app" className="flex items-center gap-2.5 px-1 font-display text-lg font-semibold">
-          <LogoMark /> {t("brand")}
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/app" className="flex items-center gap-2.5 px-1 font-display text-lg font-semibold">
+            <LogoMark /> {t("brand")}
+          </Link>
+          <ThemeToggle />
+        </div>
         {me.trees.length > 0 ? <TreeSwitcher trees={me.trees} currentId={treeId} /> : null}
         {treeId ? <PersonSearch treeId={treeId} /> : null}
         <nav aria-label={t("mainNav")} className="flex flex-col gap-1">
@@ -74,6 +78,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
           </Link>
           <div className="min-w-0 flex-1">{me.trees.length > 0 ? <TreeSwitcher trees={me.trees} currentId={treeId} /> : null}</div>
           {treeId ? <PersonSearch treeId={treeId} compact /> : null}
+          <ThemeToggle />
           <UserMenu user={me.user} compact />
         </header>
 

@@ -74,3 +74,24 @@ export function PreferencesMenu() {
     </DropdownMenu>
   );
 }
+
+/** One-click light/dark switch (system preference is still available in the menus). */
+export function ThemeToggle({ className }: { className?: string }) {
+  const t = useTranslations("prefs");
+  const { resolvedTheme, setTheme } = useTheme();
+  // The label stays the same on server and client (the theme is only known in the browser); the icon
+  // switches through the .dark class, so nothing differs during hydration.
+  return (
+    <Button
+      variant="ghost"
+      size="icon"
+      className={className}
+      onClick={() => setTheme(resolvedTheme === "dark" ? "light" : "dark")}
+      aria-label={t("toggleTheme")}
+      title={t("toggleTheme")}
+    >
+      <Sun className="hidden size-5 dark:block" aria-hidden />
+      <Moon className="size-5 dark:hidden" aria-hidden />
+    </Button>
+  );
+}

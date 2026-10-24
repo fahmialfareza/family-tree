@@ -19,7 +19,8 @@
     "theme": "Theme",
     "light": "Light",
     "dark": "Dark",
-    "system": "System"
+    "system": "System",
+    "toggleTheme": "Toggle dark mode"
   },
   "roles": {
     "owner": "Owner",
