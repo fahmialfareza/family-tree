@@ -1,6 +1,6 @@
 # Postgres Backup
 
-The family-tree data lives in the `family-tree` database on the Railway Postgres service. It replaced MongoDB, which still has its own backup in `docs/mongodb-backup.md` until the rollback window closes.
+The family-tree data lives in the `family-tree` database on the Railway Postgres service. It replaced MongoDB; older MongoDB archives remain in R2 under `mongodb/weekly/` but are no longer produced.
 
 ## Required GitHub Secrets
 
