@@ -10,11 +10,16 @@ const (
 )
 
 type User struct {
-	ID       string   `json:"_id"`
-	Name     string   `json:"name"`
-	Username string   `json:"username"`
-	Password string   `json:"password,omitempty"`
-	Role     UserRole `json:"role"`
+	ID            string   `json:"_id"`
+	Name          string   `json:"name"`
+	Username      string   `json:"username,omitempty"`
+	Email         string   `json:"email,omitempty"`
+	EmailVerified bool     `json:"emailVerified"`
+	HasPassword   bool     `json:"hasPassword"`
+	GoogleLinked  bool     `json:"googleLinked"`
+	Pending       bool     `json:"-"` // signed up but email not verified yet: cannot sign in
+	Password      string   `json:"-"` // bcrypt hash; never serialized
+	Role          UserRole `json:"role"`
 }
 
 type TreeRole string

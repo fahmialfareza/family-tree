@@ -10,10 +10,9 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 // These tests need a disposable Postgres database: TEST_DATABASE_URL=postgres://.../family_tree_test
@@ -34,6 +33,8 @@ func TestMain(m *testing.M) {
 	}
 	os.Setenv("DATABASE_URL", dsn)
 	jwtSecret = []byte("test-secret")
+	bcryptCost = bcrypt.MinCost
+	mailer = testMail
 	ctx := context.Background()
 	if err := InitPostgres(ctx); err != nil {
 		fmt.Println("postgres:", err)
@@ -70,15 +71,14 @@ func resetDB(t *testing.T) {
 			t.Fatalf("seed %q: %v", sql, err)
 		}
 	}
-	exec("TRUNCATE relationships, family_owners, families, person_owners, people, tree_invites, tree_members, trees, users CASCADE")
+	exec("TRUNCATE relationships, family_owners, families, person_owners, people, tree_invites, tree_members, trees, sessions, auth_tokens, users CASCADE")
+	testMail.reset()
+	clearRateLimits()
 	// Fixture IDs repeat across tests, so drop anything a previous test cached for them.
 	bumpTreeCache(context.Background(), treeA)
 	bumpTreeCache(context.Background(), treeB)
 	for _, u := range []string{alice, bob, carol, dave, erin} {
-		cacheDel(context.Background(), cacheKeyUser(u), cacheKeyUsername(u))
-	}
-	for _, u := range []string{alice, bob, carol, dave, erin} {
-		exec("INSERT INTO users (id, name, username, password, role) VALUES (?, ?, ?, 'x', 'user')", u, u, u)
+		exec("INSERT INTO users (id, name, username, password, role) VALUES (?, ?, ?, '', 'user')", u, u, u)
 	}
 	exec("INSERT INTO trees (id, name, branch_scoped) VALUES (?, 'A', true), (?, 'B', false)", treeA, treeB)
 	exec(`INSERT INTO tree_members (tree_id, user_id, role) VALUES
@@ -95,13 +95,14 @@ func resetDB(t *testing.T) {
 	exec("INSERT INTO family_owners (family_id, user_id) VALUES (?, ?), (?, ?)", fA1, bob, fA2, alice)
 }
 
+// tokenFor signs a user in by creating a real session (one per call).
 func tokenFor(t *testing.T, userID string) string {
 	t.Helper()
-	s, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{"id": userID, "exp": time.Now().Add(time.Hour).Unix()}).SignedString(jwtSecret)
+	pair, err := createSession(context.Background(), &User{ID: userID}, "test", "127.0.0.1", true)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return s
+	return pair.AccessToken
 }
 
 type response struct {
@@ -126,8 +127,18 @@ func ids(items []any) []string {
 	return out
 }
 
-// call sends JSON bodies as JSON and url.Values-like maps (form) as multipart, like the frontend.
+// call sends a request as user ("" for anonymous). JSON bodies are sent as JSON and form maps as
+// multipart, like the frontend.
 func call(t *testing.T, user, method, path string, body any) response {
+	t.Helper()
+	token := ""
+	if user != "" {
+		token = tokenFor(t, user)
+	}
+	return callWith(t, token, method, path, body)
+}
+
+func callWith(t *testing.T, token, method, path string, body any) response {
 	t.Helper()
 	var buf bytes.Buffer
 	contentType := ""
@@ -150,8 +161,8 @@ func call(t *testing.T, user, method, path string, body any) response {
 	if contentType != "" {
 		req.Header.Set("Content-Type", contentType)
 	}
-	if user != "" {
-		req.Header.Set("Authorization", "Bearer "+tokenFor(t, user))
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
 	}
 	rec := httptest.NewRecorder()
 	testRouter.ServeHTTP(rec, req)
@@ -356,7 +367,7 @@ func TestLegacyCreateUserOnlyJoinsOwnedTree(t *testing.T) {
 	resetDB(t)
 	// dave is a platform admin but only a viewer in tree A: his new accounts must not join tree A.
 	DB.Exec("UPDATE users SET role = 'admin' WHERE id IN (?, ?)", dave, alice)
-	if got := call(t, dave, "POST", "/api/auth", map[string]any{"name": "Alt", "username": "dave-alt", "password": "pw-123456"}); got.Status != 201 {
+	if got := call(t, dave, "POST", "/api/auth", map[string]any{"name": "Alt", "username": "dave-alt", "password": "long enough pw"}); got.Status != 201 {
 		t.Fatalf("create user: %d %v", got.Status, got.Body)
 	}
 	var joined int64
@@ -365,7 +376,7 @@ func TestLegacyCreateUserOnlyJoinsOwnedTree(t *testing.T) {
 		t.Error("account created by a viewer-admin joined the tree")
 	}
 	// alice owns tree A, so her new accounts join it as editors.
-	call(t, alice, "POST", "/api/auth", map[string]any{"name": "Kid", "username": "alice-kid", "password": "pw-123456"})
+	call(t, alice, "POST", "/api/auth", map[string]any{"name": "Kid", "username": "alice-kid", "password": "long enough pw"})
 	var role string
 	DB.Table("tree_members").Select("tree_members.role").Joins("JOIN users ON users.id = tree_members.user_id").
 		Where("users.username = 'alice-kid' AND tree_members.tree_id = ?", treeA).Scan(&role)
@@ -414,7 +425,7 @@ func TestTreesMembersAndInvites(t *testing.T) {
 	}
 	// The token alone is not enough: accounts without a matching email are refused.
 	expectStatus(t, erin, 403, []routeCase{{"POST", "/api/invites/accept", map[string]any{"token": token}}})
-	DB.Exec("UPDATE users SET email = 'erin@example.com' WHERE id = ?", erin)
+	DB.Exec("UPDATE users SET email = 'erin@example.com', email_verified_at = now() WHERE id = ?", erin)
 	accepted := call(t, erin, "POST", "/api/invites/accept", map[string]any{"token": token})
 	if accepted.Status != 200 {
 		t.Fatalf("accept invite: %d %v", accepted.Status, accepted.Body)
@@ -425,7 +436,7 @@ func TestTreesMembersAndInvites(t *testing.T) {
 	expectStatus(t, carol, 410, []routeCase{{"POST", "/api/invites/accept", map[string]any{"token": "not-a-real-token"}}})
 
 	// Users can only accept invites sent to their own address.
-	DB.Exec("UPDATE users SET email = 'carol@example.com' WHERE id = ?", carol)
+	DB.Exec("UPDATE users SET email = 'carol@example.com', email_verified_at = now() WHERE id = ?", carol)
 	inv2 := call(t, alice, "POST", "/api/trees/"+treeA+"/invites", map[string]any{"email": "someone@example.com", "role": "editor"})
 	payload2, _ := inv2.data().(map[string]any)
 	expectStatus(t, carol, 403, []routeCase{{"POST", "/api/invites/accept", map[string]any{"token": payload2["token"]}}})
@@ -433,7 +444,7 @@ func TestTreesMembersAndInvites(t *testing.T) {
 	// Revoked invites cannot be accepted.
 	invite2, _ := payload2["invite"].(map[string]any)
 	expectStatus(t, alice, 200, []routeCase{{"DELETE", fmt.Sprintf("/api/trees/%s/invites/%v", treeA, invite2["_id"]), nil}})
-	DB.Exec("UPDATE users SET email = 'someone@example.com' WHERE id = ?", carol)
+	DB.Exec("UPDATE users SET email = 'someone@example.com', email_verified_at = now() WHERE id = ?", carol)
 	expectStatus(t, carol, 410, []routeCase{{"POST", "/api/invites/accept", map[string]any{"token": payload2["token"]}}})
 
 	// Invites die with their inviter's ownership: a co-owner's owner-invite stops working once they are removed.

@@ -31,69 +31,6 @@ func inTree(treeID string) func(*gorm.DB) *gorm.DB {
 	return func(db *gorm.DB) *gorm.DB { return db.Where("tree_id = ?", treeID) }
 }
 
-func findUserById(ctx context.Context, id string) (*User, error) {
-	defer newrelic.FromContext(ctx).StartSegment("store/findUserById").End()
-
-	cacheKey := cacheKeyUser(id)
-	if cached, ok := cacheGet[*User](ctx, cacheKey); ok {
-		return cached, nil
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	var row userRow
-	if err := DB.WithContext(ctx).Where("id = ?", id).First(&row).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.New("not found")
-		}
-		return nil, err
-	}
-	u := row.toModel()
-	cacheSet(ctx, cacheKey, u, cacheTTLUser)
-	return u, nil
-}
-
-func findUserByUsername(ctx context.Context, username string) (*User, error) {
-	defer newrelic.FromContext(ctx).StartSegment("store/findUserByUsername").End()
-
-	cacheKey := cacheKeyUsername(username)
-	if cached, ok := cacheGet[*User](ctx, cacheKey); ok {
-		return cached, nil
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	var row userRow
-	if err := DB.WithContext(ctx).Where("username = ?", username).First(&row).Error; err != nil {
-		return nil, err
-	}
-	u := row.toModel()
-	cacheSet(ctx, cacheKey, u, cacheTTLUser)
-	return u, nil
-}
-
-// addUser creates a user and, when treeID is set, adds them to that tree with the given role.
-func addUser(ctx context.Context, u *User, treeID string, role TreeRole) (*User, error) {
-	defer newrelic.FromContext(ctx).StartSegment("store/addUser").End()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	row := userRow{Name: u.Name, Username: u.Username, Password: u.Password, Role: string(u.Role)}
-	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(&row).Error; err != nil {
-			return err
-		}
-		if treeID == "" {
-			return nil
-		}
-		return tx.Create(&treeMemberRow{TreeID: treeID, UserID: row.ID, Role: string(role)}).Error
-	})
-	if err != nil {
-		return nil, err
-	}
-	cacheDel(ctx, cacheKeyUsername(u.Username))
-	return findUserById(ctx, row.ID)
-}
-
 func repoGetAllPeople(ctx context.Context, treeID string, ownedBy []string) ([]*Person, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/repoGetAllPeople").End()
 

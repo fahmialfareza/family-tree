@@ -12,7 +12,6 @@ import (
 )
 
 const (
-	cacheTTLUser          = 5 * time.Minute
 	cacheTTLPerson        = 10 * time.Minute
 	cacheTTLPeople        = 5 * time.Minute
 	cacheTTLRelationships = 10 * time.Minute
@@ -24,9 +23,6 @@ const (
 
 // redisKeyPrefix namespaces every Redis key written by this service.
 const redisKeyPrefix = "family-tree:"
-
-func cacheKeyUser(id string) string    { return redisKeyPrefix + "user:" + id }
-func cacheKeyUsername(u string) string { return redisKeyPrefix + "username:" + u }
 
 // Tree data is cached under a per-tree version: tree:{id}:v{n}:<suffix>. Any write in a tree bumps n
 // (bumpTreeCache), which invalidates everything cached for that tree at once; old entries expire by TTL.
@@ -100,13 +96,4 @@ func cacheSet(ctx context.Context, key string, value any, ttl time.Duration) {
 		return
 	}
 	RedisClient.Set(ctx, key, data, ttl)
-}
-
-// cacheDel removes one or more exact keys.
-func cacheDel(ctx context.Context, keys ...string) {
-	defer newrelic.FromContext(ctx).StartSegment("cache/del").End()
-	if RedisClient == nil || len(keys) == 0 {
-		return
-	}
-	RedisClient.Del(ctx, keys...)
 }

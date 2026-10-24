@@ -29,7 +29,7 @@ func (b *RowBase) BeforeCreate(tx *gorm.DB) error {
 type userRow struct {
 	RowBase
 	Name            string
-	Username        string
+	Username        *string
 	Password        string
 	Role            string
 	Email           *string
@@ -134,7 +134,24 @@ type relationshipRow struct {
 func (relationshipRow) TableName() string { return "relationships" }
 
 func (u *userRow) toModel() *User {
-	return &User{ID: u.ID, Name: u.Name, Username: u.Username, Password: u.Password, Role: UserRole(u.Role)}
+	out := &User{
+		ID:            u.ID,
+		Name:          u.Name,
+		Password:      u.Password,
+		Role:          UserRole(u.Role),
+		EmailVerified: u.EmailVerifiedAt != nil,
+		HasPassword:   u.Password != "",
+		GoogleLinked:  u.GoogleSub != nil,
+	}
+	if u.Username != nil {
+		out.Username = *u.Username
+	}
+	if u.Email != nil {
+		out.Email = *u.Email
+		// Emails only change after verification, so an unverified one marks a signup that is not complete.
+		out.Pending = u.EmailVerifiedAt == nil
+	}
+	return out
 }
 
 // toModel maps the person row; owners and relationships are filled only when preloaded.

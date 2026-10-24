@@ -51,6 +51,7 @@ func InitPostgres(ctx context.Context) error {
 			SlowThreshold:             200 * time.Millisecond,
 			LogLevel:                  logger.Warn,
 			IgnoreRecordNotFoundError: true,
+			ParameterizedQueries:      true, // never log values: they include password and token hashes
 			Colorful:                  false,
 		}),
 	})

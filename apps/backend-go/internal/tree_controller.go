@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/mail"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/newrelic/go-agent/v3/newrelic"
@@ -201,10 +202,16 @@ func createInvite(c *gin.Context) {
 		return
 	}
 	access := currentAccess(c)
+	if !limitByKey(c, "invites:"+access.UserID, 30, 24*time.Hour) {
+		return
+	}
 	invite, token, err := createInviteRepo(c, access.TreeID, strings.ToLower(addr.Address), role, access.UserID)
 	if err != nil {
 		abortServerError(c, err)
 		return
+	}
+	if tree, err := getTreeRepo(c, access.TreeID); err == nil {
+		sendInviteEmail(invite.Email, currentUser(c).Name, tree.Name, token)
 	}
 	responseSuccess(c, gin.H{"invite": invite, "token": token}, 201)
 }
@@ -233,7 +240,7 @@ func acceptInvite(c *gin.Context) {
 		return
 	}
 	user := currentUser(c)
-	email, err := userEmailRepo(c, user.ID)
+	email, err := verifiedEmailRepo(c, user.ID)
 	if err != nil {
 		abortServerError(c, err)
 		return
@@ -243,7 +250,7 @@ func acceptInvite(c *gin.Context) {
 	case errors.Is(err, errInviteInvalid):
 		responseError(c, "This invite is invalid, expired or already used", 410)
 	case errors.Is(err, errInviteEmail):
-		responseError(c, "Sign in with the email address this invite was sent to", 403)
+		responseError(c, "Sign in with the email address this invite was sent to, and verify it first", 403)
 	case errors.Is(err, errAlreadyMember):
 		responseError(c, "You are already a member of this tree", 409)
 	case err != nil:

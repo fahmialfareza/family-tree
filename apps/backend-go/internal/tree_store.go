@@ -427,15 +427,14 @@ func acceptInviteRepo(ctx context.Context, token string, user *User, userEmail s
 	return tree, nil
 }
 
-func userEmailRepo(ctx context.Context, userID string) (string, error) {
+// verifiedEmailRepo returns the user's email only once it is verified.
+func verifiedEmailRepo(ctx context.Context, userID string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	var row struct{ Email *string }
-	if err := DB.WithContext(ctx).Model(&userRow{}).Select("email").Where("id = ?", userID).Take(&row).Error; err != nil {
+	if err := DB.WithContext(ctx).Model(&userRow{}).Select("email").
+		Where("id = ? AND email_verified_at IS NOT NULL", userID).Scan(&row).Error; err != nil {
 		return "", err
 	}
-	if row.Email == nil {
-		return "", nil
-	}
-	return *row.Email, nil
+	return deref(row.Email), nil
 }

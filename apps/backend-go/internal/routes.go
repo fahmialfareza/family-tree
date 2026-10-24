@@ -1,6 +1,8 @@
 package app
 
 import (
+	"time"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -30,7 +32,7 @@ func RegisterRoutes(rg *gin.Engine) {
 		trees.DELETE("/:treeId/members/:userId", member, removeMember)
 
 		trees.GET("/:treeId/invites", owner, listInvites)
-		trees.POST("/:treeId/invites", owner, createInvite)
+		trees.POST("/:treeId/invites", RateLimitMiddleware("invites", 10, time.Minute, true), owner, createInvite)
 		trees.DELETE("/:treeId/invites/:inviteId", owner, revokeInvite)
 
 		trees.GET("/:treeId/people", member, getAllPeople)
@@ -42,6 +44,8 @@ func RegisterRoutes(rg *gin.Engine) {
 		trees.GET("/:treeId/people/:id/relationships", member, getRelationships)
 		trees.POST("/:treeId/people/:id/relationships", editor, crudRelationships)
 		trees.GET("/:treeId/people/:id/tree", member, getFamilyTree)
+
+		trees.GET("/:treeId/export", owner, exportTree)
 
 		trees.GET("/:treeId/families", member, getFamilies)
 		trees.POST("/:treeId/families", editor, createFamily)
@@ -76,11 +80,43 @@ func RegisterRoutes(rg *gin.Engine) {
 		rel.POST("/:id", withTree(treeFromPerson("id"), TreeRoleEditor), crudRelationships)
 	}
 
+	// Authentication. Credential and email endpoints have tighter per-IP limits that fail closed;
+	// handlers add per-account limits on top (see limitByKey).
+	credentials := RateLimitMiddleware("auth", 20, time.Minute, true)
+	emails := RateLimitMiddleware("auth-email", 5, time.Minute, true)
+	refreshes := RateLimitMiddleware("auth-refresh", 120, time.Minute, true)
 	auth := api.Group("/auth")
 	{
-		auth.POST("/signin", signIn)
+		auth.POST("/signup", emails, signup)
+		auth.POST("/login", credentials, login)
+		auth.POST("/refresh", refreshes, refreshTokens)
+		auth.POST("/logout", signedIn, logout)
+		auth.POST("/logout-all", signedIn, logoutEverywhere)
+		auth.GET("/sessions", signedIn, getSessions)
+		auth.DELETE("/sessions/:sessionId", signedIn, deleteSession)
+		auth.POST("/verify-email", credentials, verifyEmail)
+		auth.POST("/resend-verification", emails, resendVerification)
+		auth.POST("/forgot-password", emails, forgotPassword)
+		auth.POST("/reset-password", credentials, resetPassword)
+		auth.POST("/change-password", credentials, signedIn, changePassword)
+		auth.GET("/providers", googleStatus)
+		auth.GET("/google/start", credentials, googleStart)
+		auth.GET("/google/callback", credentials, googleCallback)
+		auth.POST("/google/exchange", credentials, googleExchange)
+
+		// Legacy (current frontend).
+		auth.POST("/signin", credentials, signIn)
 		auth.POST("", authenticate([]string{string(RoleAdmin)}), createUser)
 		auth.GET("", signedIn, profile)
 		auth.GET("/users", signedIn, withTree(treeFromDefault, TreeRoleOwner), users)
+	}
+
+	me := api.Group("/me", signedIn)
+	{
+		me.GET("", getMe)
+		me.PATCH("", updateMe)
+		me.PUT("/email", emails, changeEmail)
+		me.DELETE("", deleteMe)
+		me.GET("/export", exportMe)
 	}
 }

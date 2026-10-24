@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	app "github.com/fahmialfareza/family-tree/backend/internal"
@@ -22,9 +23,15 @@ func main() {
 		}
 	}
 
+	if app.IsProduction() {
+		if err := app.CheckProductionConfig(); err != nil {
+			log.Fatal(err)
+		}
+	}
 	if err := app.InitAuth(); err != nil {
 		log.Fatalf("auth config: %v", err)
 	}
+	app.InitMailer()
 
 	// graceful shutdown example
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -55,6 +62,28 @@ func main() {
 	// Initialize Gin router
 	r := gin.Default()
 
+	// Client IPs (rate limits, session records):
+	//   CLIENT_IP_HEADER=X-Real-IP (or CF-Connecting-IP, ...) - a header the platform's edge always overwrites
+	//   TRUSTED_PROXIES=10.0.0.0/8,... - X-Forwarded-For is honoured only from these peers
+	//   TRUSTED_PROXIES=none           - always use the direct peer address
+	if header := os.Getenv("CLIENT_IP_HEADER"); header != "" {
+		r.TrustedPlatform = header
+	}
+	switch proxies := os.Getenv("TRUSTED_PROXIES"); proxies {
+	case "":
+		if os.Getenv("CLIENT_IP_HEADER") == "" {
+			log.Println("warning: neither TRUSTED_PROXIES nor CLIENT_IP_HEADER is set; X-Forwarded-For is trusted from any peer, so per-IP rate limits can be bypassed")
+		}
+	case "none":
+		if err := r.SetTrustedProxies(nil); err != nil {
+			log.Fatalf("TRUSTED_PROXIES: %v", err)
+		}
+	default:
+		if err := r.SetTrustedProxies(strings.Split(proxies, ",")); err != nil {
+			log.Fatalf("invalid TRUSTED_PROXIES: %v", err)
+		}
+	}
+
 	// CORS
 	config := cors.DefaultConfig()
 	config.AllowAllOrigins = true
@@ -75,7 +104,7 @@ func main() {
 
 	// HPP (simple implementation) and rate limiter
 	r.Use(app.HPPMiddleware())
-	r.Use(app.RateLimitMiddleware(600, time.Minute))
+	r.Use(app.RateLimitMiddleware("global", 600, time.Minute, false))
 
 	// Set upload limit (100 MB)
 	r.MaxMultipartMemory = 100 << 20 // 100 MB

@@ -1,9 +1,11 @@
 package app
 
 import (
+	"context"
 	"fmt"
+	"log"
+	"math/rand/v2"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -25,42 +27,62 @@ func HPPMiddleware() gin.HandlerFunc {
 	}
 }
 
-// RateLimitMiddleware is a Redis-backed sliding-window rate limiter per IP.
-// redisURL is captured once at middleware creation time; the 4 Redis operations
-// are pipelined into a single round trip on every request.
-func RateLimitMiddleware(max int, per time.Duration) gin.HandlerFunc {
-	redisURL := os.Getenv("REDIS_URL")
+// rateLimitAllow records one hit for key in a Redis sliding window and reports whether it is within max per window.
+// The four Redis operations are pipelined into one round trip. Without Redis, everything is allowed.
+func rateLimitAllow(ctx context.Context, key string, max int, per time.Duration) (bool, error) {
+	if RedisClient == nil {
+		return true, nil
+	}
+	defer newrelic.FromContext(ctx).StartSegment("middleware/RateLimit").End()
+	now := time.Now()
+	key = redisKeyPrefix + "rl:" + key
+	member := fmt.Sprintf("%d-%d", now.UnixNano(), rand.Int64())
+	pipe := RedisClient.Pipeline()
+	pipe.ZRemRangeByScore(ctx, key, "-inf", fmt.Sprintf("%d", now.Add(-per).UnixMilli()))
+	pipe.ZAdd(ctx, key, redis.Z{Score: float64(now.UnixMilli()), Member: member})
+	pipe.Expire(ctx, key, per+5*time.Second)
+	count := pipe.ZCard(ctx, key)
+	if _, err := pipe.Exec(ctx); err != nil {
+		return false, err
+	}
+	return count.Val() <= int64(max), nil
+}
+
+// RateLimitMiddleware limits requests per client IP. failClosed rejects requests (503) when Redis errors;
+// general traffic fails open so a Redis outage does not take the whole API down.
+func RateLimitMiddleware(name string, max int, per time.Duration, failClosed bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if redisURL == "" || RedisClient == nil {
+		ok, err := rateLimitAllow(c, name+":ip:"+c.ClientIP(), max, per)
+		if err != nil {
+			if failClosed {
+				c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "Service temporarily unavailable", "status": http.StatusServiceUnavailable})
+				return
+			}
+			log.Printf("rate limiter unavailable: %v", err)
 			c.Next()
 			return
 		}
-		defer newrelic.FromContext(c.Request.Context()).StartSegment("middleware/RateLimit").End()
-
-		ip := c.ClientIP()
-		now := time.Now().Unix()
-		windowSec := int64(per.Seconds())
-		key := redisKeyPrefix + "rl:sz:" + ip
-		maxScore := fmt.Sprintf("%d", now-windowSec)
-		member := fmt.Sprintf("%d-%d", now, time.Now().UnixNano()%1000)
-
-		// pipeline: remove stale entries, add current, set TTL, count — 1 round trip
-		pipe := RedisClient.Pipeline()
-		pipe.ZRemRangeByScore(c, key, "-inf", maxScore)
-		pipe.ZAdd(c, key, redis.Z{Score: float64(now), Member: member})
-		pipe.Expire(c, key, per+5*time.Second)
-		zCardCmd := pipe.ZCard(c, key)
-		if _, err := pipe.Exec(c); err != nil {
-			c.AbortWithStatusJSON(http.StatusServiceUnavailable, gin.H{"message": "rate limiter unavailable", "status": http.StatusServiceUnavailable})
-			return
-		}
-
-		if zCardCmd.Val() > int64(max) {
+		if !ok {
 			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"message": "Too many requests", "status": http.StatusTooManyRequests})
 			return
 		}
 		c.Next()
 	}
+}
+
+// limitByKey applies a per-key limit inside a handler (e.g. per account on login). It writes the
+// response and returns false when the request must stop. Fails closed: used on auth endpoints only.
+func limitByKey(c *gin.Context, key string, max int, per time.Duration) bool {
+	ok, err := rateLimitAllow(c, key, max, per)
+	if err != nil {
+		responseError(c, "Service temporarily unavailable", http.StatusServiceUnavailable)
+		return false
+	}
+	if !ok {
+		responseError(c, "Too many attempts, please try again later", http.StatusTooManyRequests)
+		return false
+	}
+	return true
 }
 
 // PanicRecoveryMiddleware catches any unhandled panic, reports it to New Relic,

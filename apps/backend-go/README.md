@@ -7,12 +7,20 @@ Go backend implementation using Gin framework, maintaining API compatibility wit
 ### Required
 
 - `DATABASE_URL` - Postgres connection string (e.g., `postgres://user:pass@localhost:5432/family-tree?sslmode=disable`)
-- `JWT_SECRET` - Secret key for JWT token signing
+- `JWT_SECRET` - Secret for signing access tokens and OAuth state (startup fails without it; use 32+ random bytes)
 - `PORT` - Server port (default: `4000`)
 
 ### Optional
 
-- `REDIS_URL` - Redis connection URL for rate limiting (e.g., `redis://localhost:6379`)
+- `APP_BASE_URL` - Frontend origin used in email links and after Google sign-in (default `http://localhost:3000`)
+- `API_BASE_URL` - Public URL of this API, used for the Google OAuth callback (default `http://localhost:4000`)
+- `APP_ENV` - `production` makes startup fail unless `REDIS_URL`, `RESEND_API_KEY`, https `APP_BASE_URL`/`API_BASE_URL`,
+  a 32+ character `JWT_SECRET` and a client-IP setting are present
+- `CLIENT_IP_HEADER` - Header the platform edge always overwrites with the client IP (e.g. `X-Real-IP`, `CF-Connecting-IP`)
+- `TRUSTED_PROXIES` - Comma-separated IPs/CIDRs whose `X-Forwarded-For` is trusted, or `none` to use the peer address
+- `RESEND_API_KEY`, `EMAIL_FROM` - Transactional email via Resend; without a key emails are logged (dev only)
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` - Enable Google sign-in (redirect URI `${API_BASE_URL}/api/auth/google/callback`)
+- `REDIS_URL` - Redis connection URL for rate limiting and caching (e.g., `redis://localhost:6379`)
 - `NEW_RELIC_APP_NAME` - Application name for New Relic APM
 - `NEW_RELIC_LICENSE_KEY` - New Relic license key
 - `CLOUDINARY_URL` - Cloudinary connection URL (format: `cloudinary://api_key:api_secret@cloud_name`)
@@ -37,10 +45,11 @@ go build -o backend ./main.go
 
 ## Features
 
-- JWT authentication with bcrypt password hashing
+- Revocable sessions: 15-minute JWT access tokens + rotating refresh tokens (reuse revokes the session), bcrypt passwords
+- Email signup and verification, password reset, Google sign-in (OIDC + PKCE), account deletion and export
 - Postgres via GORM with soft delete support (all tables); schema managed by versioned SQL migrations (goose) applied on startup
 - Cloudinary image upload integration with local fallback
-- Redis-based rate limiting (600 requests/minute, sliding window)
+- Redis-based rate limiting: 600 requests/minute per IP overall, tighter per-IP and per-account limits on auth endpoints
 - New Relic APM integration
 - Family tree builder with D3-compatible output
 - CORS, compression, HPP (HTTP Parameter Pollution) protection
@@ -68,6 +77,30 @@ All tables (users, people, families, relationships) implement soft delete via `g
 - `cmd/mongo2pg` is a one-off tool that copies the legacy MongoDB data into Postgres
   (`MONGO_URI`, `MONGO_DB`, `DATABASE_URL`; truncates and reloads, safe to re-run). Remove it after the cutover.
 - Backups: see `docs/postgres-backup.md`.
+
+## Authentication
+
+- `POST /api/auth/signup` `{name, email, password}` → `{user, verificationRequired: true}`; emails a link. The account is
+  pending (cannot sign in) until `POST /api/auth/verify-email` `{token, password}` (the signup password), which returns
+  `{verified, session: {accessToken, accessTokenExpiresAt, refreshToken, user}}`
+- `POST /api/auth/login` `{identifier, password}` (email or username) → `{accessToken, accessTokenExpiresAt, refreshToken, user}`
+- `POST /api/auth/refresh` `{refreshToken}` → new pair (the old refresh token is invalidated; replaying it revokes the session)
+- `POST /api/auth/logout`, `POST /api/auth/logout-all`, `GET /api/auth/sessions`, `DELETE /api/auth/sessions/:sessionId`
+- `POST /api/auth/resend-verification` `{email}` (always 200)
+- `POST /api/auth/forgot-password` `{email}` (always 200), `POST /api/auth/reset-password` `{token, password}` (signs out everywhere)
+- `POST /api/auth/change-password` `{currentPassword, newPassword}` (signs out other sessions)
+- `GET /api/auth/providers`; Google: the frontend creates a random `binding` (kept in its own httpOnly cookie) and sends the
+  browser to `GET /api/auth/google/start?binding=…&next=/path` → Google → `/api/auth/google/callback` → redirect to
+  `${APP_BASE_URL}/auth/google/complete?code=…&next=…` → `POST /api/auth/google/exchange` `{code, binding}` (re-check `next`)
+- `GET|PATCH|DELETE /api/me` (delete needs `{"confirm":"DELETE","password":…}`), `GET /api/me/export`
+- `PUT /api/me/email` `{email, password}` → `{pendingEmail}`; the address changes only when the emailed link is confirmed
+  with `POST /api/auth/verify-email` `{token}` **while signed in** to that account
+- Invariant: an account's email is always verified, or the account is a pending signup that cannot sign in. Pending signups
+  hold no data, so the address owner can take one over (password reset or Google) without inheriting anything.
+- Passwords: at least 10 characters, not a common password, not equal to the name/username/email. bcrypt cost 12;
+  older hashes are upgraded on the next successful login. SQL parameters are never logged.
+- Legacy `POST /api/auth/signin` `{username, password}` → `{user, token}` with a 24h session-backed token (no refresh)
+  for the current frontend. Tokens issued before sessions existed are rejected (everyone signs in once more).
 
 ## Access Control
 
@@ -113,7 +146,7 @@ Tree-scoped routes (all require a bearer token; `:treeId` membership is enforced
 
 Legacy routes (used by the current frontend) keep the Node.js request/response shapes and the same checks:
 
-- `/api/auth/*` - Authentication; `GET /api/auth/users` lists the other members of the caller's tree (owner)
+- `POST /api/auth/signin`, `GET /api/auth`, `POST /api/auth` (admin creates a family account); `GET /api/auth/users` lists the other members of the caller's tree (owner)
 - `/api/person/*` - Person CRUD
 - `/api/family/*` - Family CRUD
 - `/api/relationship/*` - Relationship CRUD
