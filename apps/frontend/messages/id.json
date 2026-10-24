@@ -112,7 +112,8 @@
     "searchPeople": "Cari orang",
     "searchHint": "Temukan seseorang dan pusatkan pohon padanya",
     "searchPlaceholder": "Ketik nama…",
-    "noMatches": "Tidak ada yang cocok."
+    "noMatches": "Tidak ada yang cocok.",
+    "copyIntoTree": "Salin dari pohon lain…"
   },
   "canvas": {
     "loading": "Memuat pohon…",
@@ -146,7 +147,9 @@
     "deleteBody": "Orang ini hilang dari pohon dan daftar untuk semua anggota. Catatannya tetap disimpan sebagai riwayat, sesuai Kebijakan Privasi.",
     "deleted": "{name} dihapus.",
     "cancel": "Batal",
-    "copyFromTree": "Salin dari pohon lain"
+    "copyFromTree": "Salin dari pohon lain",
+    "copyToTree": "Salin ke pohon lain",
+    "copyFromTreeShort": "Salin dari pohon"
   },
   "drawer": {
     "loading": "Memuat…",
@@ -477,6 +480,12 @@
     "copiedFrom": "Disalin dari {tree}",
     "copiedFromOther": "Disalin dari pohon lain",
     "updateFromOriginal": "Perbarui dari aslinya",
-    "updated": "Diperbarui dari aslinya."
+    "updated": "Diperbarui dari aslinya.",
+    "titleTo": "Salin cabang {name} ke pohon lain",
+    "descriptionTo": "Kirim cabang ini ke pohon lain yang Anda miliki atau sunting — misalnya dari pohon Anda ke pohon pasangan.",
+    "noTargets": "Anda perlu menjadi pemilik atau editor pohon lain untuk menyalin ke sana.",
+    "toTree": "Salin ke",
+    "doneTo": "{created} orang disalin ke {tree}{updated, plural, =0 {} other {, # diperbarui}}.",
+    "openTree": "Buka"
   }
 }

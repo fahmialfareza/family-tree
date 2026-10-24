@@ -30,6 +30,7 @@ export function PersonDrawer({
   onClose,
   onFocus,
   onAddRelative,
+  onCopyOut,
 }: {
   treeId: string;
   personId: string | null;
@@ -40,6 +41,7 @@ export function PersonDrawer({
   onClose: () => void;
   onFocus: (id: string) => void;
   onAddRelative: (anchorId: string, kind: "parent" | "spouse" | "child") => void;
+  onCopyOut?: (personId: string, name: string) => void;
 }) {
   const t = useTranslations("drawer");
   const tp = useTranslations("person");
@@ -118,6 +120,11 @@ export function PersonDrawer({
                       <Button size="sm" variant="outline" onClick={() => onAddRelative(person._id, "child")}>
                         <UserRoundPlus className="size-4" aria-hidden /> {tcv("addChild")}
                       </Button>
+                      {onCopyOut ? (
+                        <Button size="sm" variant="ghost" onClick={() => onCopyOut(person._id, person.name)}>
+                          <Copy className="size-4" aria-hidden /> {tcv("copyToTree")}
+                        </Button>
+                      ) : null}
                     </div>
                   ) : null}
                   {person.copiedFrom ? (

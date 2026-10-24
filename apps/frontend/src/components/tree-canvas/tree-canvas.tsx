@@ -14,8 +14,20 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toPng } from "html-to-image";
-import { Copy, Download, Loader2, Maximize, Printer, TreePine, UserRoundPlus } from "lucide-react";
-import { CopyDialog, useCopySources } from "@/components/copy/copy-dialog";
+import {
+  Copy,
+  Download,
+  Loader2,
+  Maximize,
+  Printer,
+  TreePine,
+  UserRoundPlus,
+} from "lucide-react";
+import {
+  type CopyFromPerson,
+  CopyDialog,
+  useCopySources,
+} from "@/components/copy/copy-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,15 +45,40 @@ import { toast } from "sonner";
 import { EmptyState } from "@/components/common/page";
 import { PersonDrawer } from "@/components/person/person-drawer";
 import { PersonForm } from "@/components/person/person-form";
-import { QuickAddDialog, type QuickAddRequest } from "@/components/person/quick-add-dialog";
+import {
+  QuickAddDialog,
+  type QuickAddRequest,
+} from "@/components/person/quick-add-dialog";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { errorMessage } from "@/lib/api/client";
 import { useDeletePerson, useGraph } from "@/lib/api/hooks";
 import { useMediaQuery } from "@/lib/use-media-query";
-import { type FlowNode, layoutGraph, neighbourhood, PERSON_HEIGHT, PERSON_WIDTH } from "./layout";
+import {
+  type FlowNode,
+  layoutGraph,
+  neighbourhood,
+  PERSON_HEIGHT,
+  PERSON_WIDTH,
+} from "./layout";
 import { CanvasActions, nodeTypes, type RelativeKind } from "./nodes";
 
 const DEPTHS = ["2", "4", "6", "all"] as const;
@@ -61,18 +98,24 @@ function Canvas({ treeId }: { treeId: string }) {
   const openId = params.get("person");
   const tab = params.get("tab") ?? "overview";
   const [depth, setDepth] = useState<(typeof DEPTHS)[number] | null>(null);
-  const [layout, setLayout] = useState<{ key: string; nodes: FlowNode[]; edges: Edge[] }>({ key: "", nodes: [], edges: [] });
+  const [layout, setLayout] = useState<{
+    key: string;
+    nodes: FlowNode[];
+    edges: Edge[];
+  }>({ key: "", nodes: [], edges: [] });
   const [quickAdd, setQuickAdd] = useState<QuickAddRequest>(null);
   const [firstPerson, setFirstPerson] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
+  const [copyOut, setCopyOut] = useState<CopyFromPerson | null>(null);
   const copySources = useCopySources(treeId);
   const deletePerson = useDeletePerson(treeId);
   const deleting = graph?.people.find((p) => p._id === deleteId);
 
   const role = graph?.tree.role ?? "viewer";
-  const effectiveDepth = depth ?? (graph && graph.people.length > FULL_TREE_LIMIT ? "4" : "all");
+  const effectiveDepth =
+    depth ?? (graph && graph.people.length > FULL_TREE_LIMIT ? "4" : "all");
   const layoutKey = `${dataUpdatedAt}|${focusId ?? ""}|${effectiveDepth}`;
   const { nodes, edges } = layout;
   const layingOut = !!graph && layout.key !== layoutKey;
@@ -92,7 +135,11 @@ function Canvas({ treeId }: { treeId: string }) {
   useEffect(() => {
     if (!graph) return;
     let cancelled = false;
-    const visible = neighbourhood(graph, focusId, effectiveDepth === "all" ? Infinity : Number(effectiveDepth));
+    const visible = neighbourhood(
+      graph,
+      focusId,
+      effectiveDepth === "all" ? Infinity : Number(effectiveDepth),
+    );
     layoutGraph(graph, visible, { focusId }).then((res) => {
       if (!cancelled) setLayout({ key: layoutKey, ...res });
     });
@@ -106,7 +153,12 @@ function Canvas({ treeId }: { treeId: string }) {
     if (!nodes.length) return;
     const id = requestAnimationFrame(() => {
       const target = focusId ? nodes.find((n) => n.id === focusId) : undefined;
-      if (target) setCenter(target.position.x + PERSON_WIDTH / 2, target.position.y + PERSON_HEIGHT / 2, { zoom: 1, duration: 400 });
+      if (target)
+        setCenter(
+          target.position.x + PERSON_WIDTH / 2,
+          target.position.y + PERSON_HEIGHT / 2,
+          { zoom: 1, duration: 400 },
+        );
       else fitView({ padding: 0.15, duration: 300, maxZoom: 1.1 });
     });
     return () => cancelAnimationFrame(id);
@@ -117,10 +169,16 @@ function Canvas({ treeId }: { treeId: string }) {
       open: (id: string) => setQuery({ person: id, tab: null }),
       edit: (id: string) => setQuery({ person: id, tab: "edit" }),
       remove: (id: string) => setDeleteId(id),
-      addRelative: (anchorId: string, kind: RelativeKind) => setQuickAdd({ anchorId, kind }),
+      copyOut: (id: string) => {
+        const p = graph?.people.find((x) => x._id === id);
+        if (p) setCopyOut({ treeId, personId: id, name: p.name });
+      },
+      canCopyOut: copySources.length > 0,
+      addRelative: (anchorId: string, kind: RelativeKind) =>
+        setQuickAdd({ anchorId, kind }),
       canEditTree: role !== "viewer",
     }),
-    [setQuery, role],
+    [setQuery, role, graph, treeId, copySources.length],
   );
 
   async function exportPng() {
@@ -139,8 +197,16 @@ function Canvas({ treeId }: { treeId: string }) {
         width,
         height,
         pixelRatio: 2,
-        style: { width: `${width}px`, height: `${height}px`, transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})` },
-        filter: (node) => !(node instanceof HTMLElement && node.classList.contains("react-flow__node-toolbar")),
+        style: {
+          width: `${width}px`,
+          height: `${height}px`,
+          transform: `translate(${vp.x}px, ${vp.y}px) scale(${vp.zoom})`,
+        },
+        filter: (node) =>
+          !(
+            node instanceof HTMLElement &&
+            node.classList.contains("react-flow__node-toolbar")
+          ),
       });
       const a = document.createElement("a");
       a.href = url;
@@ -154,12 +220,22 @@ function Canvas({ treeId }: { treeId: string }) {
   }
 
   if (error) {
-    return <EmptyState icon={TreePine} title={t("loadFailed")} description={String((error as Error).message)} className="m-6" />;
+    return (
+      <EmptyState
+        icon={TreePine}
+        title={t("loadFailed")}
+        description={String((error as Error).message)}
+        className="m-6"
+      />
+    );
   }
   if (isLoading || !graph) {
     return (
       <div className="flex flex-1 items-center justify-center" role="status">
-        <Loader2 className="size-6 animate-spin text-muted-foreground" aria-hidden />
+        <Loader2
+          className="size-6 animate-spin text-muted-foreground"
+          aria-hidden
+        />
         <span className="sr-only">{t("loading")}</span>
       </div>
     );
@@ -173,16 +249,23 @@ function Canvas({ treeId }: { treeId: string }) {
             <EmptyState
               icon={TreePine}
               title={t("emptyTitle")}
-              description={role === "viewer" ? t("emptyViewer") : t("emptyBody")}
+              description={
+                role === "viewer" ? t("emptyViewer") : t("emptyBody")
+              }
               action={
                 role !== "viewer" ? (
                   <div className="flex flex-wrap justify-center gap-2">
                     <Button onClick={() => setFirstPerson(true)}>
-                      <UserRoundPlus className="size-4" aria-hidden /> {t("addFirst")}
+                      <UserRoundPlus className="size-4" aria-hidden />{" "}
+                      {t("addFirst")}
                     </Button>
                     {copySources.length ? (
-                      <Button variant="outline" onClick={() => setCopying(true)}>
-                        <Copy className="size-4" aria-hidden /> {t("copyFromTree")}
+                      <Button
+                        variant="outline"
+                        onClick={() => setCopying(true)}
+                      >
+                        <Copy className="size-4" aria-hidden />{" "}
+                        {t("copyFromTree")}
                       </Button>
                     ) : null}
                   </div>
@@ -206,44 +289,77 @@ function Canvas({ treeId }: { treeId: string }) {
             aria-label={t("canvasLabel", { name: graph.tree.name })}
           >
             <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} />
-            <Controls showInteractive={false} position="bottom-right" className="no-print" />
-            {desktop ? <MiniMap pannable zoomable className="no-print !rounded-lg !border" nodeStrokeWidth={2} /> : null}
+            <Controls
+              showInteractive={false}
+              position="bottom-right"
+              className="no-print"
+            />
+            {desktop ? (
+              <MiniMap
+                pannable
+                zoomable
+                className="no-print !rounded-lg !border"
+                nodeStrokeWidth={2}
+              />
+            ) : null}
           </ReactFlow>
         )}
 
         {graph.people.length > 0 ? (
           <div className="no-print absolute left-3 top-3 flex flex-wrap items-center gap-2 rounded-xl border bg-card/95 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur">
-            <span className="px-2 font-display text-sm font-semibold">{graph.tree.name}</span>
-            <Select value={effectiveDepth} onValueChange={(v) => setDepth(v as (typeof DEPTHS)[number])}>
+            <span className="px-2 font-display text-sm font-semibold">
+              {graph.tree.name}
+            </span>
+            <Select
+              value={effectiveDepth}
+              onValueChange={(v) => setDepth(v as (typeof DEPTHS)[number])}
+            >
               <SelectTrigger className="h-8 w-auto" aria-label={t("depth")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {DEPTHS.map((d) => (
                   <SelectItem key={d} value={d}>
-                    {d === "all" ? t("depthAll") : t("depthN", { n: Number(d) })}
+                    {d === "all"
+                      ? t("depthAll")
+                      : t("depthN", { n: Number(d) })}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
             {role !== "viewer" ? (
-              <Button size="sm" className="h-8" onClick={() => setFirstPerson(true)}>
-                <UserRoundPlus className="size-4" aria-hidden /> <span className="hidden sm:inline">{t("addPerson")}</span>
+              <Button
+                size="sm"
+                className="h-8"
+                onClick={() => setFirstPerson(true)}
+              >
+                <UserRoundPlus className="size-4" aria-hidden />{" "}
+                <span className="hidden sm:inline">{t("addPerson")}</span>
               </Button>
             ) : null}
             {role !== "viewer" && copySources.length ? (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" className="size-8" onClick={() => setCopying(true)} aria-label={t("copyFromTree")}>
-                    <Copy className="size-4" aria-hidden />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("copyFromTree")}</TooltipContent>
-              </Tooltip>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8"
+                onClick={() => setCopying(true)}
+                aria-label={t("copyFromTree")}
+              >
+                <Copy className="size-4" aria-hidden />{" "}
+                <span className="hidden sm:inline">
+                  {t("copyFromTreeShort")}
+                </span>
+              </Button>
             ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8" onClick={() => fitView({ padding: 0.15, duration: 300 })} aria-label={t("fit")}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  onClick={() => fitView({ padding: 0.15, duration: 300 })}
+                  aria-label={t("fit")}
+                >
                   <Maximize className="size-4" aria-hidden />
                 </Button>
               </TooltipTrigger>
@@ -251,21 +367,43 @@ function Canvas({ treeId }: { treeId: string }) {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8" onClick={exportPng} disabled={exporting} aria-label={t("exportPng")}>
-                  {exporting ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Download className="size-4" aria-hidden />}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  onClick={exportPng}
+                  disabled={exporting}
+                  aria-label={t("exportPng")}
+                >
+                  {exporting ? (
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                  ) : (
+                    <Download className="size-4" aria-hidden />
+                  )}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("exportPng")}</TooltipContent>
             </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" className="size-8" onClick={() => window.print()} aria-label={t("print")}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="size-8"
+                  onClick={() => window.print()}
+                  aria-label={t("print")}
+                >
                   <Printer className="size-4" aria-hidden />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t("print")}</TooltipContent>
             </Tooltip>
-            {layingOut ? <Loader2 className="mx-1 size-4 animate-spin text-muted-foreground" aria-label={t("loading")} /> : null}
+            {layingOut ? (
+              <Loader2
+                className="mx-1 size-4 animate-spin text-muted-foreground"
+                aria-label={t("loading")}
+              />
+            ) : null}
           </div>
         ) : null}
       </div>
@@ -280,6 +418,11 @@ function Canvas({ treeId }: { treeId: string }) {
         onClose={() => setQuery({ person: null, tab: null })}
         onFocus={(id) => setQuery({ focus: id, person: null, tab: null })}
         onAddRelative={(anchorId, kind) => setQuickAdd({ anchorId, kind })}
+        onCopyOut={
+          copySources.length
+            ? (id, name) => setCopyOut({ treeId, personId: id, name })
+            : undefined
+        }
       />
       <QuickAddDialog
         treeId={treeId}
@@ -294,24 +437,50 @@ function Canvas({ treeId }: { treeId: string }) {
       <Dialog open={firstPerson} onOpenChange={setFirstPerson}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{graph.people.length ? t("addPerson") : t("addFirst")}</DialogTitle>
-            <DialogDescription>{graph.people.length ? t("addPersonHint") : t("addFirstHint")}</DialogDescription>
+            <DialogTitle>
+              {graph.people.length ? t("addPerson") : t("addFirst")}
+            </DialogTitle>
+            <DialogDescription>
+              {graph.people.length ? t("addPersonHint") : t("addFirstHint")}
+            </DialogDescription>
           </DialogHeader>
           <PersonForm
             treeId={treeId}
             onSaved={(p) => {
               setFirstPerson(false);
-              setQuery({ focus: p._id, person: graph.people.length ? p._id : null, tab: graph.people.length ? "relatives" : null });
+              setQuery({
+                focus: p._id,
+                person: graph.people.length ? p._id : null,
+                tab: graph.people.length ? "relatives" : null,
+              });
             }}
             onCancel={() => setFirstPerson(false)}
           />
         </DialogContent>
       </Dialog>
-      <CopyDialog treeId={treeId} open={copying} onOpenChange={setCopying} onCopied={(rootId) => setQuery({ focus: rootId, person: null, tab: null })} />
-      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+      <CopyDialog
+        treeId={treeId}
+        open={copying}
+        onOpenChange={setCopying}
+        onCopied={(rootId) =>
+          setQuery({ focus: rootId, person: null, tab: null })
+        }
+      />
+      <CopyDialog
+        key={copyOut?.personId ?? "none"}
+        fromPerson={copyOut ?? undefined}
+        open={!!copyOut}
+        onOpenChange={(open) => !open && setCopyOut(null)}
+      />
+      <AlertDialog
+        open={!!deleteId}
+        onOpenChange={(open) => !open && setDeleteId(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{t("deleteTitle", { name: deleting?.name ?? "" })}</AlertDialogTitle>
+            <AlertDialogTitle>
+              {t("deleteTitle", { name: deleting?.name ?? "" })}
+            </AlertDialogTitle>
             <AlertDialogDescription>{t("deleteBody")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -326,7 +495,10 @@ function Canvas({ treeId }: { treeId: string }) {
                   await deletePerson.mutateAsync(deleteId);
                   toast.success(t("deleted", { name: deleting?.name ?? "" }));
                   setDeleteId(null);
-                  setQuery({ person: openId === deleteId ? null : openId, focus: focusId === deleteId ? null : (focusId ?? null) });
+                  setQuery({
+                    person: openId === deleteId ? null : openId,
+                    focus: focusId === deleteId ? null : (focusId ?? null),
+                  });
                 } catch (err) {
                   toast.error(errorMessage(err));
                 }

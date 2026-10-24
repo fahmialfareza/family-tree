@@ -1,7 +1,7 @@
 "use client";
 
 import { Handle, NodeToolbar, Position, type NodeProps } from "@xyflow/react";
-import { Eye, Heart, type LucideIcon, Pencil, Plus, Trash2, UserRoundPlus, Users } from "lucide-react";
+import { Copy, Eye, Heart, type LucideIcon, Pencil, Plus, Trash2, UserRoundPlus, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createContext, Fragment, memo, useContext, useEffect, useRef, useState } from "react";
 import { PersonAvatar } from "@/components/common/person-avatar";
@@ -26,8 +26,18 @@ export const CanvasActions = createContext<{
   edit: (id: string) => void;
   remove: (id: string) => void;
   addRelative: (anchorId: string, kind: RelativeKind) => void;
+  copyOut: (id: string) => void;
   canEditTree: boolean;
-}>({ open: () => undefined, edit: () => undefined, remove: () => undefined, addRelative: () => undefined, canEditTree: false });
+  canCopyOut: boolean;
+}>({
+  open: () => undefined,
+  edit: () => undefined,
+  remove: () => undefined,
+  addRelative: () => undefined,
+  copyOut: () => undefined,
+  canEditTree: false,
+  canCopyOut: false,
+});
 
 const accent = {
   male: "before:bg-node-male",
@@ -54,7 +64,7 @@ function usePersonActions(id: string, canEdit: boolean): Action[] {
 
 export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const t = useTranslations("canvas");
-  const { open } = useContext(CanvasActions);
+  const { open, copyOut, canCopyOut } = useContext(CanvasActions);
   const p = data.person;
   const deceased = p.status === "deceased";
   const span = lifeSpan(p.birthDate, p.deathDate);
@@ -147,6 +157,11 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
             <Eye className="size-4" aria-hidden /> {t("viewPerson")}
           </ContextMenuItem>
           <ContextMenuSeparator />
+          {actions.length && canCopyOut ? (
+            <ContextMenuItem onSelect={() => copyOut(p._id)}>
+              <Copy className="size-4" aria-hidden /> {t("copyToTree")}
+            </ContextMenuItem>
+          ) : null}
           {actions.map((a) => (
             <Fragment key={a.key}>
               {a.danger ? <ContextMenuSeparator /> : null}

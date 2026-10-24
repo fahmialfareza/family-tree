@@ -112,7 +112,8 @@
     "searchPeople": "Search people",
     "searchHint": "Find someone and center the tree on them",
     "searchPlaceholder": "Type a name…",
-    "noMatches": "No one matches that name."
+    "noMatches": "No one matches that name.",
+    "copyIntoTree": "Copy from another tree…"
   },
   "canvas": {
     "loading": "Loading the tree…",
@@ -146,7 +147,9 @@
     "deleteBody": "They disappear from the tree and lists for everyone. The record is kept as history, as described in the Privacy Policy.",
     "deleted": "{name} was deleted.",
     "cancel": "Cancel",
-    "copyFromTree": "Copy from another tree"
+    "copyFromTree": "Copy from another tree",
+    "copyToTree": "Copy to another tree",
+    "copyFromTreeShort": "Copy from tree"
   },
   "drawer": {
     "loading": "Loading…",
@@ -477,6 +480,12 @@
     "copiedFrom": "Copied from {tree}",
     "copiedFromOther": "Copied from another tree",
     "updateFromOriginal": "Update from original",
-    "updated": "Updated from the original."
+    "updated": "Updated from the original.",
+    "titleTo": "Copy {name}'s branch to another tree",
+    "descriptionTo": "Send this branch to another tree you own or edit — for example from your tree into your spouse's.",
+    "noTargets": "You need to be an owner or editor of another tree to copy into it.",
+    "toTree": "Copy to",
+    "doneTo": "{created, plural, one {# person} other {# people}} copied to {tree}{updated, plural, =0 {} other {, # updated}}.",
+    "openTree": "Open"
   }
 }
