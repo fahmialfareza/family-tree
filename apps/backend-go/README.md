@@ -6,8 +6,7 @@ Go backend implementation using Gin framework, maintaining API compatibility wit
 
 ### Required
 
-- `MONGO_URI` - MongoDB connection string (e.g., `mongodb://localhost:27017`)
-- `MONGO_DB` - MongoDB database name (e.g., `family-tree`)
+- `DATABASE_URL` - Postgres connection string (e.g., `postgres://user:pass@localhost:5432/family-tree?sslmode=disable`)
 - `JWT_SECRET` - Secret key for JWT token signing
 - `PORT` - Server port (default: `4001`)
 
@@ -39,7 +38,7 @@ go build -o backend ./main.go
 ## Features
 
 - JWT authentication with bcrypt password hashing
-- MongoDB with soft delete support (all collections)
+- Postgres via GORM with soft delete support (all tables); schema managed by `AutoMigrate` on startup
 - Cloudinary image upload integration with local fallback
 - Redis-based rate limiting (600 requests/minute, sliding window)
 - New Relic APM integration
@@ -48,11 +47,19 @@ go build -o backend ./main.go
 
 ## Soft Delete
 
-All collections (users, people, families, relationships) implement soft delete:
+All tables (users, people, families, relationships) implement soft delete via `gorm.DeletedAt`:
 
-- Queries automatically filter `deleted: {$ne: true}`
-- Delete operations set `deleted: true` and `deletedAt: timestamp`
-- Matches `mongoose-delete` plugin behavior from Node.js version
+- Queries automatically filter `deleted_at IS NULL`
+- Delete operations set `deleted_at` instead of removing the row
+- Ownership links (`person_owners`, `family_owners`) are plain join tables and are replaced, not soft-deleted
+
+## Database
+
+- Schema lives in `internal/schema.go`; API structs in `internal/models.go` are mapped from those rows.
+- IDs are `text`: rows migrated from MongoDB keep their 24-char hex ObjectIDs, new rows get UUIDv7 strings.
+- `cmd/mongo2pg` is a one-off tool that copies the legacy MongoDB data into Postgres
+  (`MONGO_URI`, `MONGO_DB`, `DATABASE_URL`; truncates and reloads, safe to re-run). Remove it after the cutover.
+- Backups: see `docs/postgres-backup.md`.
 
 ## API Compatibility
 

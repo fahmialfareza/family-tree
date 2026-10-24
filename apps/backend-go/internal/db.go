@@ -2,109 +2,81 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
 
-	nrmongo "github.com/newrelic/go-agent/v3/integrations/nrmongo"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/newrelic/go-agent/v3/integrations/nrpgx5"
 	nrredis "github.com/newrelic/go-agent/v3/integrations/nrredis-v9"
 	"github.com/redis/go-redis/v9"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var (
-	MongoClient *mongo.Client
-	MongoDB     *mongo.Database
+	DB          *gorm.DB
 	RedisClient *redis.Client
 )
 
-// InitIndexes creates all necessary indexes on startup. Safe to call multiple times (uses CreateIfNotExists semantics).
-func InitIndexes(ctx context.Context) error {
-	type indexDef struct {
-		collection string
-		model      mongo.IndexModel
+// InitPostgres connects to DATABASE_URL. The nrpgx5 tracer instruments every query with New Relic segments.
+func InitPostgres(ctx context.Context) error {
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		return errors.New("DATABASE_URL is required")
 	}
-
-	indexes := []indexDef{
-		// users: fast login lookup and soft-delete filter
-		{
-			"users",
-			mongo.IndexModel{Keys: bson.D{{Key: "username", Value: 1}, {Key: "deleted", Value: 1}}},
-		},
-		// people: ownership filter used in list queries
-		{
-			"people",
-			mongo.IndexModel{Keys: bson.D{{Key: "ownedBy", Value: 1}, {Key: "deleted", Value: 1}}},
-		},
-		// families: ownership filter + person foreign key used in $lookup
-		{
-			"families",
-			mongo.IndexModel{Keys: bson.D{{Key: "ownedBy", Value: 1}, {Key: "deleted", Value: 1}}},
-		},
-		{
-			"families",
-			mongo.IndexModel{Keys: bson.D{{Key: "person", Value: 1}}},
-		},
-		// relationships: graph traversal queries filter by from/to + deleted
-		{
-			"relationships",
-			mongo.IndexModel{Keys: bson.D{{Key: "from", Value: 1}, {Key: "deleted", Value: 1}}},
-		},
-		{
-			"relationships",
-			mongo.IndexModel{Keys: bson.D{{Key: "to", Value: 1}, {Key: "deleted", Value: 1}}},
-		},
+	cfg, err := pgx.ParseConfig(dsn)
+	if err != nil {
+		return fmt.Errorf("parse DATABASE_URL: %w", err)
 	}
-
-	for _, idx := range indexes {
-		col := MongoDB.Collection(idx.collection)
-		if _, err := col.Indexes().CreateOne(ctx, idx.model); err != nil {
-			return fmt.Errorf("create index on %s: %w", idx.collection, err)
-		}
+	cfg.Tracer = nrpgx5.NewTracer()
+	sqlDB := stdlib.OpenDB(*cfg)
+	sqlDB.SetMaxOpenConns(10)
+	sqlDB.SetMaxIdleConns(5)
+	sqlDB.SetConnMaxIdleTime(5 * time.Minute)
+	if err := sqlDB.PingContext(ctx); err != nil {
+		return err
 	}
-	fmt.Println("MongoDB indexes ensured")
-	return nil
-}
-
-func InitMongo(ctx context.Context) error {
-	uri := os.Getenv("MONGO_URI")
-	if uri == "" {
-		uri = "mongodb://localhost:27017"
-	}
-	// nrmongo command monitor instruments all MongoDB operations with New Relic segments
-	monitor := nrmongo.NewCommandMonitor(nil)
-	clientOpts := options.Client().ApplyURI(uri).SetServerSelectionTimeout(5 * time.Second).SetMonitor(monitor)
-	client, err := mongo.Connect(ctx, clientOpts)
+	db, err := gorm.Open(postgres.New(postgres.Config{Conn: sqlDB}), &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Warn),
+	})
 	if err != nil {
 		return err
 	}
-	if err := client.Ping(ctx, nil); err != nil {
-		return err
-	}
-	MongoClient = client
-	dbName := os.Getenv("MONGO_DB")
-	if dbName == "" {
-		dbName = "family-tree"
-	}
-	MongoDB = client.Database(dbName)
-	fmt.Println("Connected to MongoDB", uri, "db", dbName)
-	// init redis if provided
-	redisURL := os.Getenv("REDIS_URL")
-	if redisURL != "" {
-		if opt, err := redis.ParseURL(redisURL); err == nil {
-			RedisClient = redis.NewClient(opt)
-			// nrredis hook instruments all Redis commands with New Relic datastore segments
-			RedisClient.AddHook(nrredis.NewHook(opt))
-			if err := RedisClient.Ping(ctx).Err(); err != nil {
-				fmt.Println("warning: redis ping failed:", err)
-			} else {
-				fmt.Println("Connected to Redis", redisURL)
-			}
-		} else {
-			fmt.Println("warning: invalid REDIS_URL", err)
-		}
-	}
+	DB = db
+	fmt.Println("Connected to Postgres", cfg.Host, "db", cfg.Database)
 	return nil
+}
+
+// InitSchema creates or updates tables and indexes. Safe to call on every startup.
+func InitSchema(ctx context.Context) error {
+	if err := DB.WithContext(ctx).AutoMigrate(schemaModels...); err != nil {
+		return fmt.Errorf("auto migrate: %w", err)
+	}
+	fmt.Println("Postgres schema ensured")
+	return nil
+}
+
+// InitRedis connects to REDIS_URL if set. Redis is optional; failures only log a warning.
+func InitRedis(ctx context.Context) {
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		return
+	}
+	opt, err := redis.ParseURL(redisURL)
+	if err != nil {
+		fmt.Println("warning: invalid REDIS_URL", err)
+		return
+	}
+	RedisClient = redis.NewClient(opt)
+	// nrredis hook instruments all Redis commands with New Relic datastore segments
+	RedisClient.AddHook(nrredis.NewHook(opt))
+	if err := RedisClient.Ping(ctx).Err(); err != nil {
+		fmt.Println("warning: redis ping failed:", err)
+	} else {
+		fmt.Println("Connected to Redis", opt.Addr)
+	}
 }

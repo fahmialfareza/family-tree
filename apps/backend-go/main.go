@@ -26,14 +26,17 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	// Initialize MongoDB (required by repositories)
-	if err := app.InitMongo(ctx); err != nil {
-		log.Fatalf("failed to init mongo: %v", err)
+	// Initialize Postgres (required by repositories)
+	if err := app.InitPostgres(ctx); err != nil {
+		log.Fatalf("failed to init postgres: %v", err)
 	}
 
-	// Ensure indexes exist (idempotent — safe to run on every startup)
-	if err := app.InitIndexes(ctx); err != nil {
-		log.Fatalf("failed to init indexes: %v", err)
+	// Redis cache is optional
+	app.InitRedis(ctx)
+
+	// Ensure tables and indexes exist (idempotent — safe to run on every startup)
+	if err := app.InitSchema(context.Background()); err != nil {
+		log.Fatalf("failed to init schema: %v", err)
 	}
 
 	// initialize New Relic if configured (non-fatal)

@@ -1,0 +1,102 @@
+name: Weekly Postgres Backup
+
+on:
+  schedule:
+    - cron: "0 17 * * 6"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets['DATABASE_URL'] }}
+      R2_ACCOUNT_ID: ${{ secrets['R2_ACCOUNT_ID'] }}
+      R2_BUCKET: ${{ secrets['R2_BUCKET'] }}
+      # pg_dump must be the same major version as the server or newer.
+      PG_CLIENT_VERSION: "17"
+    steps:
+      - name: Install PostgreSQL client
+        run: |
+          set -euo pipefail
+
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y -qq "postgresql-client-${PG_CLIENT_VERSION}"
+          echo "/usr/lib/postgresql/${PG_CLIENT_VERSION}/bin" >> "${GITHUB_PATH}"
+
+      - name: Install AWS CLI
+        run: |
+          set -euo pipefail
+
+          curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+          unzip -q awscliv2.zip
+          sudo ./aws/install --update
+
+      - name: Create backup archive
+        id: backup
+        run: |
+          set -euo pipefail
+
+          if [[ -z "${DATABASE_URL}" ]]; then
+            echo "DATABASE_URL secret is not set or empty." >&2
+            exit 1
+          fi
+
+          timestamp="$(date -u +'%Y-%m-%d-%H%M%S')"
+          backup_filename="family-tree-postgres-${timestamp}.dump"
+          backup_path="${RUNNER_TEMP}/${backup_filename}"
+
+          # Custom format is compressed and restorable with pg_restore.
+          pg_dump --dbname="${DATABASE_URL}" --format=custom --no-owner --no-privileges --file="${backup_path}"
+
+          if [[ ! -s "${backup_path}" ]]; then
+            echo "Backup archive was not created." >&2
+            exit 1
+          fi
+
+          pg_restore --list "${backup_path}" > /dev/null
+
+          echo "backup_filename=${backup_filename}" >> "${GITHUB_OUTPUT}"
+          echo "backup_path=${backup_path}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload backup to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets['R2_ACCESS_KEY_ID'] }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets['R2_SECRET_ACCESS_KEY'] }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+
+          endpoint_url="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+
+          aws s3 cp \
+            "${{ steps.backup.outputs.backup_path }}" \
+            "s3://${R2_BUCKET}/postgres/weekly/${{ steps.backup.outputs.backup_filename }}" \
+            --endpoint-url "${endpoint_url}" \
+            --only-show-errors
+
+      - name: Delete backups older than 4 weeks
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets['R2_ACCESS_KEY_ID'] }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets['R2_SECRET_ACCESS_KEY'] }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+
+          endpoint_url="https://${R2_ACCOUNT_ID}.r2.cloudflarestorage.com"
+          cutoff="$(date -u -d '28 days ago' +'%Y-%m-%d')"
+
+          aws s3 ls "s3://${R2_BUCKET}/postgres/weekly/" \
+            --endpoint-url "${endpoint_url}" | \
+          while read -r date _time _size filename; do
+            if [[ "${date}" < "${cutoff}" ]]; then
+              echo "Deleting old backup: ${filename} (${date})"
+              aws s3 rm "s3://${R2_BUCKET}/postgres/weekly/${filename}" \
+                --endpoint-url "${endpoint_url}" \
+                --only-show-errors
+            fi
+          done
