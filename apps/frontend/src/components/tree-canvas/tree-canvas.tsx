@@ -15,6 +15,16 @@ import {
 import "@xyflow/react/dist/style.css";
 import { toPng } from "html-to-image";
 import { Download, Loader2, Maximize, Printer, TreePine, UserRoundPlus } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -23,11 +33,12 @@ import { EmptyState } from "@/components/common/page";
 import { PersonDrawer } from "@/components/person/person-drawer";
 import { PersonForm } from "@/components/person/person-form";
 import { QuickAddDialog, type QuickAddRequest } from "@/components/person/quick-add-dialog";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { useGraph } from "@/lib/api/hooks";
+import { errorMessage } from "@/lib/api/client";
+import { useDeletePerson, useGraph } from "@/lib/api/hooks";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { type FlowNode, layoutGraph, neighbourhood, PERSON_HEIGHT, PERSON_WIDTH } from "./layout";
 import { CanvasActions, nodeTypes, type RelativeKind } from "./nodes";
@@ -53,6 +64,9 @@ function Canvas({ treeId }: { treeId: string }) {
   const [quickAdd, setQuickAdd] = useState<QuickAddRequest>(null);
   const [firstPerson, setFirstPerson] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const deletePerson = useDeletePerson(treeId);
+  const deleting = graph?.people.find((p) => p._id === deleteId);
 
   const role = graph?.tree.role ?? "viewer";
   const effectiveDepth = depth ?? (graph && graph.people.length > FULL_TREE_LIMIT ? "4" : "all");
@@ -98,6 +112,8 @@ function Canvas({ treeId }: { treeId: string }) {
   const actions = useMemo(
     () => ({
       open: (id: string) => setQuery({ person: id, tab: null }),
+      edit: (id: string) => setQuery({ person: id, tab: "edit" }),
+      remove: (id: string) => setDeleteId(id),
       addRelative: (anchorId: string, kind: RelativeKind) => setQuickAdd({ anchorId, kind }),
       canEditTree: role !== "viewer",
     }),
@@ -200,6 +216,11 @@ function Canvas({ treeId }: { treeId: string }) {
                 ))}
               </SelectContent>
             </Select>
+            {role !== "viewer" ? (
+              <Button size="sm" className="h-8" onClick={() => setFirstPerson(true)}>
+                <UserRoundPlus className="size-4" aria-hidden /> <span className="hidden sm:inline">{t("addPerson")}</span>
+              </Button>
+            ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" className="size-8" onClick={() => fitView({ padding: 0.15, duration: 300 })} aria-label={t("fit")}>
@@ -253,19 +274,48 @@ function Canvas({ treeId }: { treeId: string }) {
       <Dialog open={firstPerson} onOpenChange={setFirstPerson}>
         <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{t("addFirst")}</DialogTitle>
-            <DialogDescription>{t("addFirstHint")}</DialogDescription>
+            <DialogTitle>{graph.people.length ? t("addPerson") : t("addFirst")}</DialogTitle>
+            <DialogDescription>{graph.people.length ? t("addPersonHint") : t("addFirstHint")}</DialogDescription>
           </DialogHeader>
           <PersonForm
             treeId={treeId}
             onSaved={(p) => {
               setFirstPerson(false);
-              setQuery({ focus: p._id });
+              setQuery({ focus: p._id, person: graph.people.length ? p._id : null, tab: graph.people.length ? "relatives" : null });
             }}
             onCancel={() => setFirstPerson(false)}
           />
         </DialogContent>
       </Dialog>
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("deleteTitle", { name: deleting?.name ?? "" })}</AlertDialogTitle>
+            <AlertDialogDescription>{t("deleteBody")}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              disabled={deletePerson.isPending}
+              onClick={async (e) => {
+                e.preventDefault();
+                if (!deleteId) return;
+                try {
+                  await deletePerson.mutateAsync(deleteId);
+                  toast.success(t("deleted", { name: deleting?.name ?? "" }));
+                  setDeleteId(null);
+                  setQuery({ person: openId === deleteId ? null : openId, focus: focusId === deleteId ? null : (focusId ?? null) });
+                } catch (err) {
+                  toast.error(errorMessage(err));
+                }
+              }}
+            >
+              {t("deletePerson")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </CanvasActions.Provider>
   );
 }

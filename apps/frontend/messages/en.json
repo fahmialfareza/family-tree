@@ -134,7 +134,17 @@
     "fit": "Fit to screen",
     "exportPng": "Download as image",
     "exportFailed": "The image couldn't be created.",
-    "print": "Print"
+    "print": "Print",
+    "editPerson": "Edit",
+    "deletePerson": "Delete",
+    "viewPerson": "View details",
+    "personActions": "Actions for {name}",
+    "addPerson": "Add person",
+    "addPersonHint": "Add someone new; you can link them to relatives right after.",
+    "deleteTitle": "Delete {name}?",
+    "deleteBody": "They disappear from the tree and lists for everyone. The record is kept as history, as described in the Privacy Policy.",
+    "deleted": "{name} was deleted.",
+    "cancel": "Cancel"
   },
   "drawer": {
     "loading": "Loading…",
@@ -145,7 +155,7 @@
     "unknown": "Unknown",
     "centerHere": "Center tree here",
     "deleteTitle": "Delete {name}?",
-    "deleteBody": "Their relationships stay visible as history, but they are removed from the tree and lists.",
+    "deleteBody": "They disappear from the tree and lists for everyone. The record is kept as history, as described in the Privacy Policy.",
     "deleted": "Person deleted."
   },
   "person": {

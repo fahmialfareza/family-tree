@@ -1,6 +1,6 @@
 "use client";
 
-import { Crosshair, Loader2, MapPin, MessageCircle, Phone, Trash2 } from "lucide-react";
+import { Crosshair, Heart, Loader2, MapPin, MessageCircle, Pencil, Phone, Trash2, UserRoundPlus, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -44,6 +44,7 @@ export function PersonDrawer({
   const t = useTranslations("drawer");
   const tp = useTranslations("person");
   const tc = useTranslations("common");
+  const tcv = useTranslations("canvas");
   const locale = useLocale();
   const desktop = useMediaQuery("(min-width: 768px)", true);
   const { data: person, isLoading } = usePerson(treeId, personId);
@@ -101,6 +102,22 @@ export function PersonDrawer({
             <ScrollArea className="min-h-0 flex-1">
               <div className="p-5">
                 <TabsContent value="overview" className="mt-0 space-y-5">
+                  {canEdit ? (
+                    <div className="flex flex-wrap gap-2" role="toolbar" aria-label={tcv("personActions", { name: person.name })}>
+                      <Button size="sm" onClick={() => onTabChange("edit")}>
+                        <Pencil className="size-4" aria-hidden /> {tcv("editPerson")}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onAddRelative(person._id, "parent")}>
+                        <Users className="size-4" aria-hidden /> {tcv("addParent")}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onAddRelative(person._id, "spouse")}>
+                        <Heart className="size-4" aria-hidden /> {tcv("addSpouse")}
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => onAddRelative(person._id, "child")}>
+                        <UserRoundPlus className="size-4" aria-hidden /> {tcv("addChild")}
+                      </Button>
+                    </div>
+                  ) : null}
                   <dl className="grid gap-4 text-sm">
                     {[
                       [tp("birthDate"), formatPartialDate(person.birthDate, person.birthDatePrecision, person.birthDateQualifier, locale, q), person.birthPlace],

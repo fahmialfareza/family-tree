@@ -134,7 +134,17 @@
     "fit": "Sesuaikan layar",
     "exportPng": "Unduh sebagai gambar",
     "exportFailed": "Gambar tidak dapat dibuat.",
-    "print": "Cetak"
+    "print": "Cetak",
+    "editPerson": "Ubah",
+    "deletePerson": "Hapus",
+    "viewPerson": "Lihat detail",
+    "personActions": "Tindakan untuk {name}",
+    "addPerson": "Tambah orang",
+    "addPersonHint": "Tambahkan orang baru; Anda bisa langsung menghubungkannya dengan kerabat.",
+    "deleteTitle": "Hapus {name}?",
+    "deleteBody": "Orang ini hilang dari pohon dan daftar untuk semua anggota. Catatannya tetap disimpan sebagai riwayat, sesuai Kebijakan Privasi.",
+    "deleted": "{name} dihapus.",
+    "cancel": "Batal"
   },
   "drawer": {
     "loading": "Memuat…",
@@ -145,7 +155,7 @@
     "unknown": "Tidak diketahui",
     "centerHere": "Pusatkan pohon di sini",
     "deleteTitle": "Hapus {name}?",
-    "deleteBody": "Hubungan keluarganya tetap tersimpan sebagai riwayat, tetapi orang ini dihapus dari pohon dan daftar.",
+    "deleteBody": "Orang ini hilang dari pohon dan daftar untuk semua anggota. Catatannya tetap disimpan sebagai riwayat, sesuai Kebijakan Privasi.",
     "deleted": "Orang dihapus."
   },
   "person": {
