@@ -145,7 +145,8 @@
     "deleteTitle": "Delete {name}?",
     "deleteBody": "They disappear from the tree and lists for everyone. The record is kept as history, as described in the Privacy Policy.",
     "deleted": "{name} was deleted.",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "copyFromTree": "Copy from another tree"
   },
   "drawer": {
     "loading": "Loading…",
@@ -375,7 +376,9 @@
     "mother": "Mother's name",
     "next": "Next",
     "skip": "Skip for now",
-    "finish": "Show my tree"
+    "finish": "Show my tree",
+    "copyInstead": "Already built this family in another tree? Copy a branch instead.",
+    "copyButton": "Copy a branch"
   },
   "errors": {
     "notFoundTitle": "Page not found",
@@ -430,5 +433,50 @@
     "faq4a": "Yes. Owners can export a tree as JSON, and everyone can download their account data or delete their account.",
     "ctaTitle": "Start your family tree today",
     "ctaBody": "It takes a minute to begin — and it becomes something your family keeps."
+  },
+  "copy": {
+    "title": "Copy from another tree",
+    "description": "Bring a branch you already built into this tree — for example your side of the family into your spouse's tree.",
+    "noSources": "You need to be an owner or editor of another tree to copy from it.",
+    "fromTree": "Copy from",
+    "startFrom": "Start from",
+    "searchPerson": "Search a person…",
+    "noPeople": "No one you can copy here.",
+    "branchOnly": "Only people shared with you in that tree are listed.",
+    "thisPerson": "this person",
+    "howFar": "How much of {name}'s family?",
+    "scopes": {
+      "descendants": {
+        "title": "Descendants",
+        "body": "Them, their partners, children, grandchildren…"
+      },
+      "ancestors": {
+        "title": "Ancestors",
+        "body": "Them, their parents, grandparents…"
+      },
+      "both": {
+        "title": "Both",
+        "body": "Ancestors and descendants together"
+      },
+      "nearby": {
+        "title": "Close family",
+        "body": "Everyone within a few relationship steps"
+      }
+    },
+    "steps": "Steps",
+    "stepsN": "{n, plural, one {# step} other {# steps}}",
+    "updateExisting": "Update people copied before",
+    "updateExistingHelp": "Refresh names, dates and places of people already copied into this tree.",
+    "whatTravels": "Copied: names, gender, dates, places and how people are related. Photos, phone numbers, addresses and notes stay in the original tree. Copies are independent — changing them never changes the original.",
+    "previewing": "Checking what will be copied…",
+    "previewSummary": "{created, plural, =0 {Nobody new} one {# new person} other {# new people}}; {reused, plural, =0 {none already here} one {# already here} other {# already here}}.",
+    "previewSkipped": "{skipped, plural, one {# person isn't shared with you and will be skipped.} other {# people aren't shared with you and will be skipped.}}",
+    "alreadyHere": "already here",
+    "copy": "Copy",
+    "done": "{created, plural, one {# person copied} other {# people copied}}{updated, plural, =0 {} other {, # updated}}.",
+    "copiedFrom": "Copied from {tree}",
+    "copiedFromOther": "Copied from another tree",
+    "updateFromOriginal": "Update from original",
+    "updated": "Updated from the original."
   }
 }

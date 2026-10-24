@@ -185,6 +185,11 @@ Tree-scoped routes (all require a bearer token; `:treeId` membership is enforced
 - `PUT /api/trees/:treeId/people/:id/ownership` - share a branch (owner)
 - `GET|POST /api/trees/:treeId/people/:id/relationships`
 - `GET /api/trees/:treeId/people/:id/tree?mode=parent|child`
+- `POST /api/trees/:treeId/import` `{sourceTreeId, personId, scope: descendants|ancestors|both|nearby, steps?, updateExisting?, dryRun?}` -
+  copy a branch from another tree (owner/editor of both; branch-scoped editors only their branch). Copies only names,
+  gender, status, dates and places plus the relationships between them; repeats reuse earlier copies
+- `POST /api/trees/:treeId/people/:id/sync` - refresh a copied person's genealogy from its original
+  (`GET .../people/:id` returns `copiedFrom {treeId, treeName, personId, canUpdate}` for copies)
 - `GET|POST /api/trees/:treeId/families`, `DELETE /api/trees/:treeId/families/:id`
 
 ### Person fields

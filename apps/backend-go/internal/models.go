@@ -65,6 +65,7 @@ type TreeInvite struct {
 type Person struct {
 	ID                 string          `json:"_id"`
 	TreeID             string          `json:"treeId,omitempty"`
+	CopiedFrom         *CopySource     `json:"copiedFrom,omitempty"` // per caller; set by the handler, never cached
 	Name               string          `json:"name"`
 	Nickname           string          `json:"nickname"`
 	Address            string          `json:"address"`

@@ -64,12 +64,20 @@ func getPeoplePage(c *gin.Context, access *treeAccess) {
 func getPersonById(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getPersonById").End()
 	id := c.Param("id")
-	p, err := getPersonByIdRepo(c, currentAccess(c).TreeID, id)
+	access := currentAccess(c)
+	p, err := getPersonByIdRepo(c, access.TreeID, id)
 	if err != nil {
 		responseError(c, "Person not found", 404)
 		return
 	}
-	responseSuccess(c, p, 200)
+	info, _, err := copySourceOf(c, access.TreeID, id, access.UserID)
+	if err != nil {
+		abortServerError(c, err)
+		return
+	}
+	out := *p // the cached value is shared; never attach per-caller data to it
+	out.CopiedFrom = info
+	responseSuccess(c, &out, 200)
 }
 
 func createPerson(c *gin.Context) {

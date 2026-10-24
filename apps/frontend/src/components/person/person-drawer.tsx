@@ -1,6 +1,6 @@
 "use client";
 
-import { Crosshair, Heart, Loader2, MapPin, MessageCircle, Pencil, Phone, Trash2, UserRoundPlus, Users } from "lucide-react";
+import { Copy, Crosshair, Heart, Loader2, RefreshCw, MapPin, MessageCircle, Pencil, Phone, Trash2, UserRoundPlus, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -12,7 +12,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { errorMessage } from "@/lib/api/client";
-import { useDeletePerson, usePerson } from "@/lib/api/hooks";
+import { useDeletePerson, usePerson, useSyncFromOriginal } from "@/lib/api/hooks";
 import type { Graph, TreeRole } from "@/lib/api/types";
 import { formatPartialDate, whatsappLink } from "@/lib/format";
 import { useMediaQuery } from "@/lib/use-media-query";
@@ -45,6 +45,8 @@ export function PersonDrawer({
   const tp = useTranslations("person");
   const tc = useTranslations("common");
   const tcv = useTranslations("canvas");
+  const tcp = useTranslations("copy");
+  const sync = useSyncFromOriginal(treeId);
   const locale = useLocale();
   const desktop = useMediaQuery("(min-width: 768px)", true);
   const { data: person, isLoading } = usePerson(treeId, personId);
@@ -116,6 +118,32 @@ export function PersonDrawer({
                       <Button size="sm" variant="outline" onClick={() => onAddRelative(person._id, "child")}>
                         <UserRoundPlus className="size-4" aria-hidden /> {tcv("addChild")}
                       </Button>
+                    </div>
+                  ) : null}
+                  {person.copiedFrom ? (
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-dashed p-3 text-sm">
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Copy className="size-4" aria-hidden />
+                        {person.copiedFrom.treeName ? tcp("copiedFrom", { tree: person.copiedFrom.treeName }) : tcp("copiedFromOther")}
+                      </span>
+                      {person.copiedFrom.canUpdate && canEdit ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={sync.isPending}
+                          onClick={async () => {
+                            try {
+                              await sync.mutateAsync(person._id);
+                              toast.success(tcp("updated"));
+                            } catch (err) {
+                              toast.error(errorMessage(err));
+                            }
+                          }}
+                        >
+                          {sync.isPending ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <RefreshCw className="size-4" aria-hidden />}
+                          {tcp("updateFromOriginal")}
+                        </Button>
+                      ) : null}
                     </div>
                   ) : null}
                   <dl className="grid gap-4 text-sm">

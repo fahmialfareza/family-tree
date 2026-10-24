@@ -1,6 +1,7 @@
 "use client";
 
-import { ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Copy, Loader2, Sparkles } from "lucide-react";
+import { CopyDialog, useCopySources } from "@/components/copy/copy-dialog";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Field, FormError } from "@/components/common/field";
@@ -30,6 +31,8 @@ export function Onboarding({ userName, isFirstTree }: { userName: string; isFirs
   const [father, setFather] = useState("");
   const [mother, setMother] = useState("");
   const [busy, setBusy] = useState(false);
+  const [copying, setCopying] = useState(false);
+  const copySources = useCopySources(treeId);
   const [error, setError] = useState<string | null>(null);
 
   async function run(fn: () => Promise<void>) {
@@ -83,6 +86,7 @@ export function Onboarding({ userName, isFirstTree }: { userName: string; isFirs
         ))}
       </ol>
 
+      {treeId ? <CopyDialog treeId={treeId} open={copying} onOpenChange={setCopying} onCopied={(rootId) => finish(rootId)} /> : null}
       <div className="rounded-2xl border bg-card p-6 shadow-[var(--shadow-lift)]">
         <FormError message={error} />
         {step === 0 ? (
@@ -116,6 +120,14 @@ export function Onboarding({ userName, isFirstTree }: { userName: string; isFirs
               });
             }}
           >
+            {copySources.length ? (
+              <div className="flex flex-col gap-2 rounded-xl border border-dashed p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-muted-foreground">{t("copyInstead")}</span>
+                <Button type="button" variant="outline" size="sm" onClick={() => setCopying(true)}>
+                  <Copy className="size-4" aria-hidden /> {t("copyButton")}
+                </Button>
+              </div>
+            ) : null}
             <p className="text-sm text-muted-foreground">{t("youIntro")}</p>
             <Field label={tp("name")} required>
               {(p) => <Input {...p} value={selfName} onChange={(e) => setSelfName(e.target.value)} maxLength={120} autoFocus required />}

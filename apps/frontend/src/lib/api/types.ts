@@ -67,6 +67,8 @@ export interface Person {
   photoUrl?: string;
   ownedBy: string[] | null;
   owners?: User[];
+  /** Set when the person was copied from another tree; tree details only for members of that tree. */
+  copiedFrom?: { treeId?: string; treeName?: string; personId?: string; canUpdate: boolean };
   relationships?: Relationship[];
 }
 
@@ -129,4 +131,27 @@ export interface Session {
 export interface Page<T> {
   items: T[];
   nextCursor: string | null;
+}
+
+export type ImportScope = "descendants" | "ancestors" | "both" | "nearby";
+
+export interface ImportRequest {
+  sourceTreeId: string;
+  personId: string;
+  scope: ImportScope;
+  steps?: number;
+  updateExisting?: boolean;
+  dryRun?: boolean;
+}
+
+export interface ImportResult {
+  people?: { _id: string; name: string; birthDate?: string; deathDate?: string; alreadyInTree: boolean }[];
+  created: number;
+  reused: number;
+  updated: number;
+  links: number;
+  skipped: number;
+  selected: number;
+  rootId?: string;
+  dryRun: boolean;
 }

@@ -145,7 +145,8 @@
     "deleteTitle": "Hapus {name}?",
     "deleteBody": "Orang ini hilang dari pohon dan daftar untuk semua anggota. Catatannya tetap disimpan sebagai riwayat, sesuai Kebijakan Privasi.",
     "deleted": "{name} dihapus.",
-    "cancel": "Batal"
+    "cancel": "Batal",
+    "copyFromTree": "Salin dari pohon lain"
   },
   "drawer": {
     "loading": "Memuat…",
@@ -375,7 +376,9 @@
     "mother": "Nama ibu",
     "next": "Lanjut",
     "skip": "Lewati dulu",
-    "finish": "Lihat pohon saya"
+    "finish": "Lihat pohon saya",
+    "copyInstead": "Sudah menyusun keluarga ini di pohon lain? Salin cabangnya saja.",
+    "copyButton": "Salin cabang"
   },
   "errors": {
     "notFoundTitle": "Halaman tidak ditemukan",
@@ -430,5 +433,50 @@
     "faq4a": "Bisa. Pemilik dapat mengekspor pohon sebagai JSON, dan setiap orang dapat mengunduh data akunnya atau menghapus akunnya.",
     "ctaTitle": "Mulai silsilah keluarga Anda hari ini",
     "ctaBody": "Hanya butuh semenit untuk memulai — dan menjadi warisan yang dijaga keluarga Anda."
+  },
+  "copy": {
+    "title": "Salin dari pohon lain",
+    "description": "Bawa cabang yang sudah Anda susun ke pohon ini — misalnya keluarga dari pihak Anda ke pohon pasangan Anda.",
+    "noSources": "Anda perlu menjadi pemilik atau editor pohon lain untuk menyalin darinya.",
+    "fromTree": "Salin dari",
+    "startFrom": "Mulai dari",
+    "searchPerson": "Cari orang…",
+    "noPeople": "Tidak ada orang yang dapat Anda salin di sini.",
+    "branchOnly": "Hanya orang yang dibagikan kepada Anda di pohon itu yang ditampilkan.",
+    "thisPerson": "orang ini",
+    "howFar": "Seberapa banyak keluarga {name}?",
+    "scopes": {
+      "descendants": {
+        "title": "Keturunan",
+        "body": "Dia, pasangannya, anak, cucu…"
+      },
+      "ancestors": {
+        "title": "Leluhur",
+        "body": "Dia, orang tuanya, kakek-nenek…"
+      },
+      "both": {
+        "title": "Keduanya",
+        "body": "Leluhur dan keturunan sekaligus"
+      },
+      "nearby": {
+        "title": "Keluarga dekat",
+        "body": "Semua dalam beberapa langkah hubungan"
+      }
+    },
+    "steps": "Langkah",
+    "stepsN": "{n} langkah",
+    "updateExisting": "Perbarui orang yang pernah disalin",
+    "updateExistingHelp": "Segarkan nama, tanggal, dan tempat orang yang sudah disalin ke pohon ini.",
+    "whatTravels": "Yang disalin: nama, jenis kelamin, tanggal, tempat, dan hubungan keluarga. Foto, nomor telepon, alamat, dan catatan tetap di pohon asal. Salinan berdiri sendiri — mengubahnya tidak pernah mengubah aslinya.",
+    "previewing": "Memeriksa yang akan disalin…",
+    "previewSummary": "{created, plural, =0 {Tidak ada orang baru} other {# orang baru}}; {reused, plural, =0 {belum ada yang sudah di sini} other {# sudah ada di sini}}.",
+    "previewSkipped": "{skipped} orang tidak dibagikan kepada Anda dan akan dilewati.",
+    "alreadyHere": "sudah ada",
+    "copy": "Salin",
+    "done": "{created} orang disalin{updated, plural, =0 {} other {, # diperbarui}}.",
+    "copiedFrom": "Disalin dari {tree}",
+    "copiedFromOther": "Disalin dari pohon lain",
+    "updateFromOriginal": "Perbarui dari aslinya",
+    "updated": "Diperbarui dari aslinya."
   }
 }

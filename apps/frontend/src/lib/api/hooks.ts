@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type {
   Family,
+  ImportRequest,
+  ImportResult,
   Graph,
   Me,
   Page,
@@ -42,7 +44,7 @@ export function useTree(treeId: string) {
 }
 
 export function useGraph(treeId: string) {
-  return useQuery({ queryKey: keys.graph(treeId), queryFn: () => api.get<Graph>(`${t(treeId)}/graph`) });
+  return useQuery({ queryKey: keys.graph(treeId), queryFn: () => api.get<Graph>(`${t(treeId)}/graph`), enabled: !!treeId });
 }
 
 export function usePeoplePage(treeId: string, q: string) {
@@ -230,5 +232,32 @@ export function useUpdateMe() {
   return useMutation({
     mutationFn: (name: string) => api.patch<User>("/api/me", { name }),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.me }),
+  });
+}
+
+/** Copies a branch from another tree into treeId (dry runs are queries; see useImportPreview). */
+export function useImportBranch(treeId: string) {
+  const invalidate = useInvalidateTree(treeId);
+  return useMutation({
+    mutationFn: (body: ImportRequest) => api.post<ImportResult>(`${t(treeId)}/import`, { ...body, dryRun: false }),
+    onSuccess: invalidate,
+  });
+}
+
+export function useImportPreview(treeId: string, body: ImportRequest | null) {
+  return useQuery({
+    queryKey: ["tree", treeId, "import-preview", body],
+    queryFn: () => api.post<ImportResult>(`${t(treeId)}/import`, { ...body, dryRun: true }),
+    enabled: !!body,
+    staleTime: 0,
+  });
+}
+
+/** Pulls the original's names, dates and places into a copied person. */
+export function useSyncFromOriginal(treeId: string) {
+  const invalidate = useInvalidateTree(treeId);
+  return useMutation({
+    mutationFn: (id: string) => api.post<Person>(`${t(treeId)}/people/${encodeURIComponent(id)}/sync`),
+    onSuccess: invalidate,
   });
 }

@@ -94,10 +94,12 @@ type personRow struct {
 	BirthPlace         *string
 	DeathPlace         *string
 	Notes              *string
-	Phone              string
-	PhotoURL           string
-	OwnerLinks         []personOwner     `gorm:"foreignKey:PersonID;constraint:OnDelete:CASCADE"`
-	Relationships      []relationshipRow `gorm:"foreignKey:FromID"`
+	// Set on people copied from another tree (migration 00005); never sent to clients.
+	SourcePersonID *string `gorm:"type:text"`
+	Phone          string
+	PhotoURL       string
+	OwnerLinks     []personOwner     `gorm:"foreignKey:PersonID;constraint:OnDelete:CASCADE"`
+	Relationships  []relationshipRow `gorm:"foreignKey:FromID"`
 }
 
 func (personRow) TableName() string { return "people" }

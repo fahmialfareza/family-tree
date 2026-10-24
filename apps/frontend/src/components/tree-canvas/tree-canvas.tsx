@@ -14,7 +14,8 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { toPng } from "html-to-image";
-import { Download, Loader2, Maximize, Printer, TreePine, UserRoundPlus } from "lucide-react";
+import { Copy, Download, Loader2, Maximize, Printer, TreePine, UserRoundPlus } from "lucide-react";
+import { CopyDialog, useCopySources } from "@/components/copy/copy-dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -65,6 +66,8 @@ function Canvas({ treeId }: { treeId: string }) {
   const [firstPerson, setFirstPerson] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
+  const copySources = useCopySources(treeId);
   const deletePerson = useDeletePerson(treeId);
   const deleting = graph?.people.find((p) => p._id === deleteId);
 
@@ -173,9 +176,16 @@ function Canvas({ treeId }: { treeId: string }) {
               description={role === "viewer" ? t("emptyViewer") : t("emptyBody")}
               action={
                 role !== "viewer" ? (
-                  <Button onClick={() => setFirstPerson(true)}>
-                    <UserRoundPlus className="size-4" aria-hidden /> {t("addFirst")}
-                  </Button>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    <Button onClick={() => setFirstPerson(true)}>
+                      <UserRoundPlus className="size-4" aria-hidden /> {t("addFirst")}
+                    </Button>
+                    {copySources.length ? (
+                      <Button variant="outline" onClick={() => setCopying(true)}>
+                        <Copy className="size-4" aria-hidden /> {t("copyFromTree")}
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : undefined
               }
             />
@@ -220,6 +230,16 @@ function Canvas({ treeId }: { treeId: string }) {
               <Button size="sm" className="h-8" onClick={() => setFirstPerson(true)}>
                 <UserRoundPlus className="size-4" aria-hidden /> <span className="hidden sm:inline">{t("addPerson")}</span>
               </Button>
+            ) : null}
+            {role !== "viewer" && copySources.length ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" size="icon" className="size-8" onClick={() => setCopying(true)} aria-label={t("copyFromTree")}>
+                    <Copy className="size-4" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("copyFromTree")}</TooltipContent>
+              </Tooltip>
             ) : null}
             <Tooltip>
               <TooltipTrigger asChild>
@@ -287,6 +307,7 @@ function Canvas({ treeId }: { treeId: string }) {
           />
         </DialogContent>
       </Dialog>
+      <CopyDialog treeId={treeId} open={copying} onOpenChange={setCopying} onCopied={(rootId) => setQuery({ focus: rootId, person: null, tab: null })} />
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
