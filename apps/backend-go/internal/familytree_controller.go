@@ -45,7 +45,7 @@ type internalNode struct {
 }
 
 func getFamilyTree(c *gin.Context) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/getFamilyTree").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getFamilyTree").End()
 	personId := c.Param("personId")
 	mode := c.Query("mode")
 	// Default to "parent" mode if not specified (matching Node.js)
@@ -80,7 +80,7 @@ func getFamilyTree(c *gin.Context) {
 }
 
 func buildFamilyTree(ctx context.Context, personId string, withChildren bool, withParent bool) (internalNode, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "service/buildFamilyTree").End()
+	defer newrelic.FromContext(ctx).StartSegment("service/buildFamilyTree").End()
 	debug := os.Getenv("TREE_DEBUG") == "1"
 
 	// ── Phase 1: BFS to discover all person IDs and pre-load their relationships ────
@@ -261,12 +261,8 @@ func buildFamilyTree(ctx context.Context, personId string, withChildren bool, wi
 				}
 			}
 
-			for _, sc := range singleChildren {
-				node.Children = append(node.Children, sc)
-			}
-			for _, spNode := range spouseNodes {
-				node.Spouses = append(node.Spouses, spNode)
-			}
+			node.Children = append(node.Children, singleChildren...)
+			node.Spouses = append(node.Spouses, spouseNodes...)
 		}
 
 		if wp {

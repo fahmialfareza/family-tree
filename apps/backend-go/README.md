@@ -8,7 +8,7 @@ Go backend implementation using Gin framework, maintaining API compatibility wit
 
 - `DATABASE_URL` - Postgres connection string (e.g., `postgres://user:pass@localhost:5432/family-tree?sslmode=disable`)
 - `JWT_SECRET` - Secret key for JWT token signing
-- `PORT` - Server port (default: `4001`)
+- `PORT` - Server port (default: `4000`)
 
 ### Optional
 

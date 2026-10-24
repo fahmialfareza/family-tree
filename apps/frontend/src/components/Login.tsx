@@ -32,9 +32,11 @@ function LoginComponent({ token: tokenFromCookie }: { token?: string }) {
     setToken(tokenFromCookie || "");
   }, [tokenFromCookie, setToken]);
 
-  if (token) {
-    router.push("/");
-  }
+  useEffect(() => {
+    if (token) {
+      router.push("/");
+    }
+  }, [token, router]);
 
   return (
     <div className="flex items-center justify-center min-h-screen px-4 sm:px-6 lg:px-8">

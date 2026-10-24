@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import Tree, { RawNodeDatum } from "react-d3-tree";
 import * as htmlToImage from "html-to-image";
 import { useState } from "react";
@@ -299,6 +299,11 @@ const renderRectSvgNode = (modalHandler: (node: FamilyTreeNode) => void) => {
 
 export default function TreeWrapper({ data }: { data: FamilyTreeNode }) {
   const treeRef = useRef<HTMLDivElement>(null);
+  const [translateX, setTranslateX] = useState(0);
+  const measureTree = useCallback((el: HTMLDivElement | null) => {
+    treeRef.current = el;
+    if (el) setTranslateX(el.offsetWidth / 3);
+  }, []);
   const { modalOpen, selectedNode, openModal, closeModal } = useModal();
 
   const handleDownload = async () => {
@@ -349,7 +354,7 @@ export default function TreeWrapper({ data }: { data: FamilyTreeNode }) {
         </button>
       </div>
       <div
-        ref={treeRef}
+        ref={measureTree}
         style={{
           width: "100vw",
           height: "90vh",
@@ -373,9 +378,7 @@ export default function TreeWrapper({ data }: { data: FamilyTreeNode }) {
             separation={{ siblings: 2, nonSiblings: 2 }}
             orientation="vertical"
             translate={{
-              x: treeRef.current
-                ? treeRef.current.offsetWidth / 3
-                : window.innerWidth / 3,
+              x: translateX,
               y: 100,
             }}
             renderCustomNodeElement={renderRectSvgNode(openModal)}

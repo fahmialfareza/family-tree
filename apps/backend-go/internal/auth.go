@@ -21,7 +21,7 @@ var jwtSecret = func() []byte {
 }()
 
 func signIn(c *gin.Context) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/signIn").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/signIn").End()
 	var body struct {
 		Username string `json:"username"`
 		Password string `json:"password"`
@@ -60,7 +60,7 @@ func signIn(c *gin.Context) {
 func authenticate(roles []string) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		txn := newrelic.FromContext(c.Request.Context())
-		defer newrelic.StartSegment(txn, "middleware/authenticate").End()
+		defer txn.StartSegment("middleware/authenticate").End()
 
 		auth := c.GetHeader("Authorization")
 		if auth == "" {
@@ -137,7 +137,7 @@ func authenticate(roles []string) gin.HandlerFunc {
 }
 
 func createUser(c *gin.Context) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/createUser").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/createUser").End()
 	var body struct {
 		Name     string `json:"name"`
 		Username string `json:"username"`
@@ -159,7 +159,7 @@ func createUser(c *gin.Context) {
 }
 
 func profile(c *gin.Context) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/profile").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/profile").End()
 	u, _ := c.Get("user")
 	t, _ := c.Get("token")
 	user := u.(*User)
@@ -169,7 +169,7 @@ func profile(c *gin.Context) {
 }
 
 func users(c *gin.Context) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/users").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/users").End()
 	// only admin allowed by middleware
 	us, err := repoFindUsers(c, RoleUser)
 	if err != nil {

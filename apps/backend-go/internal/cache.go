@@ -62,7 +62,7 @@ func cacheKeyFamily(id string) string { return redisKeyPrefix + "family:" + id }
 
 // cacheGet deserializes a cached value. Returns (value, true) on hit, zero+false on miss.
 func cacheGet[T any](ctx context.Context, key string) (T, bool) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "cache/get").End()
+	defer newrelic.FromContext(ctx).StartSegment("cache/get").End()
 	var zero T
 	if RedisClient == nil {
 		return zero, false
@@ -80,7 +80,7 @@ func cacheGet[T any](ctx context.Context, key string) (T, bool) {
 
 // cacheSet serializes and stores a value with the given TTL. Silently skips if Redis is unavailable.
 func cacheSet(ctx context.Context, key string, value any, ttl time.Duration) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "cache/set").End()
+	defer newrelic.FromContext(ctx).StartSegment("cache/set").End()
 	if RedisClient == nil {
 		return
 	}
@@ -93,7 +93,7 @@ func cacheSet(ctx context.Context, key string, value any, ttl time.Duration) {
 
 // cacheDel removes one or more exact keys.
 func cacheDel(ctx context.Context, keys ...string) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "cache/del").End()
+	defer newrelic.FromContext(ctx).StartSegment("cache/del").End()
 	if RedisClient == nil || len(keys) == 0 {
 		return
 	}
@@ -102,7 +102,7 @@ func cacheDel(ctx context.Context, keys ...string) {
 
 // cacheDelPattern removes all keys matching the given glob pattern via SCAN+DEL.
 func cacheDelPattern(ctx context.Context, pattern string) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "cache/del-pattern").End()
+	defer newrelic.FromContext(ctx).StartSegment("cache/del-pattern").End()
 	if RedisClient == nil {
 		return
 	}

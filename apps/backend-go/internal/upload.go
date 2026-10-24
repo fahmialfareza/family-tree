@@ -15,7 +15,7 @@ import (
 )
 
 func uploadImage(c *gin.Context, field string) (string, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "upload/uploadImage").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("upload/uploadImage").End()
 	file, err := c.FormFile(field)
 	if err != nil {
 		fmt.Printf("[UPLOAD] Error getting form file '%s': %v\n", field, err)

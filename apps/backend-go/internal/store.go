@@ -20,7 +20,7 @@ func preloadOwners(db *gorm.DB) *gorm.DB {
 func unscoped(db *gorm.DB) *gorm.DB { return db.Unscoped() }
 
 func findUserById(ctx context.Context, id string) (*User, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/findUserById").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/findUserById").End()
 
 	cacheKey := cacheKeyUser(id)
 	if cached, ok := cacheGet[*User](ctx, cacheKey); ok {
@@ -42,7 +42,7 @@ func findUserById(ctx context.Context, id string) (*User, error) {
 }
 
 func findUserByUsername(ctx context.Context, username string) (*User, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/findUserByUsername").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/findUserByUsername").End()
 
 	cacheKey := cacheKeyUsername(username)
 	if cached, ok := cacheGet[*User](ctx, cacheKey); ok {
@@ -61,7 +61,7 @@ func findUserByUsername(ctx context.Context, username string) (*User, error) {
 }
 
 func addUser(ctx context.Context, u *User) (*User, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/addUser").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/addUser").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	row := userRow{Name: u.Name, Username: u.Username, Password: u.Password, Role: string(u.Role)}
@@ -73,7 +73,7 @@ func addUser(ctx context.Context, u *User) (*User, error) {
 }
 
 func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/repoGetAllPeople").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/repoGetAllPeople").End()
 
 	cacheKey := cacheKeyPeople(ownedBy)
 	if cached, ok := cacheGet[[]*Person](ctx, cacheKey); ok {
@@ -102,7 +102,7 @@ func repoGetAllPeople(ctx context.Context, ownedBy []string) ([]*Person, error) 
 }
 
 func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getPersonByIdRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/getPersonByIdRepo").End()
 
 	cacheKey := cacheKeyPerson(id)
 	if cached, ok := cacheGet[*Person](ctx, cacheKey); ok {
@@ -122,7 +122,7 @@ func getPersonByIdRepo(ctx context.Context, id string) (*Person, error) {
 }
 
 func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/createPersonRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/createPersonRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -148,7 +148,7 @@ func createPersonRepo(ctx context.Context, p *Person) (*Person, error) {
 }
 
 func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/updatePersonRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/updatePersonRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -174,7 +174,7 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 }
 
 func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deletePersonRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/deletePersonRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -192,7 +192,7 @@ func deletePersonRepo(ctx context.Context, id string) (*Person, error) {
 }
 
 func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getAllFamiliesRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/getAllFamiliesRepo").End()
 
 	cacheKey := cacheKeyFamilies(ownedBy)
 	if cached, ok := cacheGet[[]*Family](ctx, cacheKey); ok {
@@ -220,7 +220,7 @@ func getAllFamiliesRepo(ctx context.Context, ownedBy []string) ([]*Family, error
 
 // getFamilyByIdRepo fetches a single family by ID with person populated, using the cache.
 func getFamilyByIdRepo(ctx context.Context, id string) (*Family, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getFamilyByIdRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/getFamilyByIdRepo").End()
 
 	cacheKey := cacheKeyFamily(id)
 	if cached, ok := cacheGet[*Family](ctx, cacheKey); ok {
@@ -241,7 +241,7 @@ func getFamilyByIdRepo(ctx context.Context, id string) (*Family, error) {
 }
 
 func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/createFamilyRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/createFamilyRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -267,7 +267,7 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 }
 
 func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deleteFamilyRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/deleteFamilyRepo").End()
 
 	out, err := getFamilyByIdRepo(ctx, id)
 	if err != nil {
@@ -287,7 +287,7 @@ func deleteFamilyRepo(ctx context.Context, id string) (*Family, error) {
 }
 
 func repoFindUsers(ctx context.Context, role UserRole) ([]User, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/repoFindUsers").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/repoFindUsers").End()
 
 	cacheKey := cacheKeyUsersList()
 	if cached, ok := cacheGet[[]User](ctx, cacheKey); ok {
@@ -313,7 +313,7 @@ func repoFindUsers(ctx context.Context, role UserRole) ([]User, error) {
 
 // Relationship repository functions
 func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Relationship, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getRelationshipsByPersonIdRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/getRelationshipsByPersonIdRepo").End()
 
 	cacheKey := cacheKeyRelationships(personId)
 	if cached, ok := cacheGet[[]*Relationship](ctx, cacheKey); ok {
@@ -353,7 +353,7 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, personId string) ([]*Re
 }
 
 func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/insertManyRelationshipsRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/insertManyRelationshipsRepo").End()
 	rows := make([]relationshipRow, 0, len(rels))
 	for _, r := range rels {
 		if r.From == "" || r.To == "" {
@@ -386,7 +386,7 @@ func insertManyRelationshipsRepo(ctx context.Context, rels []Relationship) error
 }
 
 func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/updateRelationshipRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/updateRelationshipRepo").End()
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 
@@ -419,7 +419,7 @@ func updateRelationshipRepo(ctx context.Context, r Relationship) (*Relationship,
 }
 
 func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/deleteRelationshipsRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/deleteRelationshipsRepo").End()
 	if len(ids) == 0 {
 		return nil
 	}
@@ -441,7 +441,7 @@ func deleteRelationshipsRepo(ctx context.Context, ids []string) error {
 // in one DB round-trip. Returns a map of personID → []*Relationship; each relationship is indexed
 // under both its From and To IDs when they appear in the requested set.
 func getRelationshipsByPersonIdsRepo(ctx context.Context, ids []string) (map[string][]*Relationship, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getRelationshipsByPersonIdsRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/getRelationshipsByPersonIdsRepo").End()
 
 	result := make(map[string][]*Relationship, len(ids))
 	if len(ids) == 0 {
@@ -477,7 +477,7 @@ func getRelationshipsByPersonIdsRepo(ctx context.Context, ids []string) (map[str
 // in one DB round-trip. Uses individual cache entries where available; does not write back.
 // Returns a map of personID → *Person.
 func getPersonsByIdsRepo(ctx context.Context, ids []string) (map[string]*Person, error) {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/getPersonsByIdsRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/getPersonsByIdsRepo").End()
 
 	result := make(map[string]*Person, len(ids))
 	if len(ids) == 0 {
@@ -513,7 +513,7 @@ func getPersonsByIdsRepo(ctx context.Context, ids []string) (map[string]*Person,
 
 // updateOwnedByBatchRepo replaces the owners of multiple people in one transaction.
 func updateOwnedByBatchRepo(ctx context.Context, ids []string, owners []string) error {
-	defer newrelic.StartSegment(newrelic.FromContext(ctx), "store/updateOwnedByBatchRepo").End()
+	defer newrelic.FromContext(ctx).StartSegment("store/updateOwnedByBatchRepo").End()
 	if len(ids) == 0 {
 		return nil
 	}

@@ -6,7 +6,7 @@ import (
 )
 
 func getRelationships(c *gin.Context) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/getRelationships").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/getRelationships").End()
 	id := c.Param("id")
 	rels, err := getRelationshipsByPersonIdRepo(c, id)
 	if err != nil {
@@ -27,7 +27,7 @@ func getRelationships(c *gin.Context) {
 }
 
 func crudRelationships(c *gin.Context) {
-	defer newrelic.StartSegment(newrelic.FromContext(c.Request.Context()), "handler/crudRelationships").End()
+	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/crudRelationships").End()
 	var body []struct {
 		From  *string `json:"from"`
 		To    string  `json:"to"`
