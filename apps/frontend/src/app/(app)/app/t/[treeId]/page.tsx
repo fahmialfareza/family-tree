@@ -1,11 +1,11 @@
 import { Suspense } from "react";
-import { TreeCanvas } from "@/components/tree-canvas/tree-canvas";
+import { TreeCanvasClient } from "@/components/tree-canvas/tree-canvas-client";
 
 export default async function TreePage({ params }: { params: Promise<{ treeId: string }> }) {
   const { treeId } = await params;
   return (
     <Suspense>
-      <TreeCanvas treeId={treeId} />
+      <TreeCanvasClient treeId={treeId} />
     </Suspense>
   );
 }
