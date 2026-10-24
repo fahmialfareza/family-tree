@@ -16,7 +16,7 @@ jobs:
       R2_ACCOUNT_ID: ${{ secrets['R2_ACCOUNT_ID'] }}
       R2_BUCKET: ${{ secrets['R2_BUCKET'] }}
       # pg_dump must be the same major version as the server or newer.
-      PG_CLIENT_VERSION: "17"
+      PG_CLIENT_VERSION: "18"
     steps:
       - name: Install PostgreSQL client
         run: |
