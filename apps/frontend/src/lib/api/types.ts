@@ -205,3 +205,21 @@ export interface ImportResult {
   rootId?: string;
   dryRun: boolean;
 }
+
+export interface DayCount {
+  date: string;
+  count: number;
+}
+
+/** GET /api/admin/overview (platform admins only). */
+export interface AdminOverview {
+  generatedAt: string;
+  users: { total: number; verified: number; pending: number; google: number; apple: number; new7d: number; new30d: number; prev30d: number; active1d: number; active7d: number; active30d: number };
+  trees: { total: number; assistantEnabled: number; branchScoped: number; new30d: number };
+  content: { people: number; families: number; relationships: number; photos: number; peopleNew30d: number };
+  signups: DayCount[];
+  peopleAdded: DayCount[];
+  recentUsers: { id: string; name: string; email?: string; username?: string; emailVerified: boolean; signIn: "google" | "apple" | "password"; trees: number; createdAt: string; lastActiveAt?: string }[];
+  largestTrees: { id: string; name: string; people: number; members: number; assistant: boolean; createdAt: string }[];
+  system: { database: string; redis: "ok" | "error" | "off"; email: boolean; google: boolean; apple: boolean; aiProviders: string[]; version?: string };
+}

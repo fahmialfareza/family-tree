@@ -38,7 +38,7 @@ export async function middleware(req: NextRequest) {
   };
   const access = req.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = req.cookies.get(REFRESH_COOKIE)?.value;
-  const isApp = req.nextUrl.pathname.startsWith("/app");
+  const isApp = req.nextUrl.pathname.startsWith("/app") || req.nextUrl.pathname.startsWith("/admin");
 
   if (access) return next();
 
@@ -81,5 +81,5 @@ function redirectToLogin(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/", "/privacy", "/terms", "/app/:path*", "/invite", "/auth/login", "/auth/signup"],
+  matcher: ["/", "/privacy", "/terms", "/app/:path*", "/admin", "/admin/:path*", "/invite", "/auth/login", "/auth/signup"],
 };

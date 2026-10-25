@@ -117,6 +117,8 @@ func RegisterRoutes(rg *gin.Engine) {
 		auth.GET("/users", signedIn, withTree(treeFromDefault, TreeRoleOwner), users)
 	}
 
+	api.GET("/admin/overview", authenticate([]string{string(RoleAdmin)}), adminOverviewHandler)
+
 	me := api.Group("/me", signedIn)
 	{
 		me.GET("", getMe)

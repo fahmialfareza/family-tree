@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, LogOut, UserRound } from "lucide-react";
+import { ChevronsUpDown, LayoutDashboard, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LocaleRadio, ThemeRadio } from "@/components/common/preferences";
@@ -54,6 +54,13 @@ export function UserMenu({ user, compact, className }: { user: User; compact?: b
             <UserRound className="size-4" aria-hidden /> {t("account")}
           </Link>
         </DropdownMenuItem>
+        {user.role === "admin" ? (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <LayoutDashboard className="size-4" aria-hidden /> {t("admin")}
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuLabel>{tp("language")}</DropdownMenuLabel>
         <LocaleRadio />

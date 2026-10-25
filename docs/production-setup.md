@@ -91,6 +91,13 @@ Local development needs none of these: both apps fall back to `http://localhost:
 - After launch: add `sakdulur.com` to Google Search Console and Bing Webmaster Tools (set the verification env vars
   above), submit `https://sakdulur.com/sitemap.xml`, and test the landing page in Google's Rich Results Test.
 
+## Admin dashboard
+
+`https://sakdulur.com/admin` shows platform totals, sign-ups and people added per day, active users, the newest
+accounts, the largest trees and system status (database, Redis, email, sign-in providers, AI providers). It is
+only for accounts with `users.role = 'admin'`; everyone else gets a 404. To make someone an admin:
+`UPDATE users SET role = 'admin' WHERE email = 'you@example.com';` (they need to reload).
+
 ## Mobile apps
 
 The iOS and Android apps (`apps/mobile`, Capacitor) load the production frontend in a native WebView and add
