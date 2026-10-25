@@ -106,6 +106,7 @@ func RegisterRoutes(rg *gin.Engine) {
 		auth.GET("/google/start", credentials, googleStart)
 		auth.GET("/google/callback", credentials, googleCallback)
 		auth.POST("/google/exchange", credentials, googleExchange)
+		auth.POST("/apple", credentials, appleSignIn)
 
 		// Legacy (current frontend).
 		auth.POST("/signin", credentials, signIn)

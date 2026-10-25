@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -80,6 +81,7 @@ type oauthState struct {
 	Next        string    `json:"r"`
 	BindingHash string    `json:"b"`
 	Expires     time.Time `json:"e"`
+	App         bool      `json:"a,omitempty"` // started from the mobile app: finish through its URL scheme
 }
 
 func signValue(payload []byte) string {
@@ -136,6 +138,31 @@ func redirectToApp(c *gin.Context, path string, params map[string]string) {
 	c.Redirect(http.StatusFound, appLink(path, params))
 }
 
+// mobileAppScheme is the custom URL scheme of the iOS/Android app (e.g. com.example.familytree). The app
+// opens Google sign-in in the system browser, because Google refuses sign-in inside embedded web views;
+// the callback hands the one-time code back to the app through this scheme. A code intercepted by another
+// app that registered the same scheme is useless: exchanging it needs the binding value only the app holds.
+func mobileAppScheme() string {
+	s := strings.ToLower(strings.TrimSpace(os.Getenv("MOBILE_APP_SCHEME")))
+	if s == "" || s == "http" || s == "https" || s == "javascript" || s == "data" {
+		return ""
+	}
+	for _, r := range s {
+		if !(r >= 'a' && r <= 'z' || r >= '0' && r <= '9' || r == '.' || r == '-' || r == '+') {
+			return ""
+		}
+	}
+	return s
+}
+
+func redirectToMobileApp(c *gin.Context, path string, params map[string]string) {
+	q := url.Values{}
+	for k, v := range params {
+		q.Set(k, v)
+	}
+	c.Redirect(http.StatusFound, mobileAppScheme()+":/"+path+"?"+q.Encode())
+}
+
 func googleStart(c *gin.Context) {
 	if !googleEnabled() {
 		responseError(c, "Google sign-in is not configured", 404)
@@ -152,7 +179,8 @@ func googleStart(c *gin.Context) {
 		return
 	}
 	st := oauthState{State: randomString(), Verifier: oauth2.GenerateVerifier(), Nonce: randomString(),
-		Next: safeNext(c.Query("next")), BindingHash: hashInviteToken(binding), Expires: time.Now().Add(oauthCookieTTL)}
+		Next: safeNext(c.Query("next")), BindingHash: hashInviteToken(binding), Expires: time.Now().Add(oauthCookieTTL),
+		App: c.Query("client") == "app" && mobileAppScheme() != ""}
 	payload, _ := json.Marshal(st)
 	setOAuthCookie(c, signValue(payload), int(oauthCookieTTL.Seconds()))
 	c.Redirect(http.StatusFound, cfg.AuthCodeURL(st.State, oauth2.S256ChallengeOption(st.Verifier),
@@ -161,7 +189,15 @@ func googleStart(c *gin.Context) {
 
 func googleCallback(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/googleCallback").End()
-	fail := func(reason string) { redirectToApp(c, "/auth/login", map[string]string{"error": reason}) }
+	var st oauthState
+	finish := func(path string, params map[string]string) {
+		if st.App {
+			redirectToMobileApp(c, path, params)
+		} else {
+			redirectToApp(c, path, params)
+		}
+	}
+	fail := func(reason string) { finish("/auth/login", map[string]string{"error": reason}) }
 	if !googleEnabled() {
 		responseError(c, "Google sign-in is not configured", 404)
 		return
@@ -169,9 +205,9 @@ func googleCallback(c *gin.Context) {
 	raw, _ := c.Cookie(oauthCookie)
 	setOAuthCookie(c, "", -1)
 	payload, ok := readSignedValue(raw)
-	var st oauthState
 	if !ok || json.Unmarshal(payload, &st) != nil || time.Now().After(st.Expires) ||
 		subtle.ConstantTimeCompare([]byte(st.State), []byte(c.Query("state"))) != 1 {
+		st = oauthState{} // unverified state: never trust its App flag
 		fail("google_state")
 		return
 	}
@@ -221,21 +257,30 @@ func googleCallback(c *gin.Context) {
 		fail("google_account")
 		return
 	}
-	redirectToApp(c, "/auth/google/complete", map[string]string{"code": code, "next": st.Next})
+	finish("/auth/google/complete", map[string]string{"code": code, "next": st.Next})
 }
 
-var errGoogleConflict = errors.New("email belongs to an account linked to another Google identity")
+var errGoogleConflict = errors.New("email belongs to an account linked to another identity of the same provider")
 
-// googleSignIn finds the account for a verified Google identity, linking or creating it. An account whose
-// email is verified is linked as is. A pending signup for the address (never usable, so it holds no data)
-// is taken over: its password is cleared, because Google just proved who owns the address.
-// An account already linked to a different Google identity is never re-linked.
+// googleSignIn finds the account for a verified Google identity, linking or creating it.
 func googleSignIn(ctx context.Context, sub, email, name string) (*User, error) {
+	return providerSignIn(ctx, "google_sub", sub, email, name)
+}
+
+// providerSignIn finds the account for a verified identity of an external provider (subColumn is
+// google_sub or apple_sub), linking or creating it. An account whose email is verified is linked as is.
+// A pending signup for the address (never usable, so it holds no data) is taken over: its password is
+// cleared, because the provider just proved who owns the address.
+// An account already linked to a different identity of the same provider is never re-linked.
+func providerSignIn(ctx context.Context, subColumn, sub, email, name string) (*User, error) {
+	if subColumn != "google_sub" && subColumn != "apple_sub" {
+		return nil, errors.New("unknown identity provider")
+	}
 	email = normalizeEmail(email)
 	var out *User
 	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		var row userRow
-		err := tx.Where("google_sub = ?", sub).First(&row).Error
+		err := tx.Where(subColumn+" = ?", sub).First(&row).Error
 		if err == nil {
 			out = row.toModel()
 			return nil
@@ -245,10 +290,14 @@ func googleSignIn(ctx context.Context, sub, email, name string) (*User, error) {
 		}
 		err = tx.Where("lower(email) = ?", email).First(&row).Error
 		if err == nil {
-			if row.GoogleSub != nil {
+			linkedSub := row.GoogleSub
+			if subColumn == "apple_sub" {
+				linkedSub = row.AppleSub
+			}
+			if linkedSub != nil {
 				return errGoogleConflict
 			}
-			updates := map[string]any{"google_sub": sub}
+			updates := map[string]any{subColumn: sub}
 			if row.EmailVerifiedAt == nil {
 				updates["email_verified_at"] = time.Now()
 				updates["password"] = ""
@@ -275,7 +324,12 @@ func googleSignIn(ctx context.Context, sub, email, name string) (*User, error) {
 			name = strings.SplitN(email, "@", 2)[0]
 		}
 		now := time.Now()
-		row = userRow{Name: name, Email: &email, EmailVerifiedAt: &now, GoogleSub: &sub, Role: string(RoleUser)}
+		row = userRow{Name: name, Email: &email, EmailVerifiedAt: &now, Role: string(RoleUser)}
+		if subColumn == "apple_sub" {
+			row.AppleSub = &sub
+		} else {
+			row.GoogleSub = &sub
+		}
 		if err := tx.Create(&row).Error; err != nil {
 			return err
 		}
@@ -326,7 +380,7 @@ func googleExchange(c *gin.Context) {
 	responseSuccess(c, pair, 200)
 }
 
-// googleStatus lets the frontend decide whether to show the Google button.
+// googleStatus lets the frontend decide whether to show the Google and Apple buttons.
 func googleStatus(c *gin.Context) {
-	responseSuccess(c, gin.H{"google": googleEnabled()}, 200)
+	responseSuccess(c, gin.H{"google": googleEnabled(), "apple": appleEnabled()}, 200)
 }

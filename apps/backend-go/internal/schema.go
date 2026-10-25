@@ -35,6 +35,7 @@ type userRow struct {
 	Email           *string
 	EmailVerifiedAt *time.Time
 	GoogleSub       *string
+	AppleSub        *string
 }
 
 func (userRow) TableName() string { return "users" }
@@ -153,6 +154,7 @@ func (u *userRow) toModel() *User {
 		EmailVerified: u.EmailVerifiedAt != nil,
 		HasPassword:   u.Password != "",
 		GoogleLinked:  u.GoogleSub != nil,
+		AppleLinked:   u.AppleSub != nil,
 	}
 	if u.Username != nil {
 		out.Username = *u.Username

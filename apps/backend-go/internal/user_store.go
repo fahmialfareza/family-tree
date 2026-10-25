@@ -156,6 +156,10 @@ func deleteAccount(ctx context.Context, userID string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	var deletedTrees []string
+	var apple struct {
+		AppleClientID     *string
+		AppleRefreshToken *string
+	}
 	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		// Lock the user's memberships so ownership cannot change underneath the check.
 		if err := tx.Exec("SELECT 1 FROM tree_members WHERE user_id = ? FOR UPDATE", userID).Error; err != nil {
@@ -175,6 +179,9 @@ func deleteAccount(ctx context.Context, userID string) error {
 			}
 			deletedTrees = private
 		}
+		if err := tx.Table("users").Select("apple_client_id, apple_refresh_token").Where("id = ?", userID).Take(&apple).Error; err != nil {
+			return err
+		}
 		// Cascades to sessions, auth tokens, memberships and person/family owner links.
 		return tx.Exec("DELETE FROM users WHERE id = ?", userID).Error
 	})
@@ -183,6 +190,9 @@ func deleteAccount(ctx context.Context, userID string) error {
 	}
 	for _, id := range deletedTrees {
 		bumpTreeCache(ctx, id)
+	}
+	if apple.AppleClientID != nil && apple.AppleRefreshToken != nil {
+		revokeAppleToken(ctx, *apple.AppleClientID, *apple.AppleRefreshToken)
 	}
 	return nil
 }
