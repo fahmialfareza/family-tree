@@ -3,12 +3,12 @@ import "server-only";
 // Server-side configuration. The browser never talks to the Go API directly: every call goes through
 // this app's route handlers (BFF), which hold the session in httpOnly cookies.
 
-function required(name: string, fallback?: string): string {
-  const value = process.env[name] ?? fallback;
-  if (!value) {
+function required(name: string, value: string | undefined, fallback?: string): string {
+  const v = value || fallback;
+  if (!v) {
     throw new Error(`Missing environment variable ${name}`);
   }
-  return value.replace(/\/+$/, "");
+  return v.replace(/\/+$/, "");
 }
 
 /**
@@ -24,15 +24,19 @@ export function clientIpHeaders(req?: { headers: Headers }): Record<string, stri
 export const serverEnv = {
   /** Go API base URL as reachable from this server (may be an internal address). */
   get backendUrl() {
-    return required("BACKEND_URL", process.env.NODE_ENV === "production" ? undefined : "http://localhost:4000");
+    return required("BACKEND_URL", process.env.BACKEND_URL, process.env.NODE_ENV === "production" ? undefined : "http://localhost:4000");
   },
   /** Go API base URL as reachable from browsers (Google sign-in redirects there). */
   get backendPublicUrl() {
     return (process.env.BACKEND_PUBLIC_URL || this.backendUrl).replace(/\/+$/, "");
   },
-  /** This app's public origin, used for same-origin checks. */
+  /**
+   * This app's public origin, used for same-origin checks. Must be read as the literal
+   * process.env.NEXT_PUBLIC_APP_URL: Next.js inlines NEXT_PUBLIC_* only when written out, and on Cloudflare
+   * Workers a dynamic process.env[name] lookup finds nothing at runtime.
+   */
   get appUrl() {
-    return required("NEXT_PUBLIC_APP_URL", process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000");
+    return required("NEXT_PUBLIC_APP_URL", process.env.NEXT_PUBLIC_APP_URL, process.env.NODE_ENV === "production" ? undefined : "http://localhost:3000");
   },
   get secureCookies() {
     return this.appUrl.startsWith("https://");
