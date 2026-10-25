@@ -4,7 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { AuthCard } from "@/components/auth/auth-card";
 import { SignupForm } from "@/components/auth/signup-form";
 import { safeNext } from "@/lib/safe-next";
-import { googleEnabled, redirectIfSignedIn } from "@/lib/server/auth-redirect";
+import { authProviders, redirectIfSignedIn } from "@/lib/server/auth-redirect";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("auth");
@@ -29,7 +29,7 @@ export default async function SignupPage({ searchParams }: { searchParams: Promi
         </>
       }
     >
-      <SignupForm next={target} google={await googleEnabled()} />
+      <SignupForm next={target} providers={await authProviders()} />
     </AuthCard>
   );
 }

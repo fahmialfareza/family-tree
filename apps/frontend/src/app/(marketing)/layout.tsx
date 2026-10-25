@@ -16,7 +16,7 @@ export default async function MarketingLayout({
   const signedIn = !!(await getAccessToken());
   return (
     <div className="flex min-h-dvh flex-col">
-      <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
+      <header className="sticky top-0 z-30 border-b bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Logo label={tm("brand")} labelClassName="max-[399px]:sr-only" />
           <nav

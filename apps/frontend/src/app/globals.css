@@ -112,6 +112,18 @@
   }
   html {
     -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    /* Landscape phones: keep content clear of the notch / rounded corners. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  /* Inside the iOS/Android app (see components/providers/native-bridge.tsx): no rubber-band page bounce
+     and no long-press link previews, which make a web page feel like one. */
+  .native-app body {
+    overscroll-behavior: none;
+    -webkit-touch-callout: none;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;

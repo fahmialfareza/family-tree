@@ -1,0 +1,28 @@
+{
+  "name": "mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "iOS and Android apps: a Capacitor shell around the hosted frontend (apps/frontend)",
+  "scripts": {
+    "sync": "node scripts/build-www.mjs && cap sync",
+    "open:ios": "cap open ios",
+    "open:android": "cap open android",
+    "assets": "capacitor-assets generate --ios --android --iconBackgroundColor '#3f7a52' --iconBackgroundColorDark '#3f7a52' --splashBackgroundColor '#f9f6ef' --splashBackgroundColorDark '#221d18'",
+    "www": "node scripts/build-www.mjs"
+  },
+  "dependencies": {
+    "@capacitor-community/apple-sign-in": "^7.1.0",
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/browser": "^8.0.5",
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/ios": "^8.5.3",
+    "@capacitor/share": "^8.0.3",
+    "@capacitor/splash-screen": "^8.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5",
+    "@capacitor/cli": "^8.5.3"
+  }
+}

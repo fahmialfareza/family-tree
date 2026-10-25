@@ -10,7 +10,7 @@ export default async function AuthLayout({
   const t = await getTranslations("meta");
   return (
     <div className="relative flex min-h-dvh flex-col bg-[radial-gradient(ellipse_at_top,var(--color-secondary),transparent_60%)]">
-      <header className="flex items-center justify-between px-4 py-4 sm:px-8">
+      <header className="flex items-center justify-between px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-8">
         <Logo label={t("brand")} />
         <div className="flex items-center gap-1">
           <ThemeToggle />

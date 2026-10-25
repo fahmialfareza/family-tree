@@ -9,9 +9,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api, errorMessage, sessionRequest } from "@/lib/api/client";
 import { MIN_AGE } from "@/lib/legal-content";
-import { GoogleIcon } from "./auth-card";
+import { type AuthProviders, SocialSignIn } from "./social-sign-in";
 
-export function SignupForm({ next, google }: { next: string; google: boolean }) {
+export function SignupForm({ next, providers }: { next: string; providers: AuthProviders }) {
   const t = useTranslations("auth");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -65,18 +65,7 @@ export function SignupForm({ next, google }: { next: string; google: boolean }) 
 
   return (
     <div className="space-y-5">
-      {google ? (
-        <>
-          <Button asChild variant="outline" className="w-full">
-            <a href={`/api/session/google/start?next=${encodeURIComponent(next)}`}>
-              <GoogleIcon /> {t("continueWithGoogle")}
-            </a>
-          </Button>
-          <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> {t("or")} <span className="h-px flex-1 bg-border" />
-          </div>
-        </>
-      ) : null}
+      <SocialSignIn next={next} providers={providers} />
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormError message={error} />
         <Field label={t("name")} required>

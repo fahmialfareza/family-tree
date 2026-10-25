@@ -14,6 +14,7 @@ This file is the entrypoint for Claude Code when working in this repository.
 
 - Active backend: `apps/backend-go`
 - Active frontend: `apps/frontend`
+- Mobile apps: `apps/mobile` (Capacitor shell that loads the hosted frontend; see its README)
 - Deprecated backend: `apps/backend`
 - Use `pnpm` for JavaScript and TypeScript workflows.
 - Reuse existing Go code under `apps/backend-go/internal/` instead of introducing parallel packages.

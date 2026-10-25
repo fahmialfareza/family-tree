@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Family Tree</string>
+    <string name="title_activity_main">Family Tree</string>
+    <string name="package_name">com.malanghub.familytree</string>
+    <string name="custom_url_scheme">com.malanghub.familytree</string>
+</resources>

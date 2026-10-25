@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input";
 import { ApiError, api, errorMessage } from "@/lib/api/client";
 import { useMe, useSessions, useUpdateMe } from "@/lib/api/hooks";
+import { nativeDownloadHandler } from "@/lib/native";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function Account() {
@@ -196,7 +197,11 @@ export function Account() {
 
       <Section title={t("yourData")} description={t("yourDataHelp")}>
         <Button asChild variant="outline">
-          <a href="/api/proxy/api/me/export" download="family-tree-account.json">
+          <a
+            href="/api/proxy/api/me/export"
+            download="family-tree-account.json"
+            onClick={nativeDownloadHandler("/api/proxy/api/me/export", "family-tree-account.json", (err) => toast.error(errorMessage(err)))}
+          >
             <Download className="size-4" aria-hidden /> {t("downloadData")}
           </a>
         </Button>

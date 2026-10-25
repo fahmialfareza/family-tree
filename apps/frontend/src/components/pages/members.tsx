@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Loader2, LogOut, MailPlus, Trash2, X } from "lucide-react";
+import { Copy, Loader2, LogOut, MailPlus, Share2, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { useState } from "react";
@@ -18,11 +18,13 @@ import { errorMessage } from "@/lib/api/client";
 import { useCreateInvite, useInvites, useMe, useMembers, useRemoveMember, useRevokeInvite, useUpdateMember } from "@/lib/api/hooks";
 import type { TreeRole } from "@/lib/api/types";
 import { initials } from "@/lib/format";
+import { shareLink, useNativePlatform } from "@/lib/native";
 
 const ROLES: TreeRole[] = ["owner", "editor", "viewer"];
 
 export function Members({ treeId }: { treeId: string }) {
   const t = useTranslations("members");
+  const native = useNativePlatform() !== "web";
   const tr = useTranslations("roles");
   const tc = useTranslations("common");
   const format = useFormatter();
@@ -90,11 +92,15 @@ export function Members({ treeId }: { treeId: string }) {
                 size="sm"
                 variant="outline"
                 onClick={async () => {
-                  await navigator.clipboard.writeText(lastLink);
-                  toast.success(t("linkCopied"));
+                  try {
+                    if ((await shareLink({ url: lastLink, title: t("shareInvite") })) === "copied") toast.success(t("linkCopied"));
+                  } catch {
+                    // share sheet dismissed
+                  }
                 }}
               >
-                <Copy className="size-4" aria-hidden /> {t("copyLink")}
+                {native ? <Share2 className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}{" "}
+                {native ? t("shareLink") : t("copyLink")}
               </Button>
             </div>
           ) : null}

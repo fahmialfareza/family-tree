@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { errorMessage } from "@/lib/api/client";
 import { useDeleteTree, useTree, useUpdateTree } from "@/lib/api/hooks";
+import { nativeDownloadHandler } from "@/lib/native";
 
 export function TreeSettings({ treeId }: { treeId: string }) {
   const t = useTranslations("settings");
@@ -78,7 +79,11 @@ export function TreeSettings({ treeId }: { treeId: string }) {
 
       <Section title={t("export")} description={t("exportHelp")}>
         <Button asChild variant="outline">
-          <a href={`/api/proxy/api/trees/${treeId}/export`} download={`${tree.name}.json`}>
+          <a
+            href={`/api/proxy/api/trees/${treeId}/export`}
+            download={`${tree.name}.json`}
+            onClick={nativeDownloadHandler(`/api/proxy/api/trees/${treeId}/export`, `${tree.name}.json`, (err) => toast.error(errorMessage(err)))}
+          >
             <Download className="size-4" aria-hidden /> {t("downloadJson")}
           </a>
         </Button>

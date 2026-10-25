@@ -119,7 +119,7 @@ export function PersonForm({
           <PersonAvatar name={name || "?"} photoUrl={person?.photoUrl} gender={gender} className="size-16" />
         )}
         <div className="flex flex-wrap gap-2">
-          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onChange={(e) => pickPhoto(e.target.files?.[0])} aria-label={t("photo")} />
+          <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={(e) => pickPhoto(e.target.files?.[0])} aria-label={t("photo")} />
           <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()} disabled={compressing}>
             {compressing ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Camera className="size-4" aria-hidden />}
             {person?.photoUrl || preview ? t("changePhoto") : t("addPhoto")}

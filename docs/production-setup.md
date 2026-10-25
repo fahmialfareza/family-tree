@@ -28,6 +28,9 @@ browser ──► frontend (Cloudflare)  ──BACKEND_URL──►  Go API (Rai
 | `EMAIL_FROM` | recommended | e.g. `Family Tree <noreply@your-domain>` on a domain verified in Resend |
 | `CLOUDINARY_URL` | for photos | `cloudinary://key:secret@cloud`; without it production rejects photo uploads |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional | Enables "Continue with Google". Authorized redirect URI: `${API_BASE_URL}/api/auth/google/callback` |
+| `MOBILE_APP_SCHEME` | mobile apps | `com.malanghub.familytree` — Google sign-in started in the app returns through this URL scheme |
+| `APPLE_CLIENT_IDS` | iOS app | iOS bundle id (`com.malanghub.familytree`); enables Sign in with Apple |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | iOS app | "Sign in with Apple" key (.p8, newlines as `\n`); used to revoke Apple tokens on account deletion |
 | `NEW_RELIC_ENABLED`, `NEW_RELIC_APP_NAME`, `NEW_RELIC_LICENSE_KEY` | optional | APM / error tracking |
 | `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS` | optional | Pool size (defaults 20 / 10) |
 | `TREE_DEBUG` | no | `1` for debug logs on tree endpoints |
@@ -47,6 +50,8 @@ The others are read at runtime: set them in the Worker (`wrangler secret put` fo
 | `NEXT_PUBLIC_CONTACT_EMAIL` | build | Footer and legal pages (default `fahmialfareza97@gmail.com`) |
 | `NEXT_PUBLIC_OPERATOR_NAME` | build | Named in the Privacy Policy and Terms (default `Fahmi Alfareza`) |
 | `NEXT_PUBLIC_IMAGE_HOSTS` | build | Extra image origins for the CSP (Cloudinary is built in) |
+| `IOS_APP_IDS` | runtime (mobile) | `<TeamID>.com.malanghub.familytree`; serves `/.well-known/apple-app-site-association` |
+| `ANDROID_APP_PACKAGE`, `ANDROID_CERT_SHA256` | runtime (mobile) | Package name and signing fingerprints; serves `/.well-known/assetlinks.json` |
 
 Local development needs none of these: both apps fall back to `http://localhost:3000` / `http://localhost:4000`.
 
@@ -63,6 +68,13 @@ Local development needs none of these: both apps fall back to `http://localhost:
    (check the email arrives), invite someone.
 7. Tell the family: everyone is signed out once (old tokens are rejected) and should add an email to their
    account (Account → Email) so they can reset passwords and accept invites.
+
+## Mobile apps
+
+The iOS and Android apps (`apps/mobile`, Capacitor) load the production frontend in a native WebView and add
+Sign in with Apple, Google sign-in through the system browser, native sharing and file saving. Setup, store
+checklists and the release steps are in [`apps/mobile/README.md`](../apps/mobile/README.md). Migration 00006 adds
+the Apple columns to `users`.
 
 ## Operations
 

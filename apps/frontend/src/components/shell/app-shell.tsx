@@ -72,7 +72,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
-        <header className="sticky top-0 z-30 flex items-center gap-2 border-b bg-background/90 px-3 py-2 backdrop-blur md:hidden">
+        <header className="sticky top-0 z-30 flex items-center gap-2 border-b bg-background/90 px-3 pb-2 pt-[max(0.5rem,env(safe-area-inset-top))] backdrop-blur md:hidden">
           <Link href="/app" aria-label={t("brand")} className="-m-1 flex size-9 items-center justify-center rounded-lg">
             <LogoMark className="size-7" />
           </Link>

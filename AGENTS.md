@@ -13,6 +13,7 @@ This file is the entrypoint for Codex and other OpenAI agents working in this re
 
 - Active backend: `apps/backend-go`
 - Active frontend: `apps/frontend`
+- Mobile apps: `apps/mobile` (Capacitor shell that loads the hosted frontend; see its README)
 - Deprecated backend: `apps/backend`
 - JavaScript and TypeScript work should use `pnpm` from the repo root.
 - Go backend work should follow existing `internal/` package patterns and stay `gofmt` compatible.

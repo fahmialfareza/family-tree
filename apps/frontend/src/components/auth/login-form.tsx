@@ -9,9 +9,9 @@ import { Field, FormError, PasswordInput } from "@/components/common/field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ApiError, api, errorMessage, sessionRequest } from "@/lib/api/client";
-import { GoogleIcon } from "./auth-card";
+import { type AuthProviders, SocialSignIn } from "./social-sign-in";
 
-export function LoginForm({ next, google, initialError }: { next: string; google: boolean; initialError?: string }) {
+export function LoginForm({ next, providers, initialError }: { next: string; providers: AuthProviders; initialError?: string }) {
   const t = useTranslations("auth");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
@@ -45,18 +45,7 @@ export function LoginForm({ next, google, initialError }: { next: string; google
 
   return (
     <div className="space-y-5">
-      {google ? (
-        <>
-          <Button asChild variant="outline" className="w-full">
-            <a href={`/api/session/google/start?next=${encodeURIComponent(next)}`}>
-              <GoogleIcon /> {t("continueWithGoogle")}
-            </a>
-          </Button>
-          <div className="flex items-center gap-3 text-xs uppercase tracking-wide text-muted-foreground">
-            <span className="h-px flex-1 bg-border" /> {t("or")} <span className="h-px flex-1 bg-border" />
-          </div>
-        </>
-      ) : null}
+      <SocialSignIn next={next} providers={providers} />
       <form onSubmit={onSubmit} className="space-y-4" noValidate>
         <FormError message={error} />
         {unverified && identifier.includes("@") ? (

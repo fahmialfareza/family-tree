@@ -71,6 +71,7 @@ import {
 } from "@/components/ui/tooltip";
 import { errorMessage } from "@/lib/api/client";
 import { useDeletePerson, useGraph } from "@/lib/api/hooks";
+import { saveFile, useNativePlatform } from "@/lib/native";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
   type FlowNode,
@@ -93,6 +94,8 @@ function Canvas({ treeId }: { treeId: string }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const wide = useMediaQuery("(min-width: 1024px)", true);
+  // WebViews cannot print; the app exports a PNG instead.
+  const native = useNativePlatform() !== "web";
   const { data: graph, isLoading, error, dataUpdatedAt } = useGraph(treeId);
   const { fitView, setCenter, getNodes } = useReactFlow();
 
@@ -242,10 +245,7 @@ function Canvas({ treeId }: { treeId: string }) {
             node.classList.contains("react-flow__node-toolbar")
           ),
       });
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${(graph?.tree.name ?? "family-tree").replace(/[^\w-]+/g, "-")}.png`;
-      a.click();
+      await saveFile(`${(graph?.tree.name ?? "family-tree").replace(/[^\w-]+/g, "-")}.png`, url);
     } catch {
       toast.error(t("exportFailed"));
     } finally {
@@ -420,20 +420,22 @@ function Canvas({ treeId }: { treeId: string }) {
               </TooltipTrigger>
               <TooltipContent>{t("exportPng")}</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hidden size-8 md:inline-flex"
-                  onClick={() => window.print()}
-                  aria-label={t("print")}
-                >
-                  <Printer className="size-4" aria-hidden />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("print")}</TooltipContent>
-            </Tooltip>
+            {native ? null : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hidden size-8 md:inline-flex"
+                    onClick={() => window.print()}
+                    aria-label={t("print")}
+                  >
+                    <Printer className="size-4" aria-hidden />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{t("print")}</TooltipContent>
+              </Tooltip>
+            )}
             {layingOut ? (
               <Loader2
                 className="mx-1 size-4 animate-spin text-muted-foreground"
