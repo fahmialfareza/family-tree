@@ -16,7 +16,7 @@ export function GET() {
         relation: ["delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds"],
         target: {
           namespace: "android_app",
-          package_name: process.env.ANDROID_APP_PACKAGE || "com.malanghub.familytree",
+          package_name: process.env.ANDROID_APP_PACKAGE || "com.fahmialfareza.familytree",
           sha256_cert_fingerprints: fingerprints,
         },
       },

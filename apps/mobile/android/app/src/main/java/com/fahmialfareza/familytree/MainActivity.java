@@ -1,4 +1,4 @@
-package com.malanghub.familytree;
+package com.fahmialfareza.familytree;
 
 import com.getcapacitor.BridgeActivity;
 

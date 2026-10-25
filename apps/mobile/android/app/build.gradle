@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace = "com.malanghub.familytree"
+    namespace = "com.fahmialfareza.familytree"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.malanghub.familytree"
+        applicationId "com.fahmialfareza.familytree"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

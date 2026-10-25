@@ -7,7 +7,7 @@ bundling a copy. The native side adds what a website can't do:
 | Feature | Where |
 | --- | --- |
 | Sign in with Apple (iOS) | `@capacitor-community/apple-sign-in` → `POST /api/session/apple` → API `POST /api/auth/apple` |
-| Google sign-in in the system browser (Google blocks WebViews) | `startGoogleSignInNative` → API returns to `com.malanghub.familytree://auth/google/complete` |
+| Google sign-in in the system browser (Google blocks WebViews) | `startGoogleSignInNative` → API returns to `com.fahmialfareza.familytree://auth/google/complete` |
 | Share sheet for invite links, saving exports (PNG/JSON) | `@capacitor/share`, `@capacitor/filesystem` |
 | Deep links: URL scheme + universal links / App Links | `components/providers/native-bridge.tsx` |
 | Android back button closes dialogs before leaving pages | same |
@@ -16,7 +16,7 @@ bundling a copy. The native side adds what a website can't do:
 All native calls live in the frontend (`src/lib/native.ts`) and do nothing on the web. Plugins are installed
 in both `apps/frontend` (JavaScript side) and here (native side); keep their versions in step.
 
-**App id / bundle id / URL scheme:** `com.malanghub.familytree`. It can't change after the first store upload.
+**App id / bundle id / URL scheme:** `com.fahmialfareza.familytree`. It can't change after the first store upload.
 To use a different one, change `appId` in `capacitor.config.ts` before going further, then regenerate the
 platforms (`rm -rf ios android && npx cap add ios --packagemanager SPM && npx cap add android`) and re-apply the
 native changes listed under "Native project changes".
@@ -36,7 +36,7 @@ adb reverse tcp:3000 tcp:3000                    # Android emulator: makes local
 Run `pnpm sync` again whenever `capacitor.config.ts`, plugins or `CAP_SERVER_URL` change. Changes to the website
 show up on the next app launch without a sync.
 
-For Google sign-in in the app locally, set `MOBILE_APP_SCHEME=com.malanghub.familytree` on the API. Sign in with
+For Google sign-in in the app locally, set `MOBILE_APP_SCHEME=com.fahmialfareza.familytree` on the API. Sign in with
 Apple only works on a real device or simulator signed with your team, with `APPLE_CLIENT_IDS` set on the API.
 
 ## Accounts you need
@@ -50,16 +50,16 @@ Apple only works on a real device or simulator signed with your team, with `APPL
 
 ### Apple
 
-1. Certificates, Identifiers & Profiles → Identifiers → App ID `com.malanghub.familytree`. Enable
+1. Certificates, Identifiers & Profiles → Identifiers → App ID `com.fahmialfareza.familytree`. Enable
    **Sign in with Apple** and **Associated Domains**.
 2. Keys → new key with **Sign in with Apple** for that App ID. Download the `.p8` (only once) and note the Key ID.
-3. API env: `APPLE_CLIENT_IDS=com.malanghub.familytree`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`,
+3. API env: `APPLE_CLIENT_IDS=com.fahmialfareza.familytree`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`,
    `APPLE_PRIVATE_KEY` (the .p8 contents, newlines as `\n`). The key lets the API revoke Apple tokens when someone
    deletes their account; App Review checks this.
 4. Xcode → App target → Signing & Capabilities: choose your team. Sign in with Apple is already in
    `App/App.entitlements`. Add **Associated Domains** with `applinks:<your-domain>` and
    `webcredentials:<your-domain>`.
-5. Frontend env: `IOS_APP_IDS=<TeamID>.com.malanghub.familytree`, so
+5. Frontend env: `IOS_APP_IDS=<TeamID>.com.fahmialfareza.familytree`, so
    `https://<your-domain>/.well-known/apple-app-site-association` is served.
 6. App Store Connect → new app with the same bundle id.
 
@@ -75,7 +75,7 @@ Apple only works on a real device or simulator signed with your team, with `APPL
 ### Google sign-in
 
 No extra Google client is needed: the app uses the same web OAuth client as the site, through the system browser.
-Set `MOBILE_APP_SCHEME=com.malanghub.familytree` on the API.
+Set `MOBILE_APP_SCHEME=com.fahmialfareza.familytree` on the API.
 
 ## Releasing
 

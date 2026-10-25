@@ -15,7 +15,7 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const serverUrl = (process.env.CAP_SERVER_URL ?? "http://localhost:3000").replace(/\/+$/, "");
 
 const config: CapacitorConfig = {
-  appId: "com.malanghub.familytree",
+  appId: "com.fahmialfareza.familytree",
   appName: "Family Tree",
   webDir: "www",
   appendUserAgent: "FamilyTreeApp",
