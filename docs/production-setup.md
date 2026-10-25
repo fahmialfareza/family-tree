@@ -31,8 +31,8 @@ browser ──► frontend (Cloudflare)  ──BACKEND_URL──►  Go API (Rai
 | `MOBILE_APP_SCHEME` | mobile apps | `com.fahmialfareza.familytree` — Google sign-in started in the app returns through this URL scheme |
 | `APPLE_CLIENT_IDS` | iOS app | iOS bundle id (`com.fahmialfareza.familytree`); enables Sign in with Apple |
 | `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | iOS app | "Sign in with Apple" key (.p8, newlines as `\n`); used to revoke Apple tokens on account deletion |
-| `GEMINI_API_KEY`, `GROQ_API_KEY`, `OPENAI_API_KEY` | optional | AI assistant; tried in this order, each on when its key is set. Use a **paid** Gemini key for real family data (the free tier may use prompts to improve Google's products) |
-| `AI_GEMINI_MODELS`, `AI_GROQ_MODELS`, `AI_OPENAI_MODELS` | optional | Comma-separated models per provider, tried in order (defaults in `.env.example`) |
+| `GEMINI_API_KEY`, `GROQ_API_KEY` | optional | AI assistant; tried in this order, each on when its key is set. Use a **paid** Gemini key for real family data (the free tier may use prompts to improve Google's products) |
+| `AI_GEMINI_MODELS`, `AI_GROQ_MODELS` | optional | Comma-separated models per provider, tried in order (defaults in `.env.example`) |
 | `AI_PROVIDER_TIMEOUT`, `AI_DAILY_LIMIT` | optional | Per-model timeout (default `25s`) and questions per user per day (default `100`) |
 | `NEW_RELIC_ENABLED`, `NEW_RELIC_APP_NAME`, `NEW_RELIC_LICENSE_KEY` | optional | APM / error tracking |
 | `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS` | optional | Pool size (defaults 20 / 10) |

@@ -83,7 +83,7 @@ export function privacyPolicy(locale: string): LegalDoc {
             "New Relic — pemantauan kesalahan dan kinerja.",
             "Google — hanya jika Anda memilih masuk dengan Google.",
             "Apple — hanya jika Anda memilih masuk dengan Apple (aplikasi iOS).",
-            "Google (Gemini), Groq, dan OpenAI — hanya untuk pohon yang asisten AI-nya diaktifkan oleh pemilik. Saat anggota bertanya, pertanyaan beserta nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke salah satu penyedia ini untuk menyusun jawaban. Nomor telepon dan foto tidak dikirim, dan percakapan tidak kami simpan.",
+            "Google (Gemini) dan Groq — hanya untuk pohon yang asisten AI-nya diaktifkan oleh pemilik. Saat anggota bertanya, pertanyaan beserta nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke salah satu penyedia ini untuk menyusun jawaban. Nomor telepon dan foto tidak dikirim, dan percakapan tidak kami simpan.",
           ],
         },
         {
@@ -227,7 +227,7 @@ export function privacyPolicy(locale: string): LegalDoc {
           "New Relic — error and performance monitoring.",
           "Google — only if you choose Sign in with Google.",
           "Apple — only if you choose Sign in with Apple (iOS app).",
-          "Google (Gemini), Groq and OpenAI — only for trees whose owner turned on the AI assistant. When a member asks a question, the question and the names, dates, places, addresses and notes of the people involved are sent to one of these providers to write the answer. Phone numbers and photos are not sent, and we do not store the conversation.",
+          "Google (Gemini) and Groq — only for trees whose owner turned on the AI assistant. When a member asks a question, the question and the names, dates, places, addresses and notes of the people involved are sent to one of these providers to write the answer. Phone numbers and photos are not sent, and we do not store the conversation.",
         ],
       },
       {

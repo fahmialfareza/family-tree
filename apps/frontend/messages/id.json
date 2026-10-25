@@ -327,7 +327,7 @@
     "deleted": "Pohon dihapus.",
     "assistant": "Asisten AI",
     "assistantToggle": "Izinkan anggota bertanya",
-    "assistantHelp": "Anggota bisa bertanya, misalnya “Bapaknya Ayu namanya siapa dan tinggal di mana?”. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini, Groq, atau OpenAI). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
+    "assistantHelp": "Anggota bisa bertanya, misalnya “Bapaknya Ayu namanya siapa dan tinggal di mana?”. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
     "assistantUnavailable": "Belum tersedia di server ini: penyedia AI belum dikonfigurasi."
   },
   "account": {

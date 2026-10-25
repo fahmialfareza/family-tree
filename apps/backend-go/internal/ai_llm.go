@@ -19,10 +19,10 @@ import (
 	"github.com/newrelic/go-agent/v3/newrelic"
 )
 
-// Several AI providers behind one OpenAI-compatible Chat Completions call (same approach as catetin.ai):
-// the free-tier models (Gemini, then Groq) are tried first and OpenAI is the paid last resort. A model that
-// is rate limited, down or unknown is skipped for a while (cooldown), so one bad provider does not slow
-// every question. Each provider is enabled by its API key; the model lists come from the environment.
+// Gemini and Groq behind one OpenAI-compatible Chat Completions call (same approach as catetin.ai): the
+// Gemini models are tried first, then Groq. A model that is rate limited, down or unknown is skipped for a
+// while (cooldown), so one bad provider does not slow every question. Each provider is enabled by its API
+// key; the model lists come from the environment.
 
 type aiProvider struct {
 	Name    string
@@ -84,8 +84,6 @@ func aiProviders() []*aiProvider {
 		"AI_GEMINI_MODELS", "gemini-3.8-flash,gemini-3.5-flash-lite")
 	add("groq", "GROQ_API_KEY", "AI_GROQ_BASE_URL", "https://api.groq.com/openai/v1",
 		"AI_GROQ_MODELS", "openai/gpt-oss-120b,qwen/qwen3.8-27b")
-	add("openai", "OPENAI_API_KEY", "AI_OPENAI_BASE_URL", "https://api.openai.com/v1",
-		"AI_OPENAI_MODELS", "gpt-4.1-mini")
 	return out
 }
 

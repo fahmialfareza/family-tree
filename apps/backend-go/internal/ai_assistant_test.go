@@ -192,7 +192,6 @@ func useFakeProviders(t *testing.T, gemini, groq *fakeProvider) {
 	t.Setenv("GROQ_API_KEY", "key")
 	t.Setenv("AI_GROQ_BASE_URL", q.URL)
 	t.Setenv("AI_GROQ_MODELS", "groq-a")
-	t.Setenv("OPENAI_API_KEY", "")
 	resetAICooldowns()
 	t.Cleanup(resetAICooldowns)
 }
