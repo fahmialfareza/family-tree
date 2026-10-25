@@ -73,7 +73,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar */}
         <header className="sticky top-0 z-30 flex items-center gap-2 border-b bg-background/90 px-3 py-2 backdrop-blur md:hidden">
-          <Link href="/app" aria-label={t("brand")}>
+          <Link href="/app" aria-label={t("brand")} className="-m-1 flex size-9 items-center justify-center rounded-lg">
             <LogoMark className="size-7" />
           </Link>
           <div className="min-w-0 flex-1">{me.trees.length > 0 ? <TreeSwitcher trees={me.trees} currentId={treeId} /> : null}</div>
@@ -88,19 +88,19 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
 
         {/* Mobile bottom tabs */}
         {treeId ? (
-          <nav aria-label={t("mainNav")} className="pb-safe fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t bg-background/95 backdrop-blur md:hidden">
-            {nav.slice(0, 4).map((item) => (
+          <nav aria-label={t("mainNav")} className="pb-safe fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col border-t bg-background/95 backdrop-blur md:hidden">
+            {nav.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 aria-current={isActive(item) ? "page" : undefined}
                 className={cn(
-                  "flex flex-col items-center gap-0.5 py-2 text-[11px] font-medium text-muted-foreground",
+                  "flex min-w-0 flex-col items-center gap-0.5 px-0.5 py-2 text-[11px] font-medium text-muted-foreground",
                   isActive(item) && "text-primary",
                 )}
               >
                 <item.icon className="size-5" aria-hidden />
-                {item.label}
+                <span className="max-w-full truncate">{item.label}</span>
               </Link>
             ))}
           </nav>

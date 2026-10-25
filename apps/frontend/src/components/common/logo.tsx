@@ -15,11 +15,21 @@ export function LogoMark({ className }: { className?: string }) {
   );
 }
 
-export function Logo({ href = "/", className, label = "Family Tree" }: { href?: string; className?: string; label?: string }) {
+export function Logo({
+  href = "/",
+  className,
+  label = "Family Tree",
+  labelClassName,
+}: {
+  href?: string;
+  className?: string;
+  label?: string;
+  labelClassName?: string;
+}) {
   return (
-    <Link href={href} className={cn("inline-flex items-center gap-2.5 rounded-lg font-display text-lg font-semibold", className)}>
+    <Link href={href} aria-label={label} className={cn("inline-flex items-center gap-2.5 rounded-lg font-display text-lg font-semibold whitespace-nowrap", className)}>
       <LogoMark />
-      <span>{label}</span>
+      <span className={labelClassName}>{label}</span>
     </Link>
   );
 }

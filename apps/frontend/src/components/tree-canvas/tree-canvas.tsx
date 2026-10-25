@@ -84,13 +84,15 @@ import { CanvasActions, nodeTypes, type RelativeKind } from "./nodes";
 const DEPTHS = ["2", "4", "6", "all"] as const;
 // Above this size the canvas starts with a neighbourhood around the focus person instead of everyone.
 const FULL_TREE_LIMIT = 250;
+// Below this zoom person cards are too small to read, so the initial view doesn't fit everything.
+const MIN_READABLE_ZOOM = 0.5;
 
 function Canvas({ treeId }: { treeId: string }) {
   const t = useTranslations("canvas");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
-  const desktop = useMediaQuery("(min-width: 768px)", true);
+  const wide = useMediaQuery("(min-width: 1024px)", true);
   const { data: graph, isLoading, error, dataUpdatedAt } = useGraph(treeId);
   const { fitView, setCenter, getNodes } = useReactFlow();
 
@@ -159,7 +161,39 @@ function Canvas({ treeId }: { treeId: string }) {
           target.position.y + PERSON_HEIGHT / 2,
           { zoom: 1, duration: 400 },
         );
-      else fitView({ padding: 0.15, duration: 300, maxZoom: 1.1 });
+      else {
+        // On small screens fitting a big tree makes the cards unreadable; start at the top
+        // generation at a readable zoom instead and let the user pan from there.
+        const pane = document.querySelector<HTMLElement>(".react-flow");
+        const people = nodes.filter((n) => n.type === "person");
+        const bounds = getNodesBounds(people);
+        const fitZoom = pane
+          ? Math.min(
+              pane.clientWidth / (bounds.width * 1.15),
+              pane.clientHeight / (bounds.height * 1.15),
+            )
+          : 1;
+        if (fitZoom >= MIN_READABLE_ZOOM || !pane) {
+          fitView({ padding: 0.15, duration: 300, maxZoom: 1.1 });
+          return;
+        }
+        const topY = Math.min(...people.map((n) => n.position.y));
+        const midX = bounds.x + bounds.width / 2;
+        const start = people
+          .filter((n) => n.position.y === topY)
+          .reduce((a, b) =>
+            Math.abs(b.position.x - midX) < Math.abs(a.position.x - midX)
+              ? b
+              : a,
+          );
+        const zoom = 0.8;
+        setCenter(
+          start.position.x + PERSON_WIDTH / 2,
+          // Put the top generation near the top edge rather than the middle.
+          start.position.y + pane.clientHeight / (2 * zoom) - 90 / zoom,
+          { zoom, duration: 300 },
+        );
+      }
     });
     return () => cancelAnimationFrame(id);
   }, [nodes, focusId, fitView, setCenter]);
@@ -294,7 +328,7 @@ function Canvas({ treeId }: { treeId: string }) {
               position="bottom-right"
               className="no-print"
             />
-            {desktop ? (
+            {wide ? (
               <MiniMap
                 pannable
                 zoomable
@@ -306,8 +340,9 @@ function Canvas({ treeId }: { treeId: string }) {
         )}
 
         {graph.people.length > 0 ? (
-          <div className="no-print absolute left-3 top-3 flex flex-wrap items-center gap-2 rounded-xl border bg-card/95 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur">
-            <span className="px-2 font-display text-sm font-semibold">
+          <div className="no-print absolute left-3 right-3 top-3 flex w-fit max-w-[calc(100%-1.5rem)] flex-wrap items-center gap-1.5 rounded-xl border bg-card/95 p-1.5 shadow-[var(--shadow-soft)] backdrop-blur sm:gap-2">
+            <span className="hidden max-w-48 truncate px-2 font-display text-sm font-semibold lg:inline">
+
               {graph.tree.name}
             </span>
             <Select
@@ -332,9 +367,10 @@ function Canvas({ treeId }: { treeId: string }) {
                 size="sm"
                 className="h-8"
                 onClick={() => setFirstPerson(true)}
+                aria-label={t("addPerson")}
               >
                 <UserRoundPlus className="size-4" aria-hidden />{" "}
-                <span className="hidden sm:inline">{t("addPerson")}</span>
+                <span className="hidden lg:inline">{t("addPerson")}</span>
               </Button>
             ) : null}
             {role !== "viewer" && copySources.length ? (
@@ -346,7 +382,7 @@ function Canvas({ treeId }: { treeId: string }) {
                 aria-label={t("copyFromTree")}
               >
                 <Copy className="size-4" aria-hidden />{" "}
-                <span className="hidden sm:inline">
+                <span className="hidden lg:inline">
                   {t("copyFromTreeShort")}
                 </span>
               </Button>
@@ -389,7 +425,7 @@ function Canvas({ treeId }: { treeId: string }) {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="size-8"
+                  className="hidden size-8 md:inline-flex"
                   onClick={() => window.print()}
                   aria-label={t("print")}
                 >

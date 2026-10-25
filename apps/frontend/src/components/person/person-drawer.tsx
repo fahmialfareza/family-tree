@@ -97,7 +97,7 @@ export function PersonDrawer({
           </div>
         ) : (
           <Tabs value={tab} onValueChange={onTabChange} className="flex min-h-0 flex-1 flex-col">
-            <TabsList className="mx-5 mt-4 grid w-auto grid-cols-[repeat(auto-fit,minmax(0,1fr))]">
+            <TabsList className="mx-5 mt-4 grid h-11 w-auto grid-cols-[repeat(auto-fit,minmax(0,1fr))] md:h-9">
               <TabsTrigger value="overview">{t("overview")}</TabsTrigger>
               <TabsTrigger value="relatives">{t("relatives")}</TabsTrigger>
               {canEdit ? <TabsTrigger value="edit">{t("edit")}</TabsTrigger> : null}

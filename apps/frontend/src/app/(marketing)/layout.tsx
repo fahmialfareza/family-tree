@@ -18,7 +18,7 @@ export default async function MarketingLayout({
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Logo label={tm("brand")} />
+          <Logo label={tm("brand")} labelClassName="max-[399px]:sr-only" />
           <nav
             className="flex items-center gap-1 sm:gap-2"
             aria-label={t("nav")}
@@ -53,16 +53,16 @@ export default async function MarketingLayout({
             © {new Date().getFullYear()} {tm("brand")}. {t("madeWithCare")}
           </p>
           <nav className="flex flex-wrap gap-4" aria-label={t("footerNav")}>
-            <Link href="/privacy" className="hover:text-foreground">
+            <Link href="/privacy" className="inline-block py-2 hover:text-foreground">
               {t("privacy")}
             </Link>
-            <Link href="/terms" className="hover:text-foreground">
+            <Link href="/terms" className="inline-block py-2 hover:text-foreground">
               {t("terms")}
             </Link>
             {contactEmail ? (
               <a
                 href={`mailto:${contactEmail}`}
-                className="hover:text-foreground"
+                className="inline-block py-2 hover:text-foreground"
               >
                 {t("contact")}
               </a>
