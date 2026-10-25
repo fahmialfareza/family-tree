@@ -110,7 +110,7 @@ func verifyAppleToken(ctx context.Context, verifier *oidc.IDTokenVerifier, raw, 
 	return &appleIdentity{Subject: tok.Subject, Email: claims.Email, ClientID: clientID}, nil
 }
 
-var errAppleEmail = errors.New("Apple did not share a verified email")
+var errAppleEmail = errors.New("apple did not share a verified email")
 
 func appleSignIn(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/appleSignIn").End()
