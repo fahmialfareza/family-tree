@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           # Newest 1.26 patch, like the golang:1.26-alpine Docker image; the exact go.mod version (1.26.0)
           # carries standard-library vulnerabilities that govulncheck reports.
