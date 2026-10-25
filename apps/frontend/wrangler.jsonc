@@ -1,7 +1,7 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "family-tree",
+  "name": "sakdulur",
   "compatibility_date": "2026-01-08",
   "compatibility_flags": ["nodejs_compat"],
   // Runtime variables are managed in the dashboard (Worker > Settings > Variables and Secrets):
