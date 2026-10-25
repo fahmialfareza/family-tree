@@ -114,7 +114,8 @@
     "searchHint": "Temukan seseorang dan pusatkan pohon padanya",
     "searchPlaceholder": "Ketik nama…",
     "noMatches": "Tidak ada yang cocok.",
-    "copyIntoTree": "Salin dari pohon lain…"
+    "copyIntoTree": "Salin dari pohon lain…",
+    "ask": "Tanya"
   },
   "canvas": {
     "loading": "Memuat pohon…",
@@ -323,7 +324,11 @@
     "deleteTree": "Hapus pohon ini",
     "deleteTitle": "Hapus “{name}”?",
     "deleteBody": "Semua anggota langsung kehilangan akses. Tindakan ini tidak dapat dibatalkan dari aplikasi.",
-    "deleted": "Pohon dihapus."
+    "deleted": "Pohon dihapus.",
+    "assistant": "Asisten AI",
+    "assistantToggle": "Izinkan anggota bertanya",
+    "assistantHelp": "Anggota bisa bertanya, misalnya “Bapaknya Ayu namanya siapa dan tinggal di mana?”. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini, Groq, atau OpenAI). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
+    "assistantUnavailable": "Belum tersedia di server ini: penyedia AI belum dikonfigurasi."
   },
   "account": {
     "title": "Akun",
@@ -490,5 +495,31 @@
     "toTree": "Salin ke",
     "doneTo": "{created} orang disalin ke {tree}{updated, plural, =0 {} other {, # diperbarui}}.",
     "openTree": "Buka"
+  },
+  "assistant": {
+    "nav": "Tanya",
+    "title": "Tanya tentang keluarga",
+    "description": "Tanyakan dengan bahasa sehari-hari, dalam bahasa Indonesia atau Inggris. Jawaban hanya diambil dari pohon ini.",
+    "placeholder": "misal: Bapaknya Ayu namanya siapa dan tinggal di mana?",
+    "send": "Kirim",
+    "newChat": "Obrolan baru",
+    "thinking": "Mencari di pohon keluarga…",
+    "disclaimer": "AI bisa keliru; periksa detail penting di halaman orangnya. Pertanyaan Anda dan data orang yang dicari dikirim ke penyedia AI dan tidak kami simpan.",
+    "answeredBy": "Dijawab oleh {model}",
+    "openPerson": "Buka {name}",
+    "tryAsking": "Coba tanyakan",
+    "suggestions": [
+      "Siapa saja kakek dan nenek saya?",
+      "Siapa saja keluarga yang tinggal di Malang?",
+      "Apa hubungan Ayu dengan Budi?",
+      "Siapa saja anggota keluarga yang lahir setelah tahun 2000?"
+    ],
+    "failed": "Belum bisa menjawab. Silakan coba lagi.",
+    "retry": "Coba lagi",
+    "offTitle": "Asisten belum aktif untuk pohon ini",
+    "offOwner": "Aktifkan di Pengaturan agar anggota bisa bertanya tentang keluarga.",
+    "offMember": "Minta pemilik pohon untuk mengaktifkannya di Pengaturan.",
+    "openSettings": "Buka pengaturan",
+    "unavailable": "Asisten belum tersedia di server ini."
   }
 }

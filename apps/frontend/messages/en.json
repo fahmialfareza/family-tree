@@ -114,7 +114,8 @@
     "searchHint": "Find someone and center the tree on them",
     "searchPlaceholder": "Type a name…",
     "noMatches": "No one matches that name.",
-    "copyIntoTree": "Copy from another tree…"
+    "copyIntoTree": "Copy from another tree…",
+    "ask": "Ask"
   },
   "canvas": {
     "loading": "Loading the tree…",
@@ -323,7 +324,11 @@
     "deleteTree": "Delete this tree",
     "deleteTitle": "Delete “{name}”?",
     "deleteBody": "Every member loses access immediately. This cannot be undone from the app.",
-    "deleted": "Tree deleted."
+    "deleted": "Tree deleted.",
+    "assistant": "AI assistant",
+    "assistantToggle": "Let members ask questions",
+    "assistantHelp": "Members can ask things like “Who is Ayu's father and where does he live?”. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini, Groq or OpenAI). Phone numbers and photos are never sent, and conversations are not stored.",
+    "assistantUnavailable": "Not available on this server yet: no AI provider is configured."
   },
   "account": {
     "title": "Account",
@@ -490,5 +495,31 @@
     "toTree": "Copy to",
     "doneTo": "{created, plural, one {# person} other {# people}} copied to {tree}{updated, plural, =0 {} other {, # updated}}.",
     "openTree": "Open"
+  },
+  "assistant": {
+    "nav": "Ask",
+    "title": "Ask about the family",
+    "description": "Ask in your own words, in Indonesian or English. Answers come only from this tree.",
+    "placeholder": "e.g. Who is Ayu's father and where does he live?",
+    "send": "Send",
+    "newChat": "New chat",
+    "thinking": "Looking through the tree…",
+    "disclaimer": "AI can make mistakes; check important details on the person's page. Your question and the people it looks up are sent to an AI provider and are not stored by us.",
+    "answeredBy": "Answered by {model}",
+    "openPerson": "Open {name}",
+    "tryAsking": "Try asking",
+    "suggestions": [
+      "Who are my grandparents?",
+      "Who in the family lives in Malang?",
+      "How is Ayu related to Budi?",
+      "Which family members were born after 2000?"
+    ],
+    "failed": "Couldn't get an answer. Please try again.",
+    "retry": "Try again",
+    "offTitle": "The assistant is off for this tree",
+    "offOwner": "Turn it on in Settings to let members ask questions about the family.",
+    "offMember": "Ask a tree owner to turn it on in Settings.",
+    "openSettings": "Open settings",
+    "unavailable": "The assistant isn't available on this server yet."
   }
 }

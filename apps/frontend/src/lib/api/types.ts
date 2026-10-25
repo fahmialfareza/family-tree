@@ -21,8 +21,22 @@ export interface Tree {
   _id: string;
   name: string;
   branchScoped: boolean;
+  /** Owner's switch for the AI assistant; assistantAvailable means the server has an AI provider. */
+  assistantEnabled?: boolean;
+  assistantAvailable?: boolean;
   role?: TreeRole;
   createdAt: string;
+}
+
+export interface AssistantTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface AssistantAnswer {
+  answer: string;
+  people: { id: string; name: string }[];
+  model: string;
 }
 
 export interface Me {

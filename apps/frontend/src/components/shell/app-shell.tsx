@@ -1,6 +1,6 @@
 "use client";
 
-import { Network, Settings, UserRound, Users, UsersRound } from "lucide-react";
+import { Network, Settings, Sparkles, UserRound, Users, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -13,7 +13,8 @@ import { PersonSearch } from "./search";
 import { TreeSwitcher } from "./tree-switcher";
 import { UserMenu } from "./user-menu";
 
-type NavItem = { href: string; label: string; icon: typeof Network; exact?: boolean };
+// mobileTab: false keeps an item out of the phone tab bar (it is reached from the top bar instead).
+type NavItem = { href: string; label: string; icon: typeof Network; exact?: boolean; mobileTab?: boolean };
 
 export function AppShell({ initialMe, children }: { initialMe: Me; children: React.ReactNode }) {
   const t = useTranslations("shell");
@@ -22,6 +23,8 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
   const { data: me = initialMe } = useMe(initialMe);
   const treeId = params.treeId;
   const tree = me.trees.find((x) => x._id === treeId);
+  // Members see the assistant once an owner turned it on; owners also see it while off, to find the switch.
+  const showAssistant = !!tree?.assistantAvailable && (!!tree.assistantEnabled || tree.role === "owner");
 
   const nav: NavItem[] = treeId
     ? [
@@ -29,6 +32,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
         { href: `/app/t/${treeId}/people`, label: t("people"), icon: UsersRound },
         { href: `/app/t/${treeId}/families`, label: t("families"), icon: Users },
         { href: `/app/t/${treeId}/members`, label: t("members"), icon: UserRound },
+        ...(showAssistant ? [{ href: `/app/t/${treeId}/ask`, label: t("ask"), icon: Sparkles, mobileTab: false }] : []),
         ...(tree?.role === "owner" ? [{ href: `/app/t/${treeId}/settings`, label: t("settings"), icon: Settings }] : []),
       ]
     : [];
@@ -78,6 +82,19 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
           </Link>
           <div className="min-w-0 flex-1">{me.trees.length > 0 ? <TreeSwitcher trees={me.trees} currentId={treeId} /> : null}</div>
           {treeId ? <PersonSearch treeId={treeId} compact /> : null}
+          {treeId && showAssistant ? (
+            <Link
+              href={`/app/t/${treeId}/ask`}
+              aria-label={t("ask")}
+              aria-current={pathname.startsWith(`/app/t/${treeId}/ask`) ? "page" : undefined}
+              className={cn(
+                "flex size-9 items-center justify-center rounded-md text-muted-foreground hover:bg-accent",
+                pathname.startsWith(`/app/t/${treeId}/ask`) && "text-primary",
+              )}
+            >
+              <Sparkles className="size-5" aria-hidden />
+            </Link>
+          ) : null}
           <ThemeToggle />
           <UserMenu user={me.user} compact />
         </header>
@@ -89,7 +106,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
         {/* Mobile bottom tabs */}
         {treeId ? (
           <nav aria-label={t("mainNav")} className="pb-safe fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col border-t bg-background/95 backdrop-blur md:hidden">
-            {nav.map((item) => (
+            {nav.filter((item) => item.mobileTab !== false).map((item) => (
               <Link
                 key={item.href}
                 href={item.href}

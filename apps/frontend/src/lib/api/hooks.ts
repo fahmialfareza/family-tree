@@ -3,6 +3,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./client";
 import type {
+  AssistantAnswer,
+  AssistantTurn,
   Family,
   ImportRequest,
   ImportResult,
@@ -110,11 +112,18 @@ export function useCreateTree() {
 export function useUpdateTree(treeId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { name?: string; branchScoped?: boolean }) => api.patch<Tree>(t(treeId), body),
+    mutationFn: (body: { name?: string; branchScoped?: boolean; assistantEnabled?: boolean }) => api.patch<Tree>(t(treeId), body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: keys.me });
       qc.invalidateQueries({ queryKey: ["tree", treeId] });
     },
+  });
+}
+
+/** Asks the tree assistant; the conversation lives on the client and is sent with each question. */
+export function useAskAssistant(treeId: string) {
+  return useMutation({
+    mutationFn: (body: { messages: AssistantTurn[]; locale: string }) => api.post<AssistantAnswer>(`${t(treeId)}/assistant`, body),
   });
 }
 

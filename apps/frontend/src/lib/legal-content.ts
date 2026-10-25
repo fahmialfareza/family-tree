@@ -5,7 +5,7 @@
 export type LegalSection = { h: string; p?: string[]; list?: string[] };
 export type LegalDoc = { title: string; updated: string; intro: string; sections: LegalSection[] };
 
-export const LEGAL_UPDATED = "2026-10-24";
+export const LEGAL_UPDATED = "2026-10-25";
 export const MIN_AGE = 13;
 
 const operator = process.env.NEXT_PUBLIC_OPERATOR_NAME || "Fahmi Alfareza";
@@ -82,6 +82,8 @@ export function privacyPolicy(locale: string): LegalDoc {
             "Resend — pengiriman email transaksional.",
             "New Relic — pemantauan kesalahan dan kinerja.",
             "Google — hanya jika Anda memilih masuk dengan Google.",
+            "Apple — hanya jika Anda memilih masuk dengan Apple (aplikasi iOS).",
+            "Google (Gemini), Groq, dan OpenAI — hanya untuk pohon yang asisten AI-nya diaktifkan oleh pemilik. Saat anggota bertanya, pertanyaan beserta nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke salah satu penyedia ini untuk menyusun jawaban. Nomor telepon dan foto tidak dikirim, dan percakapan tidak kami simpan.",
           ],
         },
         {
@@ -224,6 +226,8 @@ export function privacyPolicy(locale: string): LegalDoc {
           "Resend — transactional email delivery.",
           "New Relic — error and performance monitoring.",
           "Google — only if you choose Sign in with Google.",
+          "Apple — only if you choose Sign in with Apple (iOS app).",
+          "Google (Gemini), Groq and OpenAI — only for trees whose owner turned on the AI assistant. When a member asks a question, the question and the names, dates, places, addresses and notes of the people involved are sent to one of these providers to write the answer. Phone numbers and photos are not sent, and we do not store the conversation.",
         ],
       },
       {

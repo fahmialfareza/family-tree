@@ -77,6 +77,30 @@ export function TreeSettings({ treeId }: { treeId: string }) {
         </div>
       </Section>
 
+      <Section title={t("assistant")}>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <p id="assistant-label" className="text-sm font-medium">
+              {t("assistantToggle")}
+            </p>
+            <p className="text-sm text-muted-foreground">{tree.assistantAvailable ? t("assistantHelp") : t("assistantUnavailable")}</p>
+          </div>
+          <Switch
+            aria-labelledby="assistant-label"
+            checked={!!tree.assistantEnabled}
+            disabled={!tree.assistantAvailable && !tree.assistantEnabled}
+            onCheckedChange={async (on) => {
+              try {
+                await update.mutateAsync({ assistantEnabled: on });
+                toast.success(t("saved"));
+              } catch (err) {
+                toast.error(errorMessage(err));
+              }
+            }}
+          />
+        </div>
+      </Section>
+
       <Section title={t("export")} description={t("exportHelp")}>
         <Button asChild variant="outline">
           <a
