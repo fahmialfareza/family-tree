@@ -115,7 +115,8 @@
     "searchPlaceholder": "Ketik nama…",
     "noMatches": "Tidak ada yang cocok.",
     "copyIntoTree": "Salin dari pohon lain…",
-    "ask": "Tanya"
+    "ask": "Tanya",
+    "more": "Lainnya"
   },
   "canvas": {
     "loading": "Memuat pohon…",

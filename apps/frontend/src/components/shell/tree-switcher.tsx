@@ -15,13 +15,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { Tree } from "@/lib/api/types";
+import { cn } from "@/lib/utils";
 
 export function TreeSwitcher({
   trees,
   currentId,
+  compact,
 }: {
   trees: Tree[];
   currentId?: string;
+  /** Phone top bar: no icon tile, tighter padding, so the tree name gets the room. */
+  compact?: boolean;
 }) {
   const t = useTranslations("shell");
   const tr = useTranslations("roles");
@@ -47,16 +51,23 @@ export function TreeSwitcher({
         />
       ) : null}
       <DropdownMenu>
-        <DropdownMenuTrigger className="flex w-full items-center gap-3 rounded-xl border bg-card p-2.5 text-left shadow-[var(--shadow-soft)] outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
-            <TreePine className="size-5" aria-hidden />
-          </span>
+        <DropdownMenuTrigger
+          className={cn(
+            "flex w-full items-center gap-3 rounded-xl border bg-card text-left shadow-[var(--shadow-soft)] outline-none hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring",
+            compact ? "gap-2 px-3 py-1.5" : "p-2.5",
+          )}
+        >
+          {compact ? null : (
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-secondary text-primary">
+              <TreePine className="size-5" aria-hidden />
+            </span>
+          )}
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold">
               {current?.name ?? t("chooseTree")}
             </span>
             {current?.role ? (
-              <span className="block text-xs text-muted-foreground">
+              <span className={cn("block text-muted-foreground", compact ? "text-[11px] leading-tight" : "text-xs")}>
                 {tr(current.role)}
               </span>
             ) : null}

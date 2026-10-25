@@ -115,7 +115,8 @@
     "searchPlaceholder": "Type a name…",
     "noMatches": "No one matches that name.",
     "copyIntoTree": "Copy from another tree…",
-    "ask": "Ask"
+    "ask": "Ask",
+    "more": "More"
   },
   "canvas": {
     "loading": "Loading the tree…",
