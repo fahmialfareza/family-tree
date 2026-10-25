@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -135,8 +136,8 @@ func (f *fakeProvider) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Authorization") != "Bearer key" {
 		f.saw = append(f.saw, "missing api key")
 	}
-	if len(req.Tools) != 3 {
-		f.saw = append(f.saw, "tools not sent")
+	if len(req.Tools) != len(assistantTools) {
+		f.saw = append(f.saw, fmt.Sprintf("read-only run got %d tools", len(req.Tools)))
 	}
 	f.mu.Unlock()
 	toolResults := 0
@@ -202,7 +203,7 @@ func TestAssistantFallbackAndToolLoop(t *testing.T) {
 	ix := testAIIndex()
 	ask := func() (*assistantResult, aiAttempt, error) {
 		return runWithFallback(context.Background(), func(ctx context.Context, a aiAttempt) (*assistantResult, error) {
-			return askAssistant(ctx, a, ix, "system", []assistantTurn{{Role: "user", Content: "Bapaknya Ayu namanya siapa dan tinggal dimana?"}})
+			return askAssistant(ctx, a, ix, nil, "system", []assistantTurn{{Role: "user", Content: "Bapaknya Ayu namanya siapa dan tinggal dimana?"}})
 		})
 	}
 

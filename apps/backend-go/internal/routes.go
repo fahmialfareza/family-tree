@@ -53,6 +53,7 @@ func RegisterRoutes(rg *gin.Engine) {
 
 		trees.GET("/:treeId/families", member, getFamilies)
 		trees.POST("/:treeId/families", editor, createFamily)
+		trees.PATCH("/:treeId/families/:id", editor, renameFamily)
 		trees.DELETE("/:treeId/families/:id", editor, deleteFamily)
 	}
 	api.POST("/invites/accept", signedIn, acceptInvite)

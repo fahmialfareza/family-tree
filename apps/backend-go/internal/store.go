@@ -242,6 +242,22 @@ func createFamilyRepo(ctx context.Context, f *Family) (*Family, error) {
 	return getFamilyByIdRepo(ctx, f.TreeID, row.ID)
 }
 
+func renameFamilyRepo(ctx context.Context, treeID, id, name string) (*Family, error) {
+	defer newrelic.FromContext(ctx).StartSegment("store/renameFamilyRepo").End()
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	res := DB.WithContext(ctx).Model(&familyRow{}).Scopes(inTree(treeID)).Where("id = ?", id).
+		Updates(map[string]any{"name": name, "updated_at": time.Now()})
+	if res.Error != nil {
+		return nil, res.Error
+	}
+	if res.RowsAffected == 0 {
+		return nil, gorm.ErrRecordNotFound
+	}
+	bumpTreeCache(ctx, treeID)
+	return getFamilyByIdRepo(ctx, treeID, id)
+}
+
 func deleteFamilyRepo(ctx context.Context, treeID, id string) (*Family, error) {
 	defer newrelic.FromContext(ctx).StartSegment("store/deleteFamilyRepo").End()
 
