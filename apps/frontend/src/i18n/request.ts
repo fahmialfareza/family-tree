@@ -1,6 +1,6 @@
 import { getRequestConfig } from "next-intl/server";
 import { cookies, headers } from "next/headers";
-import { isLocale, LOCALE_COOKIE, type Locale } from "./config";
+import { isLocale, LOCALE_COOKIE, LOCALE_HEADER, type Locale } from "./config";
 
 export { LOCALE_COOKIE, locales, type Locale } from "./config";
 
@@ -9,15 +9,18 @@ const INDONESIAN_COUNTRIES = new Set(["ID"]);
 
 /**
  * Language, in order of preference (URLs stay locale-free):
+ * 0. ?lang=en|id on public pages (via middleware.ts): the language versions search engines index
  * 1. the account's language: copied into the NEXT_LOCALE cookie at sign-in (lib/server/session.ts)
  * 2. the NEXT_LOCALE cookie: the last choice in this browser (language switcher)
  * 3. the visitor's country from the IP: Cloudflare's cf-ipcountry header (Vercel's as a fallback)
  * 4. the browser's Accept-Language, when the country is unknown (local development), else English
  */
 export async function resolveLocale(): Promise<Locale> {
+  const h = await headers();
+  const fromUrl = h.get(LOCALE_HEADER);
+  if (isLocale(fromUrl)) return fromUrl;
   const fromCookie = (await cookies()).get(LOCALE_COOKIE)?.value;
   if (isLocale(fromCookie)) return fromCookie;
-  const h = await headers();
   const country = (h.get("cf-ipcountry") ?? h.get("x-vercel-ip-country") ?? "").toUpperCase();
   // XX = unknown, T1 = Tor: no real location.
   if (/^[A-Z]{2}$/.test(country) && country !== "XX" && country !== "T1") {

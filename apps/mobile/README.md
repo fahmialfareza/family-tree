@@ -1,4 +1,4 @@
-# Family Tree mobile apps (iOS and Android)
+# Sakdulur mobile apps (iOS and Android)
 
 A [Capacitor 8](https://capacitorjs.com) shell around the hosted website (`apps/frontend`). The site is
 server-rendered and keeps the session in httpOnly cookies, so the app loads it in a native WebView instead of

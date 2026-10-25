@@ -3,9 +3,10 @@ import type { MetadataRoute } from "next";
 // Installable web app (Add to Home Screen). The store apps live in apps/mobile.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Family Tree",
-    short_name: "Family Tree",
-    description: "Build your family tree together.",
+    name: "Sakdulur — silsilah keluarga",
+    short_name: "Sakdulur",
+    description: "Build your family tree together. Susun silsilah keluarga bersama.",
+    lang: "id",
     start_url: "/app",
     scope: "/",
     display: "standalone",

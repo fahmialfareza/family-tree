@@ -18,7 +18,7 @@ export default async function MarketingLayout({
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Logo label={tm("brand")} labelClassName="max-[399px]:sr-only" />
+          <Logo label={tm("brand")} />
           <nav
             className="flex items-center gap-1 sm:gap-2"
             aria-label={t("nav")}

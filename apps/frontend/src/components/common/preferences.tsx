@@ -21,6 +21,13 @@ export function useSetLocale() {
   const set = (locale: string) =>
     start(async () => {
       await fetch("/api/locale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale }) });
+      const url = new URL(window.location.href);
+      if (url.searchParams.has("lang")) {
+        // ?lang= wins over the cookie, so leave the language-specific URL.
+        url.searchParams.delete("lang");
+        window.location.replace(url.toString());
+        return;
+      }
       router.refresh();
     });
   return { set, pending };

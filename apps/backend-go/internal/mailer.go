@@ -45,7 +45,7 @@ func InitMailer() {
 	}
 	from := os.Getenv("EMAIL_FROM")
 	if from == "" {
-		from = "Family Tree <noreply@family-tree.app>"
+		from = "Sakdulur <noreply@sakdulur.com>"
 	}
 	mailer = resendMailer{apiKey: key, from: from, client: &http.Client{Timeout: 10 * time.Second}}
 }
@@ -112,22 +112,22 @@ func sendMail(msg Email) {
 }
 
 func sendVerificationEmail(to, token string) {
-	sendMail(linkEmail(to, "Verify your email for Family Tree",
-		"Confirm this address to finish setting up your Family Tree account.",
+	sendMail(linkEmail(to, "Verify your email for Sakdulur",
+		"Confirm this address to finish setting up your Sakdulur account.",
 		"Verify email", appLink("/auth/verify-email", map[string]string{"token": token}),
 		"The link expires in 24 hours. If you did not create an account, ignore this email."))
 }
 
 func sendPasswordResetEmail(to, token string) {
-	sendMail(linkEmail(to, "Reset your Family Tree password",
-		"Someone asked to reset the password for your Family Tree account.",
+	sendMail(linkEmail(to, "Reset your Sakdulur password",
+		"Someone asked to reset the password for your Sakdulur account.",
 		"Choose a new password", appLink("/auth/reset-password", map[string]string{"token": token}),
 		"The link expires in 1 hour. If this wasn't you, ignore this email; your password stays the same."))
 }
 
 func sendInviteEmail(to, inviter, treeName, token string) {
 	sendMail(linkEmail(to, fmt.Sprintf("%s invited you to the %s family tree", inviter, treeName),
-		fmt.Sprintf("%s invited you to join \"%s\" on Family Tree.", inviter, treeName),
+		fmt.Sprintf("%s invited you to join \"%s\" on Sakdulur.", inviter, treeName),
 		"Accept invitation", appLink("/invite", map[string]string{"token": token}),
 		"Sign in or create an account with this email address to accept. The invitation expires in 7 days."))
 }

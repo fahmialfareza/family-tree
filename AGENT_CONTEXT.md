@@ -4,7 +4,7 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
 
 ## Project Summary
 
-- Family Tree is a monorepo for frontend and backend services.
+- Family Tree is a monorepo for frontend and backend services. The product is branded **Sakdulur** (sakdulur.com); keep user-facing names in `apps/frontend/src/lib/brand.ts` and the `meta.brand` messages, while internal identifiers (package names, cache keys, app ids, Cloudinary folders) stay `family-tree`.
 - Active apps:
   - `apps/backend-go`: primary backend service written in Go with Gin. Most backend changes should happen here. Reuse existing code under `internal/`.
   - `apps/frontend`: primary frontend app built with Next.js 16, React 19, and `pnpm`.

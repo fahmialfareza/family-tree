@@ -199,8 +199,8 @@ export function Account() {
         <Button asChild variant="outline">
           <a
             href="/api/proxy/api/me/export"
-            download="family-tree-account.json"
-            onClick={nativeDownloadHandler("/api/proxy/api/me/export", "family-tree-account.json", (err) => toast.error(errorMessage(err)))}
+            download="sakdulur-account.json"
+            onClick={nativeDownloadHandler("/api/proxy/api/me/export", "sakdulur-account.json", (err) => toast.error(errorMessage(err)))}
           >
             <Download className="size-4" aria-hidden /> {t("downloadData")}
           </a>

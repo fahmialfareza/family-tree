@@ -2,28 +2,31 @@
 // Operator details default to the current operator and can be overridden per deployment with env vars.
 // Keep both languages in step, and bump LEGAL_UPDATED whenever the meaning changes.
 
+import { BRAND } from "./brand";
+
 export type LegalSection = { h: string; p?: string[]; list?: string[] };
 export type LegalDoc = { title: string; updated: string; intro: string; sections: LegalSection[] };
 
-export const LEGAL_UPDATED = "2026-10-25";
+export const LEGAL_UPDATED = "2026-10-26";
 export const MIN_AGE = 13;
 
 const operator = process.env.NEXT_PUBLIC_OPERATOR_NAME || "Fahmi Alfareza";
+export const OPERATOR_NAME = operator;
 const contact = process.env.NEXT_PUBLIC_CONTACT_EMAIL || "fahmialfareza97@gmail.com";
 export const contactEmail = contact;
-const site = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/^https?:\/\//, "") || "Family Tree";
+const site = (process.env.NEXT_PUBLIC_APP_URL || "").replace(/^https?:\/\//, "") || BRAND;
 
 export function privacyPolicy(locale: string): LegalDoc {
   if (locale === "id") {
     return {
       title: "Kebijakan Privasi",
       updated: `Berlaku sejak ${LEGAL_UPDATED}`,
-      intro: `Kebijakan ini menjelaskan data pribadi apa yang dikumpulkan Family Tree (${site}), untuk apa digunakan, dengan siapa dibagikan, berapa lama disimpan, dan hak Anda atasnya. Kami menulisnya sesederhana mungkin.`,
+      intro: `Kebijakan ini menjelaskan data pribadi apa yang dikumpulkan ${BRAND} (${site}), untuk apa digunakan, dengan siapa dibagikan, berapa lama disimpan, dan hak Anda atasnya. Kami menulisnya sesederhana mungkin.`,
       sections: [
         {
           h: "1. Pengendali data",
           p: [
-            `Family Tree dikelola oleh ${operator}, perorangan yang berdomisili di Indonesia, yang bertindak sebagai pengendali data pribadi menurut Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP).`,
+            `${BRAND} dikelola oleh ${operator}, perorangan yang berdomisili di Indonesia, yang bertindak sebagai pengendali data pribadi menurut Undang-Undang No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (UU PDP).`,
             `Untuk semua pertanyaan dan permintaan terkait data pribadi, hubungi ${contact}.`,
           ],
         },
@@ -162,12 +165,12 @@ export function privacyPolicy(locale: string): LegalDoc {
   return {
     title: "Privacy Policy",
     updated: `Effective ${LEGAL_UPDATED}`,
-    intro: `This policy explains what personal data Family Tree (${site}) collects, why, who it is shared with, how long it is kept, and your rights over it. We have tried to keep it plain.`,
+    intro: `This policy explains what personal data ${BRAND} (${site}) collects, why, who it is shared with, how long it is kept, and your rights over it. We have tried to keep it plain.`,
     sections: [
       {
         h: "1. Who is responsible",
         p: [
-          `Family Tree is operated by ${operator}, an individual based in Indonesia, who is the data controller under Indonesia's Personal Data Protection Law No. 27 of 2022 (UU PDP).`,
+          `${BRAND} is operated by ${operator}, an individual based in Indonesia, who is the data controller under Indonesia's Personal Data Protection Law No. 27 of 2022 (UU PDP).`,
           `For any question or request about personal data, contact ${contact}.`,
         ],
       },
@@ -309,7 +312,7 @@ export function terms(locale: string): LegalDoc {
     return {
       title: "Ketentuan Layanan",
       updated: `Berlaku sejak ${LEGAL_UPDATED}`,
-      intro: `Ketentuan ini mengatur penggunaan Family Tree (${site}), yang disediakan oleh ${operator} ("kami"). Dengan membuat akun atau menggunakan layanan, Anda menyetujui Ketentuan ini dan Kebijakan Privasi.`,
+      intro: `Ketentuan ini mengatur penggunaan ${BRAND} (${site}), yang disediakan oleh ${operator} ("kami"). Dengan membuat akun atau menggunakan layanan, Anda menyetujui Ketentuan ini dan Kebijakan Privasi.`,
       sections: [
         {
           h: "1. Kelayakan",
@@ -410,7 +413,7 @@ export function terms(locale: string): LegalDoc {
   return {
     title: "Terms of Service",
     updated: `Effective ${LEGAL_UPDATED}`,
-    intro: `These terms govern your use of Family Tree (${site}), provided by ${operator} ("we", "us"). By creating an account or using the service you agree to these Terms and to our Privacy Policy.`,
+    intro: `These terms govern your use of ${BRAND} (${site}), provided by ${operator} ("we", "us"). By creating an account or using the service you agree to these Terms and to our Privacy Policy.`,
     sections: [
       {
         h: "1. Eligibility",

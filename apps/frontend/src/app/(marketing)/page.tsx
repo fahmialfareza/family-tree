@@ -1,10 +1,25 @@
-import { HeartHandshake, Lock, Network, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import { Copy, HeartHandshake, Lock, MessageCircleQuestion, Network, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
+import { BRAND, SITE_URL } from "@/lib/brand";
+import { contactEmail } from "@/lib/legal-content";
+import { jsonLd, languageAlternates, pageSocial } from "@/lib/seo";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const t = await getTranslations("meta");
+  return {
+    title: { absolute: t("title") },
+    description: t("description"),
+    alternates: languageAlternates("/", locale),
+    ...pageSocial("/", locale, t("title"), t("description")),
+  };
+}
 
 // A static picture of the canvas: three generations, couples joined by a terracotta dot.
-function TreePreview() {
+function TreePreview({ label }: { label: string }) {
   const card = (name: string, years: string, tone: string, x: number, y: number) => (
     <g transform={`translate(${x} ${y})`}>
       <rect width="150" height="54" rx="12" className="fill-card stroke-border" />
@@ -23,7 +38,7 @@ function TreePreview() {
   );
   const path = "fill-none stroke-muted-foreground/50";
   return (
-    <svg viewBox="0 0 520 330" role="img" aria-label="Family tree preview" className="h-auto w-full drop-shadow-[0_20px_40px_oklch(0.3_0.03_60/0.15)]">
+    <svg viewBox="0 0 520 330" role="img" aria-label={label} className="h-auto w-full drop-shadow-[0_20px_40px_oklch(0.3_0.03_60/0.15)]">
       <path d="M95 74 V100 H182 M269 74 V100 H182 M182 100 V136" className={path} strokeWidth="1.5" />
       <path d="M182 136 V150 H95 V176 M182 150 H269 V176" className={path} strokeWidth="1.5" />
       <path d="M269 230 V256 H344 M419 230 V256 H344 M344 256 V276" className={path} strokeWidth="1.5" />
@@ -41,16 +56,56 @@ function TreePreview() {
 
 export default async function LandingPage() {
   const t = await getTranslations("landing");
+  const tm = await getTranslations("meta");
+  const locale = await getLocale();
   const features = [
     { icon: Network, title: t("f1Title"), body: t("f1Body") },
     { icon: HeartHandshake, title: t("f2Title"), body: t("f2Body") },
     { icon: ShieldCheck, title: t("f3Title"), body: t("f3Body") },
+    { icon: MessageCircleQuestion, title: t("f5Title"), body: t("f5Body") },
+    { icon: Copy, title: t("f6Title"), body: t("f6Body") },
     { icon: Smartphone, title: t("f4Title"), body: t("f4Body") },
   ];
   const steps = [t("s1"), t("s2"), t("s3")];
-  const faqs = [1, 2, 3, 4].map((n) => ({ q: t(`faq${n}q`), a: t(`faq${n}a`) }));
+  const faqs = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ q: t(`faq${n}q`), a: t(`faq${n}a`) }));
+  // Structured data for search engines and AI answer engines: who runs it, what it is, and the FAQ.
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: BRAND, url: SITE_URL, logo: `${SITE_URL}/icons/icon-512.png`, email: contactEmail },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        name: BRAND,
+        url: SITE_URL,
+        inLanguage: ["en", "id"],
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+      {
+        "@type": "WebApplication",
+        "@id": `${SITE_URL}/#app`,
+        name: BRAND,
+        url: SITE_URL,
+        description: tm("description"),
+        applicationCategory: "LifestyleApplication",
+        operatingSystem: "Web",
+        inLanguage: ["en", "id"],
+        isAccessibleForFree: true,
+        offers: { "@type": "Offer", price: "0", priceCurrency: "IDR" },
+        featureList: features.map((f) => f.title),
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+      {
+        "@type": "FAQPage",
+        "@id": `${SITE_URL}/?lang=${locale}#faq`,
+        inLanguage: locale,
+        mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
+      },
+    ],
+  };
   return (
     <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={jsonLd(structuredData)} />
       <section className="relative overflow-hidden bg-[radial-gradient(ellipse_at_top_left,var(--color-secondary),transparent_55%)]">
         <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 py-16 sm:px-6 lg:grid-cols-2 lg:py-24">
           <div className="space-y-6">
@@ -70,16 +125,23 @@ export default async function LandingPage() {
             <p className="text-sm text-muted-foreground">{t("heroNote")}</p>
           </div>
           <div className="rounded-3xl border bg-canvas p-4 shadow-[var(--shadow-lift)] sm:p-6">
-            <TreePreview />
+            <TreePreview label={t("previewLabel")} />
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-3xl px-4 pt-16 text-center sm:px-6" aria-labelledby="what-is">
+        <h2 id="what-is" className="mb-4 font-display text-3xl font-semibold">
+          {t("whatIsTitle")}
+        </h2>
+        <p className="text-lg leading-relaxed text-muted-foreground">{t("whatIsBody")}</p>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6" aria-labelledby="features">
         <h2 id="features" className="mb-10 text-center font-display text-3xl font-semibold">
           {t("featuresTitle")}
         </h2>
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
             <div key={f.title} className="rounded-2xl border bg-card p-6 shadow-[var(--shadow-soft)]">
               <f.icon className="mb-4 size-8 text-primary" aria-hidden />

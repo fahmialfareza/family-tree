@@ -245,7 +245,7 @@ function Canvas({ treeId }: { treeId: string }) {
             node.classList.contains("react-flow__node-toolbar")
           ),
       });
-      await saveFile(`${(graph?.tree.name ?? "family-tree").replace(/[^\w-]+/g, "-")}.png`, url);
+      await saveFile(`${(graph?.tree.name ?? "sakdulur").replace(/[^\w-]+/g, "-")}.png`, url);
     } catch {
       toast.error(t("exportFailed"));
     } finally {

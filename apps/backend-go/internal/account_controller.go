@@ -161,7 +161,7 @@ func exportMe(c *gin.Context) {
 		abortServerError(c, err)
 		return
 	}
-	c.Header("Content-Disposition", `attachment; filename="family-tree-account.json"`)
+	c.Header("Content-Disposition", `attachment; filename="sakdulur-account.json"`)
 	responseSuccess(c, gin.H{"exportedAt": time.Now(), "user": user, "trees": trees, "sessions": sessions}, 200)
 }
 
@@ -189,6 +189,6 @@ func exportTree(c *gin.Context) {
 		abortServerError(c, err)
 		return
 	}
-	c.Header("Content-Disposition", `attachment; filename="family-tree-export.json"`)
+	c.Header("Content-Disposition", `attachment; filename="sakdulur-export.json"`)
 	responseSuccess(c, gin.H{"exportedAt": time.Now(), "tree": tree, "people": people, "families": families, "members": members}, 200)
 }

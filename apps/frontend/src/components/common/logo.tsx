@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BRAND } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 /** Brand mark: a small stylized tree in the primary color with a terracotta "root". */
@@ -18,7 +19,7 @@ export function LogoMark({ className }: { className?: string }) {
 export function Logo({
   href = "/",
   className,
-  label = "Family Tree",
+  label = BRAND,
   labelClassName,
 }: {
   href?: string;

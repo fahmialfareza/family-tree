@@ -1,8 +1,8 @@
 {
   "meta": {
-    "brand": "Family Tree",
-    "title": "Family Tree — susun silsilah keluarga bersama",
-    "description": "Silsilah keluarga yang privat dan kolaboratif. Tambahkan kerabat, foto, dan cerita, lalu undang keluarga untuk ikut menyusunnya."
+    "brand": "Sakdulur",
+    "title": "Sakdulur — susun silsilah keluarga bersama",
+    "description": "Sakdulur adalah aplikasi silsilah keluarga yang gratis dan privat. Susun pohon keluarga lintas generasi — orang tua, pasangan, anak — tambahkan foto dan cerita, tanyakan apa pun tentang keluarga, dan ajak kerabat menyusunnya bersama. Cocok untuk trah dan bani."
   },
   "common": {
     "add": "Tambah",
@@ -95,7 +95,7 @@
     "invalid": "Tautan undangan ini tidak lengkap."
   },
   "shell": {
-    "brand": "Family Tree",
+    "brand": "Sakdulur",
     "mainNav": "Navigasi utama",
     "skipToContent": "Langsung ke konten",
     "tree": "Pohon",
@@ -418,6 +418,8 @@
     "ctaPrimary": "Mulai gratis",
     "ctaSecondary": "Masuk",
     "heroNote": "Tanpa iklan. Pohon Anda hanya terlihat oleh orang yang Anda undang.",
+    "whatIsTitle": "Apa itu Sakdulur?",
+    "whatIsBody": "Sakdulur adalah aplikasi web gratis untuk menyusun silsilah keluarga yang privat, bersama-sama. “Sak dulur” dalam bahasa Jawa berarti “satu saudara”: setiap anggota bisa menambahkan cabangnya, foto, dan cerita, serta melihat bagaimana mereka saling berhubungan. Cocok untuk satu rumah tangga hingga satu trah atau bani dengan ratusan anggota.",
     "featuresTitle": "Semua yang dibutuhkan silsilah keluarga",
     "f1Title": "Silsilah yang sebenarnya",
     "f1Body": "Pasangan berdampingan, anak di bawahnya, leluhur dan keturunan sekaligus — termasuk pernikahan kedua.",
@@ -427,6 +429,10 @@
     "f3Body": "Setiap pohon bersifat privat. Hanya anggota yang dapat melihat, dan data bisa diekspor atau dihapus kapan saja.",
     "f4Title": "Nyaman di ponsel",
     "f4Body": "Cubit, perbesar, dan tambah kerabat dengan satu ketukan — dalam Bahasa Indonesia atau Inggris, mode terang atau gelap.",
+    "f5Title": "Tanya tentang keluarga",
+    "f5Body": "“Bapaknya Ayu namanya siapa dan tinggal di mana?” Tanyakan dengan bahasa sehari-hari dan dapatkan jawabannya dari pohon Anda. Pemilik pohon yang memutuskan untuk mengaktifkannya.",
+    "f6Title": "Satu keluarga, banyak pohon",
+    "f6Body": "Simpan pohon Anda, pohon pasangan, dan pohon keluarga besan, lalu salin satu cabang di antaranya tanpa mengetik ulang.",
     "howTitle": "Cara kerjanya",
     "s1": "Buat akun gratis dan beri nama pohon Anda.",
     "s2": "Tambahkan diri Anda, orang tua, lalu kembangkan dari sana.",
@@ -443,8 +449,15 @@
     "faq3a": "Tentu. Catat tanggal — bahkan perkiraan seperti “sekitar 1920” — tempat, foto, dan kisahnya.",
     "faq4q": "Bisakah saya membawa data saya?",
     "faq4a": "Bisa. Pemilik dapat mengekspor pohon sebagai JSON, dan setiap orang dapat mengunduh data akunnya atau menghapus akunnya.",
+    "faq5q": "Apa arti “Sakdulur”?",
+    "faq5a": "“Sak dulur” dalam bahasa Jawa berarti “satu saudara” atau “kita semua bersaudara”. Aplikasi ini dibuat untuk itu: satu tempat untuk silsilah seluruh keluarga.",
+    "faq6q": "Bisakah dipakai untuk trah atau bani?",
+    "faq6a": "Bisa. Keluarga besar dapat berbagi satu pohon, memberi tiap cabang keluarga akses untuk mengubah bagiannya sendiri, lalu mencetak atau mengekspor seluruh pohon untuk acara kumpul keluarga.",
+    "faq7q": "Bagaimana fitur “tanya tentang keluarga” bekerja?",
+    "faq7a": "Jika pemilik pohon mengaktifkannya, anggota bisa bertanya dalam bahasa Indonesia atau Inggris. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
     "ctaTitle": "Mulai silsilah keluarga Anda hari ini",
-    "ctaBody": "Hanya butuh semenit untuk memulai — dan menjadi warisan yang dijaga keluarga Anda."
+    "ctaBody": "Hanya butuh semenit untuk memulai — dan menjadi warisan yang dijaga keluarga Anda.",
+    "previewLabel": "Contoh silsilah keluarga di Sakdulur"
   },
   "copy": {
     "title": "Salin dari pohon lain",

@@ -23,12 +23,24 @@ function secure() {
   return (process.env.NEXT_PUBLIC_APP_URL || "").startsWith("https://");
 }
 
+// ?lang=en|id on public pages selects the language for that request only (hreflang URLs for search engines,
+// which crawl without cookies and mostly from US IPs). i18n/request.ts reads it from this header.
+const LOCALE_HEADER = "x-sakdulur-locale";
+
 export async function middleware(req: NextRequest) {
+  // Built when returning, so cookies refreshed below are included.
+  const next = () => {
+    const headers = new Headers(req.headers);
+    headers.delete(LOCALE_HEADER); // never trust a client-sent value
+    const lang = req.nextUrl.searchParams.get("lang");
+    if (lang === "en" || lang === "id") headers.set(LOCALE_HEADER, lang);
+    return NextResponse.next({ request: { headers } });
+  };
   const access = req.cookies.get(ACCESS_COOKIE)?.value;
   const refresh = req.cookies.get(REFRESH_COOKIE)?.value;
   const isApp = req.nextUrl.pathname.startsWith("/app");
 
-  if (access) return NextResponse.next();
+  if (access) return next();
 
   if (refresh) {
     const res = await fetch(`${backendUrl()}/api/auth/refresh`, {
@@ -42,7 +54,7 @@ export async function middleware(req: NextRequest) {
     if (pair?.accessToken) {
       // Make the fresh token visible to this request's server components, then persist it.
       req.cookies.set(ACCESS_COOKIE, pair.accessToken);
-      const out = NextResponse.next({ request: { headers: req.headers } });
+      const out = next();
       const base = { httpOnly: true, secure: secure(), sameSite: "lax" as const, path: "/" };
       const ttl = Math.floor((new Date(pair.accessTokenExpiresAt).getTime() - Date.now()) / 1000);
       out.cookies.set(ACCESS_COOKIE, pair.accessToken, { ...base, maxAge: Math.max(ttl - 30, 30) });
@@ -50,14 +62,14 @@ export async function middleware(req: NextRequest) {
       return out;
     }
     if (res && (res.status === 401 || res.status === 400)) {
-      const out = isApp ? redirectToLogin(req) : NextResponse.next();
+      const out = isApp ? redirectToLogin(req) : next();
       out.cookies.delete(REFRESH_COOKIE);
       return out;
     }
-    return NextResponse.next(); // API unreachable: let the page show its own error
+    return next(); // API unreachable: let the page show its own error
   }
 
-  return isApp ? redirectToLogin(req) : NextResponse.next();
+  return isApp ? redirectToLogin(req) : next();
 }
 
 function redirectToLogin(req: NextRequest) {
@@ -68,5 +80,5 @@ function redirectToLogin(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/app/:path*", "/invite", "/auth/login", "/auth/signup"],
+  matcher: ["/", "/privacy", "/terms", "/app/:path*", "/invite", "/auth/login", "/auth/signup"],
 };

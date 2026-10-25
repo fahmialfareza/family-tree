@@ -3,6 +3,8 @@ export const locales = ["en", "id"] as const;
 export type Locale = (typeof locales)[number];
 export const LOCALE_COOKIE = "NEXT_LOCALE";
 export const LOCALE_COOKIE_MAX_AGE = 365 * 24 * 60 * 60;
+/** Set by middleware.ts from ?lang= on public pages (same name is inlined there: edge runtime). */
+export const LOCALE_HEADER = "x-sakdulur-locale";
 
 export function isLocale(value: string | null | undefined): value is Locale {
   return !!value && (locales as readonly string[]).includes(value);

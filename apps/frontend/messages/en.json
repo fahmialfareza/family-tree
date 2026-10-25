@@ -1,8 +1,8 @@
 {
   "meta": {
-    "brand": "Family Tree",
-    "title": "Family Tree — build your family tree together",
-    "description": "A private, collaborative family tree. Add relatives, photos and stories, and invite family to build it with you."
+    "brand": "Sakdulur",
+    "title": "Sakdulur — build your family tree together",
+    "description": "Sakdulur is a free, private family tree app. Map parents, partners and children across generations, add photos and stories, ask questions about your family, and invite relatives to build it with you — in English or Bahasa Indonesia."
   },
   "common": {
     "add": "Add",
@@ -95,7 +95,7 @@
     "invalid": "This invitation link is incomplete."
   },
   "shell": {
-    "brand": "Family Tree",
+    "brand": "Sakdulur",
     "mainNav": "Main navigation",
     "skipToContent": "Skip to content",
     "tree": "Tree",
@@ -418,6 +418,8 @@
     "ctaPrimary": "Start your tree — free",
     "ctaSecondary": "Sign in",
     "heroNote": "No ads. Your tree is only visible to the people you invite.",
+    "whatIsTitle": "What is Sakdulur?",
+    "whatIsBody": "Sakdulur is a free web app for building a private family tree together. “Sak dulur” is Javanese for “one family”: everyone in it can add their own branch, photos and stories, and see how they are all related. It works for a small household as well as a whole trah or bani with hundreds of members.",
     "featuresTitle": "Everything a family tree needs",
     "f1Title": "A real family tree",
     "f1Body": "Couples side by side, children below, ancestors and descendants together — even with remarriages.",
@@ -427,6 +429,10 @@
     "f3Body": "Every tree is private. Only members can see it, and you can export or delete your data anytime.",
     "f4Title": "Works on every phone",
     "f4Body": "Pinch, zoom and add relatives in a tap, in English or Bahasa Indonesia, light or dark.",
+    "f5Title": "Ask about your family",
+    "f5Body": "“Who is Ayu's father and where does he live?” Ask in plain words and get an answer from your tree. Owners choose whether to turn it on.",
+    "f6Title": "One family, many trees",
+    "f6Body": "Keep your own tree, your spouse's and your in-laws', and copy a branch between them instead of typing it twice.",
     "howTitle": "How it works",
     "s1": "Create your free account and name your tree.",
     "s2": "Add yourself, your parents, and branch out from there.",
@@ -443,8 +449,15 @@
     "faq3a": "Of course. Record dates — even approximate ones like “about 1920” — places, photos and stories.",
     "faq4q": "Can I take my data with me?",
     "faq4a": "Yes. Owners can export a tree as JSON, and everyone can download their account data or delete their account.",
+    "faq5q": "What does “Sakdulur” mean?",
+    "faq5a": "“Sak dulur” is Javanese for “one family” or “all of us relatives”. The app is made for exactly that: one place where the whole family's tree lives.",
+    "faq6q": "Can I use it for a trah or bani reunion?",
+    "faq6a": "Yes. Large family groups can share one tree, give each branch's family edit access to their own part, and print or export the whole tree for the reunion.",
+    "faq7q": "How does “ask about your family” work?",
+    "faq7a": "When a tree's owner turns it on, members can ask questions in Indonesian or English. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini or Groq). Phone numbers and photos are never sent, and conversations are not stored.",
     "ctaTitle": "Start your family tree today",
-    "ctaBody": "It takes a minute to begin — and it becomes something your family keeps."
+    "ctaBody": "It takes a minute to begin — and it becomes something your family keeps.",
+    "previewLabel": "Example of a family tree on Sakdulur"
   },
   "copy": {
     "title": "Copy from another tree",

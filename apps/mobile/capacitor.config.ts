@@ -16,7 +16,7 @@ const serverUrl = (process.env.CAP_SERVER_URL ?? "http://localhost:3000").replac
 
 const config: CapacitorConfig = {
   appId: "com.fahmialfareza.familytree",
-  appName: "Family Tree",
+  appName: "Sakdulur",
   webDir: "www",
   appendUserAgent: "FamilyTreeApp",
   server: {

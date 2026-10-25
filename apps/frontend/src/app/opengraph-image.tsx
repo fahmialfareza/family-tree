@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Family Tree — build your family tree together";
+// Shared links in both languages use one image, so its text is bilingual.
+export const alt = "Sakdulur — build your family tree together / susun silsilah keluarga bersama";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -34,9 +35,9 @@ export default function OpengraphImage() {
     (
       <div style={{ width: "100%", height: "100%", display: "flex", background: "#f9f6ef", position: "relative", fontFamily: "sans-serif" }}>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "center", padding: 80, width: 600, gap: 24 }}>
-          <span style={{ fontSize: 30, color: "#c9714a", fontWeight: 700 }}>Family Tree</span>
-          <span style={{ fontSize: 64, lineHeight: 1.1, fontWeight: 800, color: "#3a3127" }}>Your family story, together.</span>
-          <span style={{ fontSize: 28, color: "#7a6d5d" }}>Private trees you build with the people who share them.</span>
+          <span style={{ fontSize: 34, color: "#c9714a", fontWeight: 800 }}>Sakdulur</span>
+          <span style={{ fontSize: 60, lineHeight: 1.1, fontWeight: 800, color: "#3a3127" }}>Silsilah keluarga, disusun bersama.</span>
+          <span style={{ fontSize: 28, color: "#7a6d5d" }}>Your family tree, built together. Free and private.</span>
         </div>
         {card("Hasan", "1938–2011", "#6f8fb3", 640, 120)}
         {card("Siti", "1942–2019", "#c98585", 900, 120)}

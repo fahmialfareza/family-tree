@@ -14,7 +14,7 @@ const page = (body) => `<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Family Tree</title>
+<title>Sakdulur</title>
 <style>
   :root { color-scheme: light dark; --bg: #f9f6ef; --fg: #3a3128; --muted: #75695c; --primary: #3f7a52; --on-primary: #fbf7ee; }
   @media (prefers-color-scheme: dark) { :root { --bg: #221d18; --fg: #f2ede4; --muted: #b9ad9c; --primary: #7cc893; --on-primary: #10261a; } }
@@ -44,17 +44,17 @@ ${body}
 `;
 
 const offline = page(`<h1 id="t">You're offline</h1>
-<p id="d">Family Tree needs an internet connection. Check your connection and try again.</p>
+<p id="d">Sakdulur needs an internet connection. Check your connection and try again.</p>
 <a id="r" href="${serverUrl}/app">Try again</a>
 <script>
   if ((navigator.language || "").toLowerCase().startsWith("id")) {
     document.getElementById("t").textContent = "Anda sedang offline";
-    document.getElementById("d").textContent = "Family Tree membutuhkan koneksi internet. Periksa koneksi Anda lalu coba lagi.";
+    document.getElementById("d").textContent = "Sakdulur membutuhkan koneksi internet. Periksa koneksi Anda lalu coba lagi.";
     document.getElementById("r").textContent = "Coba lagi";
   }
 </script>`);
 
-const index = page(`<p><a href="${serverUrl}/app">Open Family Tree</a></p>`);
+const index = page(`<p><a href="${serverUrl}/app">Open Sakdulur</a></p>`);
 
 mkdirSync(new URL("../www", import.meta.url), { recursive: true });
 writeFileSync(new URL("../www/offline.html", import.meta.url), offline);

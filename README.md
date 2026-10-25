@@ -1,6 +1,6 @@
-# Family Tree
+# Sakdulur (family-tree)
 
-Family Tree is a monorepo for the active Go backend and Next.js frontend used by this project.
+Sakdulur (sakdulur.com) is a family tree web app. This repository (family-tree) is a monorepo for the active Go backend and Next.js frontend used by this project.
 
 ## Apps
 
