@@ -50,7 +50,7 @@ export async function middleware(req: NextRequest) {
       cache: "no-store",
     }).catch(() => null);
     const body = res?.ok ? await res.json().catch(() => null) : null;
-    const pair = body?.data as { accessToken: string; accessTokenExpiresAt: string; refreshToken: string } | undefined;
+    const pair = body?.data as { accessToken: string; accessTokenExpiresAt: string; refreshToken?: string } | undefined;
     if (pair?.accessToken) {
       // Make the fresh token visible to this request's server components, then persist it.
       req.cookies.set(ACCESS_COOKIE, pair.accessToken);
@@ -58,7 +58,8 @@ export async function middleware(req: NextRequest) {
       const base = { httpOnly: true, secure: secure(), sameSite: "lax" as const, path: "/" };
       const ttl = Math.floor((new Date(pair.accessTokenExpiresAt).getTime() - Date.now()) / 1000);
       out.cookies.set(ACCESS_COOKIE, pair.accessToken, { ...base, maxAge: Math.max(ttl - 30, 30) });
-      out.cookies.set(REFRESH_COOKIE, pair.refreshToken, { ...base, maxAge: 30 * 24 * 60 * 60 });
+      // Absent when another request rotated the token a moment ago: keep the refresh cookie it set.
+      if (pair.refreshToken) out.cookies.set(REFRESH_COOKIE, pair.refreshToken, { ...base, maxAge: 30 * 24 * 60 * 60 });
       return out;
     }
     if (res && (res.status === 401 || res.status === 400)) {

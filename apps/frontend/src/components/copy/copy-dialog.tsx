@@ -32,7 +32,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -374,7 +373,7 @@ export function CopyDialog({
                         ? ` ${t("previewSkipped", { skipped: preview.data.skipped })}`
                         : ""}
                     </p>
-                    <ScrollArea className="max-h-40">
+                    <div className="max-h-40 overflow-y-auto overscroll-contain">
                       <ul className="flex flex-wrap gap-1.5">
                         {(preview.data.people ?? []).map((p) => (
                           <li key={p._id}>
@@ -389,7 +388,7 @@ export function CopyDialog({
                           </li>
                         ))}
                       </ul>
-                    </ScrollArea>
+                    </div>
                   </>
                 ) : null}
               </section>

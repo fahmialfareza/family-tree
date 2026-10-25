@@ -7,7 +7,6 @@ import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { PersonAvatar } from "@/components/common/person-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -103,8 +102,10 @@ export function PersonDrawer({
               {canEdit ? <TabsTrigger value="edit">{t("edit")}</TabsTrigger> : null}
               {showSharing ? <TabsTrigger value="sharing">{t("sharing")}</TabsTrigger> : null}
             </TabsList>
-            <ScrollArea className="min-h-0 flex-1">
-              <div className="p-5">
+            {/* A plain scroll container: Radix ScrollArea's viewport is height:100%, which never resolves inside
+                the phone bottom sheet (max-height only), so its content could not scroll there. */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
+              <div className="p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
                 <TabsContent value="overview" className="mt-0 space-y-5">
                   {canEdit ? (
                     <div className="flex flex-wrap gap-2" role="toolbar" aria-label={tcv("personActions", { name: person.name })}>
@@ -238,7 +239,7 @@ export function PersonDrawer({
                   </TabsContent>
                 ) : null}
               </div>
-            </ScrollArea>
+            </div>
           </Tabs>
         )}
       </SheetContent>

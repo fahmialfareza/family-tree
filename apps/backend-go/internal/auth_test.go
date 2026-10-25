@@ -162,14 +162,27 @@ func TestSignupVerifyLoginRefreshLogout(t *testing.T) {
 		t.Fatalf("login: %v", login)
 	}
 
-	// Refresh rotates. Replaying the previous token right away (two tabs) fails without killing the
-	// session; replaying it later revokes the session.
+	// Refresh rotates. Replaying the previous token right away (concurrent requests when a browser reopens)
+	// gets an access token for the same session but no new refresh token, so the browser keeps the rotated
+	// one; replaying it later revokes the session.
 	rotated := dataMap(call(t, "", "POST", "/api/auth/refresh", map[string]any{"refreshToken": str(login, "refreshToken")}))
 	if str(rotated, "refreshToken") == "" || str(rotated, "refreshToken") == str(login, "refreshToken") {
 		t.Fatalf("refresh did not rotate: %v", rotated)
 	}
-	expectStatus(t, "", 401, []routeCase{{"POST", "/api/auth/refresh", map[string]any{"refreshToken": str(login, "refreshToken")}}})
+	concurrent := call(t, "", "POST", "/api/auth/refresh", map[string]any{"refreshToken": str(login, "refreshToken")})
+	if concurrent.Status != 200 || str(dataMap(concurrent), "accessToken") == "" || str(dataMap(concurrent), "refreshToken") != "" {
+		t.Fatalf("concurrent refresh: %d %v", concurrent.Status, concurrent.Body)
+	}
+	expectTokenStatus(t, str(dataMap(concurrent), "accessToken"), 200, "GET", "/api/me")
 	expectTokenStatus(t, str(rotated, "accessToken"), 200, "GET", "/api/me")
+	// The rotated refresh token still works afterwards (the concurrent request did not rotate again).
+	again := dataMap(call(t, "", "POST", "/api/auth/refresh", map[string]any{"refreshToken": str(rotated, "refreshToken")}))
+	if str(again, "refreshToken") == "" {
+		t.Fatalf("rotated token stopped working: %v", again)
+	}
+	rotated = again
+	login = map[string]any{"refreshToken": str(dataMap(call(t, "", "POST", "/api/auth/login", map[string]any{"identifier": "NIA@example.com", "password": strongPassword})), "refreshToken")}
+	rotated = dataMap(call(t, "", "POST", "/api/auth/refresh", map[string]any{"refreshToken": str(login, "refreshToken")}))
 	DB.Exec("UPDATE sessions SET last_used_at = now() - interval '1 minute' WHERE prev_refresh_token_hash = ?", hashInviteToken(str(login, "refreshToken")))
 	expectStatus(t, "", 401, []routeCase{{"POST", "/api/auth/refresh", map[string]any{"refreshToken": str(login, "refreshToken")}}})
 	expectTokenStatus(t, str(rotated, "accessToken"), 401, "GET", "/api/me")

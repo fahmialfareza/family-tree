@@ -209,9 +209,16 @@ func rotateRefreshToken(ctx context.Context, refresh, userAgent, ip string) (*To
 		return nil
 	})
 	if errors.Is(err, errRefreshReused) {
-		// Revoke outside the transaction above, which rolled back. Unknown tokens match nothing here.
-		// A token rotated in the last refreshGrace is most likely a second tab refreshing at the same
-		// time, so that session is spared; the request still fails.
+		// A token rotated in the last refreshGrace is almost always a concurrent request from the same
+		// browser (several requests fire at once when a tab or the browser reopens with an expired access
+		// token). Failing it made the website clear the cookies the winning request had just set, signing
+		// people out. So within the grace period the session gets a fresh access token, without a new
+		// refresh token: the browser keeps the one the first request received.
+		if p, gerr := accessForRecentRotation(ctx, hash); gerr != nil || p != nil {
+			return p, gerr
+		}
+		// Older reuse means a stolen copy: revoke outside the transaction above, which rolled back.
+		// Unknown tokens match nothing here.
 		if rerr := DB.WithContext(ctx).Model(&sessionRow{}).
 			Where("prev_refresh_token_hash = ? AND revoked_at IS NULL AND last_used_at < ?", hash, time.Now().Add(-refreshGrace)).
 			Update("revoked_at", time.Now()).Error; rerr != nil {
@@ -220,6 +227,31 @@ func rotateRefreshToken(ctx context.Context, refresh, userAgent, ip string) (*To
 		return nil, errSessionInvalid
 	}
 	return pair, err
+}
+
+// accessForRecentRotation returns an access-only pair when hash was rotated away within refreshGrace on a
+// live session, or nil when it was not.
+func accessForRecentRotation(ctx context.Context, hash string) (*TokenPair, error) {
+	var row sessionRow
+	err := DB.WithContext(ctx).
+		Where("prev_refresh_token_hash = ? AND revoked_at IS NULL AND last_used_at >= ? AND expires_at > ?",
+			hash, time.Now().Add(-refreshGrace), time.Now()).
+		Take(&row).Error
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	user, err := loadLiveUser(DB.WithContext(ctx), row.UserID)
+	if err != nil {
+		return nil, errSessionInvalid
+	}
+	access, exp, err := signAccessToken(row.UserID, row.ID, accessTokenTTL)
+	if err != nil {
+		return nil, err
+	}
+	return &TokenPair{AccessToken: access, AccessTokenExpiresAt: exp, User: user}, nil
 }
 
 func loadLiveUser(db *gorm.DB, userID string) (*User, error) {
