@@ -12,8 +12,8 @@ const serif = Fraunces({ subsets: ["latin"], variable: "--font-serif", display: 
 
 // Search keywords per language (Bing still reads them; Google ignores them but they cost nothing).
 const KEYWORDS: Record<string, string[]> = {
-  en: ["family tree", "family tree app", "genealogy", "family history", "ancestry", "Indonesian family tree", "Sakdulur"],
-  id: ["silsilah keluarga", "pohon keluarga", "aplikasi silsilah", "trah", "bani", "keluarga besar", "garis keturunan", "Sakdulur"],
+  en: ["family tree", "family tree app", "AI family tree", "genealogy", "family history", "ancestry", "Indonesian family tree", "Sakdulur"],
+  id: ["silsilah keluarga", "pohon keluarga", "aplikasi silsilah", "silsilah keluarga AI", "trah", "bani", "keluarga besar", "garis keturunan", "Sakdulur"],
 };
 
 export async function generateMetadata(): Promise<Metadata> {

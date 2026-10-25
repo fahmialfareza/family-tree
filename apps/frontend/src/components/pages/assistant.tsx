@@ -8,11 +8,13 @@ import { EmptyState } from "@/components/common/page";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage } from "@/lib/api/client";
-import { useAskAssistant, useTree } from "@/lib/api/hooks";
+import { useAskAssistant, useInvalidateTree, useTree } from "@/lib/api/hooks";
 import type { AssistantAnswer, AssistantTurn } from "@/lib/api/types";
+import { applyAssistantAction } from "@/lib/assistant-actions";
 import { cn } from "@/lib/utils";
+import { ActionCards, type ActionState, useActionTitle } from "@/components/assistant/action-cards";
 
-type Message = AssistantTurn & Partial<Pick<AssistantAnswer, "people" | "model">> & { error?: boolean };
+type Message = AssistantTurn & Partial<Pick<AssistantAnswer, "people" | "model">> & { error?: boolean; actions?: ActionState[] };
 
 // Only the last few turns go to the server; enough for follow-ups like "dan ibunya?".
 const HISTORY_TURNS = 10;
@@ -21,7 +23,9 @@ const storageKey = (treeId: string) => `ft-assistant:${treeId}`;
 function loadConversation(treeId: string): Message[] {
   try {
     const raw = sessionStorage.getItem(storageKey(treeId));
-    return raw ? (JSON.parse(raw) as Message[]) : [];
+    const saved = raw ? (JSON.parse(raw) as Message[]) : [];
+    // A reload in the middle of applying leaves no request running: offer the button again.
+    return saved.map((m) => ({ ...m, actions: m.actions?.map((x) => (x.state === "applying" ? { ...x, state: "pending" as const } : x)) }));
   } catch {
     return [];
   }
@@ -66,7 +70,11 @@ function Conversation({ treeId }: { treeId: string }) {
   const t = useTranslations("assistant");
   const locale = useLocale();
   const ask = useAskAssistant(treeId);
+  const invalidate = useInvalidateTree(treeId);
+  const actionTitle = useActionTitle();
+  const ta = useTranslations("assistant.actions");
   const [messages, setMessages] = useState<Message[]>(() => loadConversation(treeId));
+  const [applying, setApplying] = useState(false);
   const [draft, setDraft] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
@@ -86,11 +94,43 @@ function Conversation({ treeId }: { treeId: string }) {
     setMessages(next);
     setDraft("");
     try {
-      const history = next.slice(-HISTORY_TURNS).map(({ role, content }) => ({ role, content }));
+      // The model only sees text, so tell it which proposed changes the user applied.
+      const history = next.slice(-HISTORY_TURNS).map(({ role, content, actions }) => {
+        const applied = (actions ?? []).filter((a) => a.state === "done").map(actionTitle);
+        const text = applied.length ? `${content}\n\n[${ta("appliedNote", { items: applied.join("; ") })}]` : content;
+        return { role, content: text.slice(0, 2000) };
+      });
       const res = await ask.mutateAsync({ messages: history, locale });
-      setMessages([...next, { role: "assistant", content: res.answer, people: res.people, model: res.model }]);
+      const actions: ActionState[] = (res.actions ?? []).map((a) => ({ ...a, state: "pending" }));
+      setMessages([...next, { role: "assistant", content: res.answer, people: res.people, model: res.model, actions }]);
     } catch (err) {
       setMessages([...next, { role: "assistant", content: errorMessage(err, t("failed")), error: true }]);
+    }
+  }
+
+  const patchAction = (msgIndex: number, id: string, patch: Partial<ActionState>) =>
+    setMessages((prev) =>
+      prev.map((m, i) => (i === msgIndex ? { ...m, actions: m.actions?.map((a) => (a.id === id ? { ...a, ...patch } : a)) } : m)),
+    );
+
+  async function applyActions(msgIndex: number, ids: string[]) {
+    const msg = messages[msgIndex];
+    setApplying(true);
+    try {
+      for (const id of ids) {
+        const action = msg.actions?.find((a) => a.id === id);
+        if (!action) continue;
+        patchAction(msgIndex, id, { state: "applying", error: undefined });
+        try {
+          const { personId } = await applyAssistantAction(treeId, action);
+          patchAction(msgIndex, id, { state: "done", resultPersonId: personId });
+        } catch (err) {
+          patchAction(msgIndex, id, { state: "failed", error: errorMessage(err) });
+        }
+      }
+    } finally {
+      await invalidate();
+      setApplying(false);
     }
   }
 
@@ -160,6 +200,16 @@ function Conversation({ treeId }: { treeId: string }) {
                     </Link>
                   ))}
                 </div>
+              ) : null}
+              {m.actions?.length ? (
+                <ActionCards
+                  treeId={treeId}
+                  actions={m.actions}
+                  busy={applying || ask.isPending}
+                  onApply={(id) => void applyActions(i, [id])}
+                  onApplyAll={() => void applyActions(i, m.actions!.filter((a) => a.state === "pending" || a.state === "failed").map((a) => a.id))}
+                  onDismiss={(id) => patchAction(i, id, { state: "dismissed" })}
+                />
               ) : null}
               {m.error ? (
                 <Button variant="outline" size="sm" onClick={retry} disabled={ask.isPending}>

@@ -36,10 +36,43 @@ export interface AssistantTurn {
   content: string;
 }
 
+/** A change the assistant proposes; nothing happens until the user applies it (lib/assistant-actions.ts). */
+export interface AssistantAction {
+  id: string;
+  type: "add_person" | "update_person" | "add_relationship" | "add_family" | "rename_family";
+  personId?: string;
+  personName?: string;
+  /** add_person / add_relationship: the person becomes relativeName's relation. */
+  relativeId?: string;
+  relativeName?: string;
+  relation?: "parent" | "child" | "partner";
+  otherParentId?: string;
+  otherParentName?: string;
+  familyId?: string;
+  familyName?: string;
+  fields?: AssistantPersonFields;
+}
+
+export interface AssistantPersonFields {
+  name?: string;
+  nickname?: string;
+  gender?: Gender;
+  status?: LifeStatus;
+  birthDate?: string;
+  birthDateQualifier?: DateQualifier;
+  birthPlace?: string;
+  deathDate?: string;
+  deathDateQualifier?: DateQualifier;
+  deathPlace?: string;
+  address?: string;
+  notes?: string;
+}
+
 export interface AssistantAnswer {
   answer: string;
   people: { id: string; name: string }[];
   model: string;
+  actions: AssistantAction[];
 }
 
 export interface Me {

@@ -2,7 +2,7 @@
   "meta": {
     "brand": "Sakdulur",
     "title": "Sakdulur — build your family tree together",
-    "description": "Sakdulur is a free, private family tree app. Map parents, partners and children across generations, add photos and stories, ask questions about your family, and invite relatives to build it with you — in English or Bahasa Indonesia."
+    "description": "Sakdulur is a free, private family tree app. Map parents, partners and children across generations, add photos and stories, ask questions or add relatives just by chatting, and invite family to build it with you — in English or Bahasa Indonesia."
   },
   "common": {
     "add": "Add",
@@ -328,7 +328,7 @@
     "deleted": "Tree deleted.",
     "assistant": "AI assistant",
     "assistantToggle": "Let members ask questions",
-    "assistantHelp": "Members can ask things like “Who is Ayu's father and where does he live?”. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini or Groq). Phone numbers and photos are never sent, and conversations are not stored.",
+    "assistantHelp": "Members can ask things like “Who is Ayu's father and where does he live?”, and editors can ask it to add or update people, relationships and families — every change waits for them to press Apply. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini or Groq). Phone numbers and photos are never sent, and conversations are not stored.",
     "assistantUnavailable": "Not available on this server yet: no AI provider is configured."
   },
   "account": {
@@ -429,8 +429,8 @@
     "f3Body": "Every tree is private. Only members can see it, and you can export or delete your data anytime.",
     "f4Title": "Works on every phone",
     "f4Body": "Pinch, zoom and add relatives in a tap, in English or Bahasa Indonesia, light or dark.",
-    "f5Title": "Ask about your family",
-    "f5Body": "“Who is Ayu's father and where does he live?” Ask in plain words and get an answer from your tree. Owners choose whether to turn it on.",
+    "f5Title": "Ask and update by chatting",
+    "f5Body": "“Who is Ayu's father?” or “Add Rani as Ayu's daughter, born 1994.” Ask in plain words or describe a change; nothing is saved until you press Apply. Owners choose whether to turn it on.",
     "f6Title": "One family, many trees",
     "f6Body": "Keep your own tree, your spouse's and your in-laws', and copy a branch between them instead of typing it twice.",
     "howTitle": "How it works",
@@ -453,8 +453,8 @@
     "faq5a": "“Sak dulur” is Javanese for “one family” or “all of us relatives”. The app is made for exactly that: one place where the whole family's tree lives.",
     "faq6q": "Can I use it for a trah or bani reunion?",
     "faq6a": "Yes. Large family groups can share one tree, give each branch's family edit access to their own part, and print or export the whole tree for the reunion.",
-    "faq7q": "How does “ask about your family” work?",
-    "faq7a": "When a tree's owner turns it on, members can ask questions in Indonesian or English. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini or Groq). Phone numbers and photos are never sent, and conversations are not stored.",
+    "faq7q": "How does the AI assistant work?",
+    "faq7a": "When a tree's owner turns it on, members can ask questions in Indonesian or English, and editors can ask it to add or update people, relationships and families. Every change is shown first and only saved when you press Apply; it never deletes anything. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini or Groq). Phone numbers and photos are never sent, and conversations are not stored.",
     "ctaTitle": "Start your family tree today",
     "ctaBody": "It takes a minute to begin — and it becomes something your family keeps.",
     "previewLabel": "Example of a family tree on Sakdulur"
@@ -513,12 +513,12 @@
   "assistant": {
     "nav": "Ask",
     "title": "Ask about the family",
-    "description": "Ask in your own words, in Indonesian or English. Answers come only from this tree.",
-    "placeholder": "e.g. Who is Ayu's father and where does he live?",
+    "description": "Ask about your family, or tell it what to add or change, in Indonesian or English. Answers come only from this tree, and changes wait for your Apply.",
+    "placeholder": "Ask, or say what to add — e.g. “Add Rani as Ayu's daughter, born 1994”",
     "send": "Send",
     "newChat": "New chat",
     "thinking": "Looking through the tree…",
-    "disclaimer": "AI can make mistakes; check important details on the person's page. Your question and the people it looks up are sent to an AI provider and are not stored by us.",
+    "disclaimer": "AI can make mistakes; check important details on the person's page. Changes are only saved when you press Apply. Your question and the people it looks up are sent to an AI provider and are not stored by us.",
     "answeredBy": "Answered by {model}",
     "openPerson": "Open {name}",
     "tryAsking": "Try asking",
@@ -526,7 +526,7 @@
       "Who are my grandparents?",
       "Who in the family lives in Malang?",
       "How is Ayu related to Budi?",
-      "Which family members were born after 2000?"
+      "Add Rani as Ayu's daughter, born 1994"
     ],
     "failed": "Couldn't get an answer. Please try again.",
     "retry": "Try again",
@@ -534,6 +534,47 @@
     "offOwner": "Turn it on in Settings to let members ask questions about the family.",
     "offMember": "Ask a tree owner to turn it on in Settings.",
     "openSettings": "Open settings",
-    "unavailable": "The assistant isn't available on this server yet."
+    "unavailable": "The assistant isn't available on this server yet.",
+    "actions": {
+      "title": "Suggested changes",
+      "note": "Nothing changes until you apply it.",
+      "apply": "Apply",
+      "applyAll": "Apply all",
+      "dismiss": "Dismiss",
+      "applied": "Applied",
+      "dismissed": "Dismissed",
+      "retry": "Try again",
+      "open": "Open",
+      "addPerson": "Add {name}",
+      "addPersonAs": "Add {name} as {relation} of {relative}",
+      "addChildOf2": "Add {name} as child of {relative} and {other}",
+      "updatePerson": "Update {name}",
+      "addRelationship": "Link {name} as {relation} of {relative}",
+      "addFamily": "Create family “{family}” centered on {name}",
+      "renameFamily": "Rename family to “{family}”",
+      "relation": {
+        "parent": "parent",
+        "child": "child",
+        "partner": "partner"
+      },
+      "qualifier": {
+        "exact": "",
+        "about": "about",
+        "before": "before",
+        "after": "after"
+      },
+      "gender": {
+        "male": "Male",
+        "female": "Female",
+        "other": "Other",
+        "unknown": "Unknown"
+      },
+      "status": {
+        "alive": "Living",
+        "deceased": "Deceased"
+      },
+      "cleared": "(cleared)",
+      "appliedNote": "Applied by the user: {items}"
+    }
   }
 }

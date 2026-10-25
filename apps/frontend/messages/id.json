@@ -2,7 +2,7 @@
   "meta": {
     "brand": "Sakdulur",
     "title": "Sakdulur — susun silsilah keluarga bersama",
-    "description": "Sakdulur adalah aplikasi silsilah keluarga yang gratis dan privat. Susun pohon keluarga lintas generasi — orang tua, pasangan, anak — tambahkan foto dan cerita, tanyakan apa pun tentang keluarga, dan ajak kerabat menyusunnya bersama. Cocok untuk trah dan bani."
+    "description": "Sakdulur adalah aplikasi silsilah keluarga yang gratis dan privat. Susun pohon keluarga lintas generasi — orang tua, pasangan, anak — tambahkan foto dan cerita, tanya atau tambahkan kerabat cukup lewat obrolan, dan ajak keluarga menyusunnya bersama. Cocok untuk trah dan bani."
   },
   "common": {
     "add": "Tambah",
@@ -328,7 +328,7 @@
     "deleted": "Pohon dihapus.",
     "assistant": "Asisten AI",
     "assistantToggle": "Izinkan anggota bertanya",
-    "assistantHelp": "Anggota bisa bertanya, misalnya “Bapaknya Ayu namanya siapa dan tinggal di mana?”. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
+    "assistantHelp": "Anggota bisa bertanya, misalnya “Bapaknya Ayu namanya siapa dan tinggal di mana?”, dan editor bisa meminta asisten menambah atau mengubah data orang, hubungan, dan keluarga — setiap perubahan menunggu mereka menekan Terapkan. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
     "assistantUnavailable": "Belum tersedia di server ini: penyedia AI belum dikonfigurasi."
   },
   "account": {
@@ -429,8 +429,8 @@
     "f3Body": "Setiap pohon bersifat privat. Hanya anggota yang dapat melihat, dan data bisa diekspor atau dihapus kapan saja.",
     "f4Title": "Nyaman di ponsel",
     "f4Body": "Cubit, perbesar, dan tambah kerabat dengan satu ketukan — dalam Bahasa Indonesia atau Inggris, mode terang atau gelap.",
-    "f5Title": "Tanya tentang keluarga",
-    "f5Body": "“Bapaknya Ayu namanya siapa dan tinggal di mana?” Tanyakan dengan bahasa sehari-hari dan dapatkan jawabannya dari pohon Anda. Pemilik pohon yang memutuskan untuk mengaktifkannya.",
+    "f5Title": "Tanya dan ubah lewat obrolan",
+    "f5Body": "“Bapaknya Ayu siapa?” atau “Tambahkan Rani anaknya Ayu, lahir 1994.” Bertanya atau minta perubahan dengan bahasa sehari-hari; tidak ada yang tersimpan sebelum Anda menekan Terapkan. Pemilik pohon yang memutuskan untuk mengaktifkannya.",
     "f6Title": "Satu keluarga, banyak pohon",
     "f6Body": "Simpan pohon Anda, pohon pasangan, dan pohon keluarga besan, lalu salin satu cabang di antaranya tanpa mengetik ulang.",
     "howTitle": "Cara kerjanya",
@@ -453,8 +453,8 @@
     "faq5a": "“Sak dulur” dalam bahasa Jawa berarti “satu saudara” atau “kita semua bersaudara”. Aplikasi ini dibuat untuk itu: satu tempat untuk silsilah seluruh keluarga.",
     "faq6q": "Bisakah dipakai untuk trah atau bani?",
     "faq6a": "Bisa. Keluarga besar dapat berbagi satu pohon, memberi tiap cabang keluarga akses untuk mengubah bagiannya sendiri, lalu mencetak atau mengekspor seluruh pohon untuk acara kumpul keluarga.",
-    "faq7q": "Bagaimana fitur “tanya tentang keluarga” bekerja?",
-    "faq7a": "Jika pemilik pohon mengaktifkannya, anggota bisa bertanya dalam bahasa Indonesia atau Inggris. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
+    "faq7q": "Bagaimana asisten AI bekerja?",
+    "faq7a": "Jika pemilik pohon mengaktifkannya, anggota bisa bertanya dalam bahasa Indonesia atau Inggris, dan editor bisa meminta asisten menambah atau mengubah data orang, hubungan, dan keluarga. Setiap perubahan ditampilkan dulu dan baru tersimpan setelah Anda menekan Terapkan; asisten tidak pernah menghapus apa pun. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
     "ctaTitle": "Mulai silsilah keluarga Anda hari ini",
     "ctaBody": "Hanya butuh semenit untuk memulai — dan menjadi warisan yang dijaga keluarga Anda.",
     "previewLabel": "Contoh silsilah keluarga di Sakdulur"
@@ -513,12 +513,12 @@
   "assistant": {
     "nav": "Tanya",
     "title": "Tanya tentang keluarga",
-    "description": "Tanyakan dengan bahasa sehari-hari, dalam bahasa Indonesia atau Inggris. Jawaban hanya diambil dari pohon ini.",
-    "placeholder": "misal: Bapaknya Ayu namanya siapa dan tinggal di mana?",
+    "description": "Tanyakan tentang keluarga, atau minta tambahkan dan ubah data, dalam bahasa Indonesia atau Inggris. Jawaban hanya dari pohon ini, dan perubahan menunggu Anda menekan Terapkan.",
+    "placeholder": "Tanya, atau minta tambahkan — misal “Tambahkan Rani anaknya Ayu, lahir 1994”",
     "send": "Kirim",
     "newChat": "Obrolan baru",
     "thinking": "Mencari di pohon keluarga…",
-    "disclaimer": "AI bisa keliru; periksa detail penting di halaman orangnya. Pertanyaan Anda dan data orang yang dicari dikirim ke penyedia AI dan tidak kami simpan.",
+    "disclaimer": "AI bisa keliru; periksa detail penting di halaman orangnya. Perubahan baru tersimpan setelah Anda menekan Terapkan. Pertanyaan Anda dan data orang yang dicari dikirim ke penyedia AI dan tidak kami simpan.",
     "answeredBy": "Dijawab oleh {model}",
     "openPerson": "Buka {name}",
     "tryAsking": "Coba tanyakan",
@@ -526,7 +526,7 @@
       "Siapa saja kakek dan nenek saya?",
       "Siapa saja keluarga yang tinggal di Malang?",
       "Apa hubungan Ayu dengan Budi?",
-      "Siapa saja anggota keluarga yang lahir setelah tahun 2000?"
+      "Tambahkan Rani sebagai anak Ayu, lahir 1994"
     ],
     "failed": "Belum bisa menjawab. Silakan coba lagi.",
     "retry": "Coba lagi",
@@ -534,6 +534,47 @@
     "offOwner": "Aktifkan di Pengaturan agar anggota bisa bertanya tentang keluarga.",
     "offMember": "Minta pemilik pohon untuk mengaktifkannya di Pengaturan.",
     "openSettings": "Buka pengaturan",
-    "unavailable": "Asisten belum tersedia di server ini."
+    "unavailable": "Asisten belum tersedia di server ini.",
+    "actions": {
+      "title": "Usulan perubahan",
+      "note": "Tidak ada yang berubah sampai Anda menerapkannya.",
+      "apply": "Terapkan",
+      "applyAll": "Terapkan semua",
+      "dismiss": "Abaikan",
+      "applied": "Diterapkan",
+      "dismissed": "Diabaikan",
+      "retry": "Coba lagi",
+      "open": "Buka",
+      "addPerson": "Tambah {name}",
+      "addPersonAs": "Tambah {name} sebagai {relation} dari {relative}",
+      "addChildOf2": "Tambah {name} sebagai anak dari {relative} dan {other}",
+      "updatePerson": "Ubah data {name}",
+      "addRelationship": "Hubungkan {name} sebagai {relation} dari {relative}",
+      "addFamily": "Buat keluarga “{family}” dengan pusat {name}",
+      "renameFamily": "Ganti nama keluarga menjadi “{family}”",
+      "relation": {
+        "parent": "orang tua",
+        "child": "anak",
+        "partner": "pasangan"
+      },
+      "qualifier": {
+        "exact": "",
+        "about": "sekitar",
+        "before": "sebelum",
+        "after": "setelah"
+      },
+      "gender": {
+        "male": "Laki-laki",
+        "female": "Perempuan",
+        "other": "Lainnya",
+        "unknown": "Tidak diketahui"
+      },
+      "status": {
+        "alive": "Masih hidup",
+        "deceased": "Sudah meninggal"
+      },
+      "cleared": "(dikosongkan)",
+      "appliedNote": "Sudah diterapkan oleh pengguna: {items}"
+    }
   }
 }
