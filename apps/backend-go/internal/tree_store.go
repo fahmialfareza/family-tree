@@ -97,11 +97,14 @@ func listTreesForUser(ctx context.Context, userID string) ([]Tree, error) {
 	out := []Tree{}
 	err := DB.WithContext(ctx).
 		Table("trees").
-		Select("trees.id, trees.name, trees.branch_scoped, trees.created_at, tree_members.role").
+		Select("trees.id, trees.name, trees.branch_scoped, trees.assistant_enabled, trees.created_at, tree_members.role").
 		Joins("JOIN tree_members ON tree_members.tree_id = trees.id AND tree_members.user_id = ?", userID).
 		Where("trees.deleted_at IS NULL").
 		Order("tree_members.created_at, trees.id").
 		Scan(&out).Error
+	for i := range out {
+		out[i].AssistantAvailable = assistantConfigured()
+	}
 	return out, err
 }
 
@@ -112,7 +115,8 @@ func getTreeRepo(ctx context.Context, treeID string) (*Tree, error) {
 	if err := DB.WithContext(ctx).Where("id = ?", treeID).First(&row).Error; err != nil {
 		return nil, err
 	}
-	return &Tree{ID: row.ID, Name: row.Name, BranchScoped: row.BranchScoped, CreatedAt: row.CreatedAt}, nil
+	return &Tree{ID: row.ID, Name: row.Name, BranchScoped: row.BranchScoped, AssistantEnabled: row.AssistantEnabled,
+		AssistantAvailable: assistantConfigured(), CreatedAt: row.CreatedAt}, nil
 }
 
 // createTreeRepo creates a tree owned by userID. New trees share everything with editors by default.
@@ -134,7 +138,7 @@ func createTreeRepo(ctx context.Context, name, userID string) (*Tree, error) {
 	return &Tree{ID: row.ID, Name: row.Name, BranchScoped: row.BranchScoped, Role: TreeRoleOwner, CreatedAt: row.CreatedAt}, nil
 }
 
-func updateTreeRepo(ctx context.Context, treeID string, name *string, branchScoped *bool) (*Tree, error) {
+func updateTreeRepo(ctx context.Context, treeID string, name *string, branchScoped, assistantEnabled *bool) (*Tree, error) {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	updates := map[string]any{}
@@ -143,6 +147,9 @@ func updateTreeRepo(ctx context.Context, treeID string, name *string, branchScop
 	}
 	if branchScoped != nil {
 		updates["branch_scoped"] = *branchScoped
+	}
+	if assistantEnabled != nil {
+		updates["assistant_enabled"] = *assistantEnabled
 	}
 	if len(updates) > 0 {
 		updates["updated_at"] = time.Now()

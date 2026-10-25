@@ -35,11 +35,14 @@ const (
 const DefaultFamilyTreeName = "Alfareza Family"
 
 type Tree struct {
-	ID           string    `json:"_id"`
-	Name         string    `json:"name"`
-	BranchScoped bool      `json:"branchScoped"`
-	Role         TreeRole  `json:"role,omitempty"` // the caller's role in this tree
-	CreatedAt    time.Time `json:"createdAt"`
+	ID           string `json:"_id"`
+	Name         string `json:"name"`
+	BranchScoped bool   `json:"branchScoped"`
+	// AssistantEnabled is the owner's switch; AssistantAvailable also needs an AI provider on the server.
+	AssistantEnabled   bool      `json:"assistantEnabled"`
+	AssistantAvailable bool      `json:"assistantAvailable"`
+	Role               TreeRole  `json:"role,omitempty"` // the caller's role in this tree
+	CreatedAt          time.Time `json:"createdAt"`
 }
 
 type TreeMember struct {

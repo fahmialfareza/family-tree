@@ -42,9 +42,10 @@ func (userRow) TableName() string { return "users" }
 
 type treeRow struct {
 	RowBase
-	Name         string
-	CreatedBy    *string `gorm:"type:text"`
-	BranchScoped bool
+	Name             string
+	CreatedBy        *string `gorm:"type:text"`
+	BranchScoped     bool
+	AssistantEnabled bool
 }
 
 func (treeRow) TableName() string { return "trees" }

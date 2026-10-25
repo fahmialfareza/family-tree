@@ -71,8 +71,9 @@ func getTree(c *gin.Context) {
 func updateTree(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/updateTree").End()
 	var body struct {
-		Name         *string `json:"name"`
-		BranchScoped *bool   `json:"branchScoped"`
+		Name             *string `json:"name"`
+		BranchScoped     *bool   `json:"branchScoped"`
+		AssistantEnabled *bool   `json:"assistantEnabled"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		responseError(c, "Invalid request body", 400)
@@ -87,7 +88,7 @@ func updateTree(c *gin.Context) {
 		body.Name = &name
 	}
 	access := currentAccess(c)
-	tree, err := updateTreeRepo(c, access.TreeID, body.Name, body.BranchScoped)
+	tree, err := updateTreeRepo(c, access.TreeID, body.Name, body.BranchScoped, body.AssistantEnabled)
 	if err != nil {
 		abortServerError(c, err)
 		return

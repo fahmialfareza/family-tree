@@ -44,6 +44,7 @@ func RegisterRoutes(rg *gin.Engine) {
 		trees.GET("/:treeId/people/:id/relationships", member, getRelationships)
 		trees.POST("/:treeId/people/:id/relationships", editor, crudRelationships)
 		trees.GET("/:treeId/people/:id/tree", member, getFamilyTree)
+		trees.POST("/:treeId/assistant", member, askTreeAssistant)
 
 		trees.GET("/:treeId/graph", member, getTreeGraph)
 		trees.GET("/:treeId/export", owner, exportTree)
