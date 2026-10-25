@@ -89,10 +89,11 @@ func addUser(ctx context.Context, u *User, treeID string, role TreeRole) (*User,
 	return row.toModel(), nil
 }
 
-func updateUserName(ctx context.Context, userID, name string) error {
+// updateUserProfile applies already-validated profile fields (name, locale).
+func updateUserProfile(ctx context.Context, userID string, updates map[string]any) error {
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
-	return DB.WithContext(ctx).Model(&userRow{}).Where("id = ?", userID).Update("name", name).Error
+	return DB.WithContext(ctx).Model(&userRow{}).Where("id = ?", userID).Updates(updates).Error
 }
 
 // applyVerifiedEmail sets a verified email; called only after the address proved itself via a link.

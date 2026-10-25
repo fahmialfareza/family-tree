@@ -18,25 +18,43 @@ func getMe(c *gin.Context) {
 	responseSuccess(c, gin.H{"user": user, "trees": trees}, 200)
 }
 
+// updateMe changes the profile: {name?, locale?} (locale "en" or "id").
 func updateMe(c *gin.Context) {
 	var body struct {
-		Name string `json:"name"`
+		Name   *string `json:"name"`
+		Locale *string `json:"locale"`
 	}
-	if err := c.ShouldBindJSON(&body); err != nil {
+	if err := c.ShouldBindJSON(&body); err != nil || (body.Name == nil && body.Locale == nil) {
 		responseError(c, "Invalid request body", 400)
 		return
 	}
-	name, ok := validName(body.Name)
-	if !ok {
-		responseError(c, "Name is required (max 120 characters)", 400)
-		return
+	updates := map[string]any{}
+	if body.Name != nil {
+		name, ok := validName(*body.Name)
+		if !ok {
+			responseError(c, "Name is required (max 120 characters)", 400)
+			return
+		}
+		updates["name"] = name
+	}
+	if body.Locale != nil {
+		if *body.Locale != "en" && *body.Locale != "id" {
+			responseError(c, `Locale must be "en" or "id"`, 400)
+			return
+		}
+		updates["locale"] = *body.Locale
 	}
 	user := currentUser(c)
-	if err := updateUserName(c, user.ID, name); err != nil {
+	if err := updateUserProfile(c, user.ID, updates); err != nil {
 		abortServerError(c, err)
 		return
 	}
-	user.Name = name
+	if v, ok := updates["name"].(string); ok {
+		user.Name = v
+	}
+	if body.Locale != nil {
+		user.Locale = *body.Locale
+	}
 	responseSuccess(c, user, 200)
 }
 

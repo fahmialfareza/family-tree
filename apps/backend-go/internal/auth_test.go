@@ -491,3 +491,34 @@ func TestBFFClientIP(t *testing.T) {
 		t.Error("invalid client IP accepted")
 	}
 }
+
+func TestAccountLocale(t *testing.T) {
+	resetDB(t)
+	token := tokenFor(t, alice)
+	if res := callWith(t, token, "PATCH", "/api/me", map[string]any{"locale": "fr"}); res.Status != 400 {
+		t.Errorf("unsupported locale: %d", res.Status)
+	}
+	if res := callWith(t, token, "PATCH", "/api/me", map[string]any{}); res.Status != 400 {
+		t.Errorf("empty update: %d", res.Status)
+	}
+	res := callWith(t, token, "PATCH", "/api/me", map[string]any{"locale": "id"})
+	if res.Status != 200 || res.data().(map[string]any)["locale"] != "id" || res.data().(map[string]any)["name"] != alice {
+		t.Fatalf("set locale: %d %v", res.Status, res.Body)
+	}
+	me := callWith(t, token, "GET", "/api/me", nil).data().(map[string]any)["user"].(map[string]any)
+	if me["locale"] != "id" {
+		t.Errorf("locale not saved: %v", me)
+	}
+	// Changing the name keeps the language.
+	res = callWith(t, token, "PATCH", "/api/me", map[string]any{"name": "Alice A."})
+	if res.Status != 200 || res.data().(map[string]any)["locale"] != "id" {
+		t.Errorf("rename: %d %v", res.Status, res.Body)
+	}
+	// Sign-in responses carry it, so the website can apply it on a new device.
+	hash, _ := hashPassword(strongPassword)
+	DB.Exec("UPDATE users SET email = 'alice@example.com', email_verified_at = now(), password = ? WHERE id = ?", hash, alice)
+	login := call(t, "", "POST", "/api/auth/login", map[string]any{"identifier": "alice@example.com", "password": strongPassword})
+	if login.Status != 200 || login.data().(map[string]any)["user"].(map[string]any)["locale"] != "id" {
+		t.Errorf("login user locale: %d %v", login.Status, login.Body)
+	}
+}

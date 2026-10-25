@@ -56,6 +56,11 @@ The others are read at runtime: set them in the Worker (`wrangler secret put` fo
 | `IOS_APP_IDS` | runtime (mobile) | `<TeamID>.com.fahmialfareza.familytree`; serves `/.well-known/apple-app-site-association` |
 | `ANDROID_APP_PACKAGE`, `ANDROID_CERT_SHA256` | runtime (mobile) | Package name and signing fingerprints; serves `/.well-known/assetlinks.json` |
 
+**Language:** the account's language (applied at sign-in), then the `NEXT_LOCALE` cookie, then the visitor's
+country (`cf-ipcountry`, added by Cloudflare's IP Geolocation setting, on by default: Indonesia → Indonesian,
+elsewhere → English), then the browser's Accept-Language. Changing the language while signed in saves it on the
+account (migration 00008).
+
 Local development needs none of these: both apps fall back to `http://localhost:3000` / `http://localhost:4000`.
 
 ## Going live checklist

@@ -2,6 +2,7 @@ import "server-only";
 
 import type { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { isLocale, LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from "@/i18n/config";
 import type { TokenPair } from "@/lib/api/types";
 import { clientIpHeaders, serverEnv } from "./env";
 
@@ -25,6 +26,10 @@ export function setSessionCookies(jar: CookieJar, pair: TokenPair) {
   jar.set(ACCESS_COOKIE, pair.accessToken, { ...baseCookie(), maxAge: Math.max(expiresIn - 30, 30) });
   if (pair.refreshToken) {
     jar.set(REFRESH_COOKIE, pair.refreshToken, { ...baseCookie(), maxAge: REFRESH_MAX_AGE });
+  }
+  // The account's language wins over whatever this browser had (see i18n/request.ts).
+  if (isLocale(pair.user?.locale)) {
+    jar.set(LOCALE_COOKIE, pair.user.locale, { path: "/", maxAge: LOCALE_COOKIE_MAX_AGE, sameSite: "lax" });
   }
 }
 

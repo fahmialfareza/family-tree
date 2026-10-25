@@ -14,6 +14,9 @@ export interface User {
   emailVerified: boolean;
   hasPassword: boolean;
   googleLinked: boolean;
+  appleLinked?: boolean;
+  /** Interface language chosen on the account; absent until the user picks one. */
+  locale?: "en" | "id";
   role: "admin" | "user";
 }
 

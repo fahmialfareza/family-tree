@@ -18,8 +18,9 @@ type User struct {
 	HasPassword   bool     `json:"hasPassword"`
 	GoogleLinked  bool     `json:"googleLinked"`
 	AppleLinked   bool     `json:"appleLinked"`
-	Pending       bool     `json:"-"` // signed up but email not verified yet: cannot sign in
-	Password      string   `json:"-"` // bcrypt hash; never serialized
+	Locale        string   `json:"locale,omitempty"` // "en" or "id"; empty until the user picks a language
+	Pending       bool     `json:"-"`                // signed up but email not verified yet: cannot sign in
+	Password      string   `json:"-"`                // bcrypt hash; never serialized
 	Role          UserRole `json:"role"`
 }
 

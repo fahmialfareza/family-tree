@@ -36,6 +36,7 @@ type userRow struct {
 	EmailVerifiedAt *time.Time
 	GoogleSub       *string
 	AppleSub        *string
+	Locale          *string
 }
 
 func (userRow) TableName() string { return "users" }
@@ -156,6 +157,7 @@ func (u *userRow) toModel() *User {
 		HasPassword:   u.Password != "",
 		GoogleLinked:  u.GoogleSub != nil,
 		AppleLinked:   u.AppleSub != nil,
+		Locale:        deref(u.Locale),
 	}
 	if u.Username != nil {
 		out.Username = *u.Username
