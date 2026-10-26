@@ -1,9 +1,8 @@
 "use client";
 
-import { DatabaseBackup, Download, FileSpreadsheet, GitFork, Loader2, Trash2 } from "lucide-react";
-import Link from "next/link";
+import { Download, Loader2, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -14,24 +13,18 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { errorMessage } from "@/lib/api/client";
 import { useDeleteTree, useTree, useUpdateTree } from "@/lib/api/hooks";
-import { nativeDownloadHandler } from "@/lib/native";
+import { ExportDialog } from "@/components/export/export-dialog";
 
-// Excel first: everyone can open it. GEDCOM moves the tree to other genealogy apps; JSON is the full backup.
-const EXPORTS = [
-  { format: "xlsx", ext: "xlsx", icon: FileSpreadsheet },
-  { format: "gedcom", ext: "ged", icon: GitFork },
-  { format: "json", ext: "json", icon: DatabaseBackup },
-] as const;
 
 export function TreeSettings({ treeId }: { treeId: string }) {
   const t = useTranslations("settings");
-  const locale = useLocale();
   const tc = useTranslations("common");
   const router = useRouter();
   const { data: tree } = useTree(treeId);
   const update = useUpdateTree(treeId);
   const del = useDeleteTree(treeId);
   const [nameDraft, setName] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   if (!tree) return null;
   const name = nameDraft ?? tree.name;
@@ -111,34 +104,16 @@ export function TreeSettings({ treeId }: { treeId: string }) {
       </Section>
 
       <Section title={t("export")} description={t("exportHelp")}>
-        <ul className="space-y-3">
-          {EXPORTS.map((x) => {
-            const url = `/api/proxy/api/trees/${treeId}/export?format=${x.format}&lang=${locale}`;
-            const file = `${tree.name}.${x.ext}`;
-            return (
-              <li key={x.format} className="flex flex-col gap-2 rounded-xl border p-3 sm:flex-row sm:items-center sm:justify-between">
-                <span className="flex items-start gap-3">
-                  <x.icon className="mt-0.5 size-5 shrink-0 text-primary" aria-hidden />
-                  <span>
-                    <span className="block text-sm font-medium">{t(`exportFormats.${x.format}.title`)}</span>
-                    <span className="block text-sm text-muted-foreground">{t(`exportFormats.${x.format}.body`)}</span>
-                  </span>
-                </span>
-                <Button asChild variant={x.format === "xlsx" ? "default" : "outline"} size="sm" className="shrink-0 self-start sm:self-auto">
-                  <a href={url} download={file} onClick={nativeDownloadHandler(url, file, (err) => toast.error(errorMessage(err)))}>
-                    <Download className="size-4" aria-hidden /> {t(`exportFormats.${x.format}.action`)}
-                  </a>
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-        <p className="mt-3 text-sm text-muted-foreground">
-          {t("exportPicture")}{" "}
-          <Link href={`/app/t/${treeId}`} className="font-medium text-primary underline-offset-4 hover:underline">
-            {t("exportPictureLink")}
-          </Link>
-        </p>
+        <Button variant="outline" onClick={() => setExportOpen(true)}>
+          <Download className="size-4" aria-hidden /> {t("exportOpen")}
+        </Button>
+        <ExportDialog
+          key={exportOpen ? "open" : "closed"}
+          treeId={treeId}
+          open={exportOpen}
+          onOpenChange={setExportOpen}
+          canExportFiles
+        />
       </Section>
 
       <Section title={t("danger")} className="border-destructive/40">

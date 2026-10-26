@@ -122,6 +122,36 @@ line two', now())`, treeA)
 		t.Errorf("gedcom families: %d\n%s", strings.Count(ged, " FAM\n"), ged)
 	}
 
+	// Branches, like the copy dialog. The kid's ancestors are the kid and both parents; A Two's
+	// descendants are A Two, her partner A One and the kid.
+	count := func(q string) int {
+		t.Helper()
+		r := call(t, alice, "GET", base+"?format=json&"+q, nil)
+		if r.Status != 200 {
+			t.Fatalf("%s: %d %v", q, r.Status, r.Body)
+		}
+		return len(dataMap(r)["people"].([]any))
+	}
+	if n := count("scope=ancestors&person=p-kid"); n != 3 {
+		t.Errorf("ancestors of kid: %d", n)
+	}
+	if n := count("scope=descendants&person=" + pA2); n != 3 {
+		t.Errorf("descendants of A Two: %d", n)
+	}
+	if n := count("scope=nearby&steps=1&person=p-kid"); n != 3 {
+		t.Errorf("close family of kid: %d", n)
+	}
+	rec = rawGet(t, alice, base+"?format=gedcom&scope=ancestors&person=p-kid")
+	if !strings.Contains(rec.Header().Get("Content-Disposition"), `filename="A - Kid Sato.ged"`) {
+		t.Errorf("branch file name: %v", rec.Header().Get("Content-Disposition"))
+	}
+	expectStatus(t, alice, 400, []routeCase{
+		{"GET", base + "?scope=sideways&person=p-kid", nil},
+		{"GET", base + "?scope=ancestors", nil},
+		{"GET", base + "?scope=nearby&steps=9&person=p-kid", nil},
+	})
+	expectStatus(t, alice, 404, []routeCase{{"GET", base + "?scope=ancestors&person=" + pB1, nil}}) // other tree
+
 	res := call(t, alice, "GET", base, nil) // default stays JSON
 	if res.Status != 200 || len(dataMap(res)["people"].([]any)) != 3 {
 		t.Errorf("json: %d", res.Status)

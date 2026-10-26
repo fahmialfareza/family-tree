@@ -143,7 +143,7 @@
     "depthAll": "Everyone",
     "depthN": "{n} steps",
     "fit": "Fit to screen",
-    "exportPng": "Download as image",
+    "exportPng": "Export",
     "exportFailed": "The image couldn't be created.",
     "print": "Print",
     "editPerson": "Edit",
@@ -338,7 +338,7 @@
     "branchScoped": "Share by branch",
     "branchScopedHelp": "When on, editors and viewers only see and edit the people shared with them (Sharing tab on each person). When off, every member sees the whole tree.",
     "export": "Export",
-    "exportHelp": "Download everyone in this tree: as a spreadsheet to read, print or share, or as a file other family-tree apps can import.",
+    "exportHelp": "Download the whole tree or one branch: as a picture, a spreadsheet, or a file other family-tree apps can import.",
     "danger": "Delete tree",
     "deleteHelp": "Deleting removes the tree for every member.",
     "deleteTree": "Delete this tree",
@@ -349,25 +349,7 @@
     "assistantToggle": "Let members ask questions",
     "assistantHelp": "Members can ask things like “Who is Ayu's father and where does he live?”, and editors can ask it to add or update people, relationships and families — every change waits for them to press Apply. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini or Groq). Phone numbers and photos are never sent, and conversations are not stored.",
     "assistantUnavailable": "Not available on this server yet: no AI provider is configured.",
-    "exportFormats": {
-      "xlsx": {
-        "title": "Spreadsheet (Excel)",
-        "body": "One row per person with dates, places, parents, partners and children. Opens in Excel, Google Sheets or WPS Office.",
-        "action": "Download Excel"
-      },
-      "gedcom": {
-        "title": "GEDCOM (other family-tree apps)",
-        "body": "The standard file for moving a tree to MyHeritage, Ancestry, FamilySearch, Gramps and others.",
-        "action": "Download GEDCOM"
-      },
-      "json": {
-        "title": "Full backup (JSON)",
-        "body": "Everything Sakdulur stores for this tree, for developers or a complete backup.",
-        "action": "Download backup"
-      }
-    },
-    "exportPicture": "Want a picture or PDF of the tree?",
-    "exportPictureLink": "Open the tree and use “Download as image” or “Print”."
+    "exportOpen": "Export…"
   },
   "account": {
     "title": "Account",
@@ -709,5 +691,51 @@
       "month": "Per month · total {total}"
     },
     "weekOf": "Week of {date}"
+  },
+  "export": {
+    "title": "Export",
+    "description": "Save the tree, or one branch of it, as a picture or a file.",
+    "what": "What to export",
+    "whole": "Whole tree",
+    "wholeBody": "Everyone in “{tree}”",
+    "branch": "A branch",
+    "branchBody": "Start from one person",
+    "startFrom": "Start from",
+    "search": "Search a name…",
+    "noPeople": "No one matches that name.",
+    "howFar": "Which part of {name}'s family?",
+    "thisPerson": "this person",
+    "count": "{count, plural, one {# person} other {# people}}",
+    "format": "Format",
+    "formats": {
+      "png": {
+        "title": "Image (PNG)",
+        "body": "A picture of the tree to share in chats or print."
+      },
+      "xlsx": {
+        "title": "Spreadsheet (Excel)",
+        "body": "One row per person. Opens in Excel, Google Sheets or WPS."
+      },
+      "gedcom": {
+        "title": "GEDCOM",
+        "body": "For MyHeritage, Ancestry, FamilySearch, Gramps and other family-tree apps."
+      },
+      "json": {
+        "title": "Full backup (JSON)",
+        "body": "Everything Sakdulur stores, for developers or a complete backup."
+      }
+    },
+    "ownersOnly": "Spreadsheet and other files can be downloaded by tree owners.",
+    "download": "Download",
+    "makingImage": "Preparing the image…",
+    "downloaded": "Download started.",
+    "failed": "Couldn't export. Please try again.",
+    "branchBanner": {
+      "descendants": "Showing {name} and their descendants",
+      "ancestors": "Showing {name} and their ancestors",
+      "both": "Showing {name}'s ancestors and descendants",
+      "nearby": "Showing {name}'s close family"
+    },
+    "showEveryone": "Show everyone"
   }
 }

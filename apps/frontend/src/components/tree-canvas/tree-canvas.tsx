@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/common/page";
 import { PersonDrawer } from "@/components/person/person-drawer";
@@ -70,7 +70,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { errorMessage } from "@/lib/api/client";
+import { ExportDialog } from "@/components/export/export-dialog";
 import { useDeletePerson, useGraph } from "@/lib/api/hooks";
+import { isBranchScope, selectBranch } from "@/lib/branch";
 import { saveFile, useNativePlatform } from "@/lib/native";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
@@ -90,6 +92,7 @@ const MIN_READABLE_ZOOM = 0.5;
 
 function Canvas({ treeId }: { treeId: string }) {
   const t = useTranslations("canvas");
+  const te = useTranslations("export");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -100,6 +103,22 @@ function Canvas({ treeId }: { treeId: string }) {
   const { fitView, setCenter, getNodes } = useReactFlow();
 
   const focusId = params.get("focus") ?? undefined;
+  // ?branch=descendants|ancestors|both|nearby&from=<id>[&steps=n]: show only that branch (export dialog).
+  const branchParam = params.get("branch");
+  const branchFrom = params.get("from");
+  const branchSteps = Number(params.get("steps") ?? "2") || 2;
+  const branch = useMemo(
+    () =>
+      isBranchScope(branchParam) && branchFrom && graph?.people.some((p) => p._id === branchFrom)
+        ? { scope: branchParam, from: branchFrom, steps: branchSteps }
+        : null,
+    [branchParam, branchFrom, branchSteps, graph],
+  );
+  const branchName = branch ? graph?.people.find((p) => p._id === branch.from)?.name : undefined;
+  // ?export=png: draw the picture once the tree is laid out, then drop the flag.
+  const exportRequested = params.get("export") === "png";
+  const [exportOpen, setExportOpen] = useState(false);
+  const autoExported = useRef(false);
   const openId = params.get("person");
   const tab = params.get("tab") ?? "overview";
   const [depth, setDepth] = useState<(typeof DEPTHS)[number] | null>(null);
@@ -119,9 +138,9 @@ function Canvas({ treeId }: { treeId: string }) {
   const deleting = graph?.people.find((p) => p._id === deleteId);
 
   const role = graph?.tree.role ?? "viewer";
-  const effectiveDepth =
-    depth ?? (graph && graph.people.length > FULL_TREE_LIMIT ? "4" : "all");
-  const layoutKey = `${dataUpdatedAt}|${focusId ?? ""}|${effectiveDepth}`;
+  const effectiveDepth = exportRequested && !branch ? "all" : (depth ?? (graph && graph.people.length > FULL_TREE_LIMIT ? "4" : "all"));
+  const branchKey = branch ? `${branch.scope}:${branch.from}:${branch.steps}` : "";
+  const layoutKey = `${dataUpdatedAt}|${focusId ?? ""}|${effectiveDepth}|${branchKey}`;
   const { nodes, edges } = layout;
   const layingOut = !!graph && layout.key !== layoutKey;
 
@@ -140,18 +159,20 @@ function Canvas({ treeId }: { treeId: string }) {
   useEffect(() => {
     if (!graph) return;
     let cancelled = false;
-    const visible = neighbourhood(
-      graph,
-      focusId,
-      effectiveDepth === "all" ? Infinity : Number(effectiveDepth),
-    );
+    const visible = branch
+      ? selectBranch(graph, branch.from, branch.scope, branch.steps)
+      : neighbourhood(
+          graph,
+          focusId,
+          effectiveDepth === "all" ? Infinity : Number(effectiveDepth),
+        );
     layoutGraph(graph, visible, { focusId }).then((res) => {
       if (!cancelled) setLayout({ key: layoutKey, ...res });
     });
     return () => {
       cancelled = true;
     };
-  }, [graph, focusId, effectiveDepth, layoutKey]);
+  }, [graph, focusId, effectiveDepth, layoutKey, branch]);
 
   // Center on the focus person after each layout, otherwise fit everything.
   useEffect(() => {
@@ -215,20 +236,37 @@ function Canvas({ treeId }: { treeId: string }) {
         setQuickAdd({ anchorId, kind }),
       canEditTree: role !== "viewer",
     }),
-    [setQuery, role, graph, treeId, copySources.length],
+    [setQuery, role, graph, treeId, copySources.length, setDeleteId, setCopyOut, setQuickAdd],
   );
 
-  async function exportPng() {
+  const exportPng = useCallback(async () => {
     const el = document.querySelector<HTMLElement>(".react-flow__viewport");
     const all = getNodes();
     if (!el || !all.length) return;
     setExporting(true);
+    const bg = getComputedStyle(document.body).backgroundColor;
+    // html-to-image cannot draw the lines' translucent oklch() stroke, so the picture had cards but no
+    // lines. While drawing, give each line the same color blended onto the background as plain rgb().
+    const restyled: [SVGElement, string | null][] = [];
+    const swatch = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
+    const solid = (color: string) => {
+      if (!swatch) return color;
+      swatch.fillStyle = bg;
+      swatch.fillRect(0, 0, 1, 1);
+      swatch.fillStyle = color;
+      swatch.fillRect(0, 0, 1, 1);
+      const [r, g, b] = swatch.getImageData(0, 0, 1, 1).data;
+      return `rgb(${r}, ${g}, ${b})`;
+    };
     try {
+      el.querySelectorAll<SVGElement>(".react-flow__edge-path").forEach((path) => {
+        restyled.push([path, path.getAttribute("style")]);
+        path.style.stroke = solid(getComputedStyle(path).stroke);
+      });
       const bounds = getNodesBounds(all);
       const width = Math.min(Math.ceil(bounds.width + 160), 8000);
       const height = Math.min(Math.ceil(bounds.height + 160), 8000);
       const vp = getViewportForBounds(bounds, width, height, 0.1, 2, 0.05);
-      const bg = getComputedStyle(document.body).backgroundColor;
       const url = await toPng(el, {
         backgroundColor: bg,
         width,
@@ -245,13 +283,33 @@ function Canvas({ treeId }: { treeId: string }) {
             node.classList.contains("react-flow__node-toolbar")
           ),
       });
-      await saveFile(`${(graph?.tree.name ?? "sakdulur").replace(/[^\w-]+/g, "-")}.png`, url);
+      const base = `${graph?.tree.name ?? "sakdulur"}${branchName ? ` - ${branchName}` : ""}`;
+      await saveFile(`${base.replace(/[\\/:*?"<>|]+/g, "").trim()}.png`, url);
     } catch {
       toast.error(t("exportFailed"));
     } finally {
+      for (const [path, style] of restyled) {
+        if (style === null) path.removeAttribute("style");
+        else path.setAttribute("style", style);
+      }
       setExporting(false);
     }
-  }
+  }, [getNodes, graph, t, branchName]);
+
+  // Export dialog asked for a picture: wait until this layout is drawn, then save it once.
+  useEffect(() => {
+    if (!exportRequested) {
+      autoExported.current = false;
+      return;
+    }
+    if (layingOut || !nodes.length || autoExported.current) return;
+    autoExported.current = true;
+    const id = window.setTimeout(async () => {
+      await exportPng();
+      setQuery({ export: null });
+    }, 700);
+    return () => window.clearTimeout(id);
+  }, [exportRequested, layingOut, nodes, exportPng, setQuery]);
 
   if (error) {
     return (
@@ -278,6 +336,23 @@ function Canvas({ treeId }: { treeId: string }) {
   return (
     <CanvasActions.Provider value={actions}>
       <div className="relative flex min-h-[calc(100dvh-7.5rem)] flex-1 md:min-h-dvh">
+        {branch && branchName ? (
+          <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center px-3 md:bottom-6">
+            <div className="flex max-w-full items-center gap-3 rounded-full border bg-card/95 py-1.5 pl-4 pr-1.5 text-sm shadow-[var(--shadow-soft)] backdrop-blur">
+              <span className="min-w-0 truncate">{te(`branchBanner.${branch.scope}`, { name: branchName })}</span>
+              <Button size="sm" variant="secondary" className="shrink-0 rounded-full" onClick={() => setQuery({ branch: null, from: null, steps: null })}>
+                {te("showEveryone")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+        {exporting ? (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-background/60 backdrop-blur-sm" role="status">
+            <span className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm shadow-[var(--shadow-soft)]">
+              <Loader2 className="size-4 animate-spin" aria-hidden /> {te("makingImage")}
+            </span>
+          </div>
+        ) : null}
         {graph.people.length === 0 ? (
           <div className="flex flex-1 items-center justify-center p-6">
             <EmptyState
@@ -407,7 +482,7 @@ function Canvas({ treeId }: { treeId: string }) {
                   variant="ghost"
                   size="icon"
                   className="size-8"
-                  onClick={exportPng}
+                  onClick={() => setExportOpen(true)}
                   disabled={exporting}
                   aria-label={t("exportPng")}
                 >
@@ -503,6 +578,14 @@ function Canvas({ treeId }: { treeId: string }) {
         onCopied={(rootId) =>
           setQuery({ focus: rootId, person: null, tab: null })
         }
+      />
+      <ExportDialog
+        key={exportOpen ? "open" : "closed"}
+        treeId={treeId}
+        open={exportOpen}
+        onOpenChange={setExportOpen}
+        canExportFiles={role === "owner"}
+        startPersonId={openId ?? focusId ?? undefined}
       />
       <CopyDialog
         key={copyOut?.personId ?? "none"}

@@ -143,7 +143,7 @@
     "depthAll": "Semua",
     "depthN": "{n} langkah",
     "fit": "Sesuaikan layar",
-    "exportPng": "Unduh sebagai gambar",
+    "exportPng": "Ekspor",
     "exportFailed": "Gambar tidak dapat dibuat.",
     "print": "Cetak",
     "editPerson": "Ubah",
@@ -338,7 +338,7 @@
     "branchScoped": "Berbagi per cabang",
     "branchScopedHelp": "Jika aktif, editor dan pembaca hanya melihat dan mengubah orang yang dibagikan kepada mereka (tab Berbagi pada tiap orang). Jika nonaktif, semua anggota melihat seluruh pohon.",
     "export": "Ekspor",
-    "exportHelp": "Unduh semua orang di pohon ini: sebagai tabel untuk dibaca, dicetak, atau dibagikan, atau sebagai file yang bisa diimpor aplikasi silsilah lain.",
+    "exportHelp": "Unduh seluruh pohon atau satu cabang: sebagai gambar, tabel, atau file yang bisa diimpor aplikasi silsilah lain.",
     "danger": "Hapus pohon",
     "deleteHelp": "Menghapus pohon akan menghilangkannya bagi semua anggota.",
     "deleteTree": "Hapus pohon ini",
@@ -349,25 +349,7 @@
     "assistantToggle": "Izinkan anggota bertanya",
     "assistantHelp": "Anggota bisa bertanya, misalnya “Bapaknya Ayu namanya siapa dan tinggal di mana?”, dan editor bisa meminta asisten menambah atau mengubah data orang, hubungan, dan keluarga — setiap perubahan menunggu mereka menekan Terapkan. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
     "assistantUnavailable": "Belum tersedia di server ini: penyedia AI belum dikonfigurasi.",
-    "exportFormats": {
-      "xlsx": {
-        "title": "Tabel (Excel)",
-        "body": "Satu baris per orang lengkap dengan tanggal, tempat, orang tua, pasangan, dan anak. Bisa dibuka di Excel, Google Sheets, atau WPS Office.",
-        "action": "Unduh Excel"
-      },
-      "gedcom": {
-        "title": "GEDCOM (aplikasi silsilah lain)",
-        "body": "Format standar untuk memindahkan pohon ke MyHeritage, Ancestry, FamilySearch, Gramps, dan lainnya.",
-        "action": "Unduh GEDCOM"
-      },
-      "json": {
-        "title": "Cadangan lengkap (JSON)",
-        "body": "Semua data yang disimpan Sakdulur untuk pohon ini, untuk pengembang atau cadangan lengkap.",
-        "action": "Unduh cadangan"
-      }
-    },
-    "exportPicture": "Ingin gambar atau PDF pohonnya?",
-    "exportPictureLink": "Buka pohon lalu pakai “Unduh sebagai gambar” atau “Cetak”."
+    "exportOpen": "Ekspor…"
   },
   "account": {
     "title": "Akun",
@@ -709,5 +691,51 @@
       "month": "Per bulan · total {total}"
     },
     "weekOf": "Minggu {date}"
+  },
+  "export": {
+    "title": "Ekspor",
+    "description": "Simpan pohon, atau satu cabangnya, sebagai gambar atau file.",
+    "what": "Yang diekspor",
+    "whole": "Seluruh pohon",
+    "wholeBody": "Semua orang di “{tree}”",
+    "branch": "Satu cabang",
+    "branchBody": "Mulai dari satu orang",
+    "startFrom": "Mulai dari",
+    "search": "Cari nama…",
+    "noPeople": "Tidak ada yang cocok dengan nama itu.",
+    "howFar": "Bagian keluarga {name} yang mana?",
+    "thisPerson": "orang ini",
+    "count": "{count} orang",
+    "format": "Format",
+    "formats": {
+      "png": {
+        "title": "Gambar (PNG)",
+        "body": "Gambar pohon untuk dibagikan di obrolan atau dicetak."
+      },
+      "xlsx": {
+        "title": "Tabel (Excel)",
+        "body": "Satu baris per orang. Bisa dibuka di Excel, Google Sheets, atau WPS."
+      },
+      "gedcom": {
+        "title": "GEDCOM",
+        "body": "Untuk MyHeritage, Ancestry, FamilySearch, Gramps, dan aplikasi silsilah lain."
+      },
+      "json": {
+        "title": "Cadangan lengkap (JSON)",
+        "body": "Semua data yang disimpan Sakdulur, untuk pengembang atau cadangan lengkap."
+      }
+    },
+    "ownersOnly": "Tabel dan file lainnya bisa diunduh oleh pemilik pohon.",
+    "download": "Unduh",
+    "makingImage": "Menyiapkan gambar…",
+    "downloaded": "Unduhan dimulai.",
+    "failed": "Gagal mengekspor. Silakan coba lagi.",
+    "branchBanner": {
+      "descendants": "Menampilkan {name} dan keturunannya",
+      "ancestors": "Menampilkan {name} dan leluhurnya",
+      "both": "Menampilkan leluhur dan keturunan {name}",
+      "nearby": "Menampilkan keluarga dekat {name}"
+    },
+    "showEveryone": "Tampilkan semua"
   }
 }

@@ -1,10 +1,12 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -17,6 +19,7 @@ import (
 
 type exportData struct {
 	tree     *Tree
+	subject  string // name of the person a branch export starts from; empty for the whole tree
 	people   []*Person
 	byID     map[string]*Person
 	parents  map[string][]string
@@ -25,7 +28,38 @@ type exportData struct {
 	families []*Family
 }
 
-func loadExport(c *gin.Context, treeID string) (*exportData, error) {
+// exportScope is ?scope=all (default) or a branch like the copy dialog: descendants, ancestors, both, or
+// nearby with steps, starting from ?person=.
+type exportScope struct {
+	scope  importScope // "" = whole tree
+	person string
+	steps  int
+}
+
+func parseExportScope(c *gin.Context) (exportScope, string) {
+	s := c.DefaultQuery("scope", "all")
+	if s == "all" {
+		return exportScope{}, ""
+	}
+	out := exportScope{scope: importScope(s), person: c.Query("person")}
+	switch out.scope {
+	case scopeDescendants, scopeAncestors, scopeBoth:
+	case scopeNearby:
+		n, err := strconv.Atoi(c.Query("steps"))
+		if err != nil || n < 1 || n > 6 {
+			return out, "steps must be between 1 and 6"
+		}
+		out.steps = n
+	default:
+		return out, "scope must be all, descendants, ancestors, both or nearby"
+	}
+	if out.person == "" {
+		return out, "choose the person the branch starts from"
+	}
+	return out, ""
+}
+
+func loadExport(c *gin.Context, treeID string, sc exportScope) (*exportData, error) {
 	tree, err := getTreeRepo(c, treeID)
 	if err != nil {
 		return nil, err
@@ -42,18 +76,48 @@ func loadExport(c *gin.Context, treeID string) (*exportData, error) {
 	if err != nil {
 		return nil, err
 	}
-	d := &exportData{tree: tree, people: people, byID: map[string]*Person{}, parents: map[string][]string{},
-		children: map[string][]string{}, partners: map[string][]string{}, families: families}
+	// keep: everyone in the branch (nil = whole tree). Relationships to people outside it are dropped.
+	var keep map[string]bool
+	d := &exportData{tree: tree, byID: map[string]*Person{}, parents: map[string][]string{},
+		children: map[string][]string{}, partners: map[string][]string{}}
+	if sc.scope != "" {
+		found := false
+		for _, p := range people {
+			if p.ID == sc.person {
+				found, d.subject = true, p.Name
+			}
+		}
+		if !found {
+			return nil, errExportPerson
+		}
+		keep = map[string]bool{}
+		for _, id := range selectBranch(g, sc.person, sc.scope, sc.steps, maxGraphPeople) {
+			keep[id] = true
+		}
+	}
+	in := func(id string) bool { return keep == nil || keep[id] }
 	for _, p := range people {
-		d.byID[p.ID] = p
+		if in(p.ID) {
+			d.people = append(d.people, p)
+			d.byID[p.ID] = p
+		}
 	}
 	for _, pc := range g.ParentChild {
-		d.parents[pc.Child] = append(d.parents[pc.Child], pc.Parent)
-		d.children[pc.Parent] = append(d.children[pc.Parent], pc.Child)
+		if in(pc.Parent) && in(pc.Child) {
+			d.parents[pc.Child] = append(d.parents[pc.Child], pc.Parent)
+			d.children[pc.Parent] = append(d.children[pc.Parent], pc.Child)
+		}
 	}
 	for _, u := range g.Unions {
-		d.partners[u.Partners[0]] = append(d.partners[u.Partners[0]], u.Partners[1])
-		d.partners[u.Partners[1]] = append(d.partners[u.Partners[1]], u.Partners[0])
+		if in(u.Partners[0]) && in(u.Partners[1]) {
+			d.partners[u.Partners[0]] = append(d.partners[u.Partners[0]], u.Partners[1])
+			d.partners[u.Partners[1]] = append(d.partners[u.Partners[1]], u.Partners[0])
+		}
+	}
+	for _, f := range families {
+		if f.Person == nil || in(f.Person.ID) {
+			d.families = append(d.families, f)
+		}
 	}
 	return d, nil
 }
@@ -372,7 +436,10 @@ func attachment(c *gin.Context, base, ext string) {
 	c.Header("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.%s"; filename*=UTF-8''%s.%s`, ascii, ext, url.PathEscape(name), ext))
 }
 
-// exportTree serves GET /api/trees/:treeId/export?format=xlsx|gedcom|json&lang=en|id (default json).
+var errExportPerson = errors.New("person not in tree")
+
+// exportTree serves GET /api/trees/:treeId/export?format=xlsx|gedcom|json&lang=en|id (default json), with
+// an optional branch: &scope=descendants|ancestors|both|nearby&person=<id>[&steps=1-6].
 func exportTree(c *gin.Context) {
 	access := currentAccess(c)
 	format := c.DefaultQuery("format", "json")
@@ -380,10 +447,23 @@ func exportTree(c *gin.Context) {
 		responseError(c, "format must be xlsx, gedcom or json", 400)
 		return
 	}
-	d, err := loadExport(c, access.TreeID)
+	sc, msg := parseExportScope(c)
+	if msg != "" {
+		responseError(c, msg, 400)
+		return
+	}
+	d, err := loadExport(c, access.TreeID, sc)
+	if errors.Is(err, errExportPerson) {
+		responseError(c, "Person not found in this tree", 404)
+		return
+	}
 	if err != nil {
 		abortServerError(c, err)
 		return
+	}
+	base := d.tree.Name
+	if d.subject != "" {
+		base += " - " + d.subject
 	}
 	switch format {
 	case "xlsx":
@@ -392,10 +472,10 @@ func exportTree(c *gin.Context) {
 			abortServerError(c, err)
 			return
 		}
-		attachment(c, d.tree.Name, "xlsx")
+		attachment(c, base, "xlsx")
 		c.Data(200, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file)
 	case "gedcom":
-		attachment(c, d.tree.Name, "ged")
+		attachment(c, base, "ged")
 		c.Data(200, "text/vnd.familysearch.gedcom; charset=utf-8", []byte(d.gedcom()))
 	default:
 		members, err := listMembersRepo(c, access.TreeID)
@@ -403,7 +483,7 @@ func exportTree(c *gin.Context) {
 			abortServerError(c, err)
 			return
 		}
-		attachment(c, d.tree.Name, "json")
+		attachment(c, base, "json")
 		responseSuccess(c, gin.H{"exportedAt": time.Now(), "tree": d.tree, "people": d.people, "families": d.families, "members": members}, 200)
 	}
 }

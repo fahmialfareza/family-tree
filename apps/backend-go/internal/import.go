@@ -67,8 +67,8 @@ type importResult struct {
 	Selected int                   `json:"selected"`
 }
 
-// selectBranch walks the source graph from root according to scope.
-func selectBranch(g *treeGraph, root string, scope importScope, steps int) []string {
+// selectBranch walks the graph from root according to scope, stopping after about limit people.
+func selectBranch(g *treeGraph, root string, scope importScope, steps, limit int) []string {
 	parents, children, partners := map[string][]string{}, map[string][]string{}, map[string][]string{}
 	for _, pc := range g.ParentChild {
 		parents[pc.Child] = append(parents[pc.Child], pc.Parent)
@@ -92,7 +92,7 @@ func selectBranch(g *treeGraph, root string, scope importScope, steps int) []str
 
 	down := func() {
 		line := []string{root}
-		for len(line) > 0 && len(order) <= maxImportPeople {
+		for len(line) > 0 && len(order) <= limit {
 			id := line[0]
 			line = line[1:]
 			for _, p := range partners[id] {
@@ -107,7 +107,7 @@ func selectBranch(g *treeGraph, root string, scope importScope, steps int) []str
 	}
 	up := func() {
 		line := []string{root}
-		for len(line) > 0 && len(order) <= maxImportPeople {
+		for len(line) > 0 && len(order) <= limit {
 			id := line[0]
 			line = line[1:]
 			for _, p := range parents[id] {
@@ -128,7 +128,7 @@ func selectBranch(g *treeGraph, root string, scope importScope, steps int) []str
 		down()
 	default: // nearby
 		frontier := []string{root}
-		for d := 0; d < steps && len(frontier) > 0 && len(order) <= maxImportPeople; d++ {
+		for d := 0; d < steps && len(frontier) > 0 && len(order) <= limit; d++ {
 			var next []string
 			for _, id := range frontier {
 				for _, group := range [][]string{parents[id], children[id], partners[id]} {
@@ -231,7 +231,7 @@ func runImport(ctx context.Context, source, dest *treeAccess, body importRequest
 		return nil, errImportRootHidden
 	}
 
-	selected := selectBranch(g, body.PersonID, body.Scope, body.Steps)
+	selected := selectBranch(g, body.PersonID, body.Scope, body.Steps, maxImportPeople)
 	if len(selected) > maxImportPeople {
 		return nil, errImportTooLarge
 	}
