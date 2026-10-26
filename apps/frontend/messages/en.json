@@ -92,7 +92,12 @@
     "createAccount": "Create an account to join",
     "signIn": "I already have an account",
     "emailHint": "Use the email address the invitation was sent to.",
-    "invalid": "This invitation link is incomplete."
+    "invalid": "This invitation link is incomplete.",
+    "bodyFrom": "{name} invited you to join “{tree}” on Sakdulur as {role}.",
+    "bodyTree": "You're invited to join “{tree}” on Sakdulur as {role}.",
+    "expires": "This invitation expires {date}.",
+    "gone": "This invitation is no longer valid. Ask the person who invited you for a new one.",
+    "linkHint": "Any account works: sign in or create one, then join."
   },
   "shell": {
     "brand": "Sakdulur",
@@ -284,7 +289,7 @@
   "members": {
     "title": "Members",
     "description": "People who can open this tree.",
-    "inviteTitle": "Invite family",
+    "inviteTitle": "Invite by email",
     "inviteBody": "We'll email an invitation. It works once, for 7 days, and only for that email address.",
     "email": "Email address",
     "role": "Role",
@@ -307,7 +312,21 @@
     "removed": "Member removed.",
     "leave": "Leave tree",
     "leaveTitle": "Leave this tree?",
-    "leaveBody": "You will lose access until someone invites you again."
+    "leaveBody": "You will lose access until someone invites you again.",
+    "linkTitle": "Invite with a link",
+    "linkBody": "Share one link in your family group chat. Anyone who opens it before it expires can join, as many people as you like.",
+    "linkRole": "Joins as",
+    "linkExpiry": "Expires after",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "createLink": "Create link",
+    "linkCreated": "Invite link created.",
+    "linkOnce": "Copy or share it now: for safety the full link is only shown once. You can always make a new one.",
+    "activeLinks": "Active invite links",
+    "linkUses": "{count, plural, =0 {not used yet} one {used once} other {used # times}}",
+    "linkBy": "by {name}",
+    "revokeLink": "Turn off this link",
+    "linkRevoked": "Link turned off. Nobody else can join with it.",
+    "linkRolesHelp": "Links can add editors or viewers. To make someone an owner, change their role after they join."
   },
   "settings": {
     "title": "Tree settings",
@@ -319,8 +338,7 @@
     "branchScoped": "Share by branch",
     "branchScopedHelp": "When on, editors and viewers only see and edit the people shared with them (Sharing tab on each person). When off, every member sees the whole tree.",
     "export": "Export",
-    "exportHelp": "Download every person, relationship and family in this tree as JSON.",
-    "downloadJson": "Download JSON",
+    "exportHelp": "Download everyone in this tree: as a spreadsheet to read, print or share, or as a file other family-tree apps can import.",
     "danger": "Delete tree",
     "deleteHelp": "Deleting removes the tree for every member.",
     "deleteTree": "Delete this tree",
@@ -330,7 +348,26 @@
     "assistant": "AI assistant",
     "assistantToggle": "Let members ask questions",
     "assistantHelp": "Members can ask things like “Who is Ayu's father and where does he live?”, and editors can ask it to add or update people, relationships and families — every change waits for them to press Apply. To answer, the names, dates, places, addresses and notes of the people involved are sent to an AI provider (Google Gemini or Groq). Phone numbers and photos are never sent, and conversations are not stored.",
-    "assistantUnavailable": "Not available on this server yet: no AI provider is configured."
+    "assistantUnavailable": "Not available on this server yet: no AI provider is configured.",
+    "exportFormats": {
+      "xlsx": {
+        "title": "Spreadsheet (Excel)",
+        "body": "One row per person with dates, places, parents, partners and children. Opens in Excel, Google Sheets or WPS Office.",
+        "action": "Download Excel"
+      },
+      "gedcom": {
+        "title": "GEDCOM (other family-tree apps)",
+        "body": "The standard file for moving a tree to MyHeritage, Ancestry, FamilySearch, Gramps and others.",
+        "action": "Download GEDCOM"
+      },
+      "json": {
+        "title": "Full backup (JSON)",
+        "body": "Everything Sakdulur stores for this tree, for developers or a complete backup.",
+        "action": "Download backup"
+      }
+    },
+    "exportPicture": "Want a picture or PDF of the tree?",
+    "exportPictureLink": "Open the tree and use “Download as image” or “Print”."
   },
   "account": {
     "title": "Account",

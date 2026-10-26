@@ -16,6 +16,7 @@ import type {
   Session,
   Tree,
   TreeInvite,
+  TreeInviteLink,
   TreeMember,
   TreeRole,
   User,
@@ -33,6 +34,7 @@ export const keys = {
   families: (treeId: string) => ["tree", treeId, "families"] as const,
   members: (treeId: string) => ["tree", treeId, "members"] as const,
   invites: (treeId: string) => ["tree", treeId, "invites"] as const,
+  inviteLinks: (treeId: string) => ["tree", treeId, "invite-links"] as const,
 };
 
 const t = (treeId: string) => `/api/trees/${encodeURIComponent(treeId)}`;
@@ -233,6 +235,27 @@ export function useRevokeInvite(treeId: string) {
   return useMutation({
     mutationFn: (inviteId: string) => api.delete(`${t(treeId)}/invites/${encodeURIComponent(inviteId)}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: keys.invites(treeId) }),
+  });
+}
+
+export function useInviteLinks(treeId: string, enabled: boolean) {
+  return useQuery({ queryKey: keys.inviteLinks(treeId), queryFn: () => api.get<TreeInviteLink[]>(`${t(treeId)}/invite-links`), enabled });
+}
+
+export function useCreateInviteLink(treeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { role: "editor" | "viewer"; days: number }) =>
+      api.post<{ link: TreeInviteLink; token: string }>(`${t(treeId)}/invite-links`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.inviteLinks(treeId) }),
+  });
+}
+
+export function useRevokeInviteLink(treeId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (linkId: string) => api.delete(`${t(treeId)}/invite-links/${encodeURIComponent(linkId)}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: keys.inviteLinks(treeId) }),
   });
 }
 

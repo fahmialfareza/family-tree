@@ -247,6 +247,10 @@ func acceptInvite(c *gin.Context) {
 		return
 	}
 	tree, err := acceptInviteRepo(c, body.Token, user, email)
+	if errors.Is(err, errInviteInvalid) {
+		// Not a live email invite: maybe an invite link (no email binding, many uses).
+		tree, err = acceptInviteLinkRepo(c, body.Token, user)
+	}
 	switch {
 	case errors.Is(err, errInviteInvalid):
 		responseError(c, "This invite is invalid, expired or already used", 410)

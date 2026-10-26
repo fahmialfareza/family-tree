@@ -19,6 +19,7 @@ import { useCreateInvite, useInvites, useMe, useMembers, useRemoveMember, useRev
 import type { TreeRole } from "@/lib/api/types";
 import { initials } from "@/lib/format";
 import { shareLink, useNativePlatform } from "@/lib/native";
+import { InviteLinks } from "./invite-links";
 
 const ROLES: TreeRole[] = ["owner", "editor", "viewer"];
 
@@ -57,6 +58,8 @@ export function Members({ treeId }: { treeId: string }) {
   return (
     <PageContainer>
       <PageHeader title={t("title")} description={t("description")} />
+
+      {isOwner ? <InviteLinks treeId={treeId} /> : null}
 
       {isOwner ? (
         <Section title={t("inviteTitle")} description={t("inviteBody")}>

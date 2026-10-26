@@ -34,6 +34,9 @@ func RegisterRoutes(rg *gin.Engine) {
 		trees.GET("/:treeId/invites", owner, listInvites)
 		trees.POST("/:treeId/invites", RateLimitMiddleware("invites", 10, time.Minute, true), owner, createInvite)
 		trees.DELETE("/:treeId/invites/:inviteId", owner, revokeInvite)
+		trees.GET("/:treeId/invite-links", owner, listInviteLinks)
+		trees.POST("/:treeId/invite-links", RateLimitMiddleware("invites", 10, time.Minute, true), owner, createInviteLink)
+		trees.DELETE("/:treeId/invite-links/:linkId", owner, revokeInviteLink)
 
 		trees.GET("/:treeId/people", member, getAllPeople)
 		trees.POST("/:treeId/people", editor, createPerson)
@@ -57,6 +60,7 @@ func RegisterRoutes(rg *gin.Engine) {
 		trees.DELETE("/:treeId/families/:id", editor, deleteFamily)
 	}
 	api.POST("/invites/accept", signedIn, acceptInvite)
+	api.GET("/invites/preview", RateLimitMiddleware("invite-preview", 30, time.Minute, true), previewInvite)
 
 	// Legacy routes used by the current frontend. They resolve the tree from the addressed person/family
 	// (or the caller's first tree for lists and creates) and run the same handlers and checks.

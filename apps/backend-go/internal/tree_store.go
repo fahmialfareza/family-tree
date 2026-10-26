@@ -282,8 +282,13 @@ func removeMemberRepo(ctx context.Context, treeID, userID string) error {
 
 // revokeInvitesBy revokes the pending invites a user sent in a tree, used when they stop being an owner.
 func revokeInvitesBy(tx *gorm.DB, treeID, userID string) error {
-	return tx.Model(&treeInviteRow{}).
+	if err := tx.Model(&treeInviteRow{}).
 		Where("tree_id = ? AND invited_by = ? AND accepted_at IS NULL AND revoked_at IS NULL", treeID, userID).
+		Update("revoked_at", time.Now()).Error; err != nil {
+		return err
+	}
+	return tx.Model(&treeInviteLinkRow{}).
+		Where("tree_id = ? AND invited_by = ? AND revoked_at IS NULL", treeID, userID).
 		Update("revoked_at", time.Now()).Error
 }
 

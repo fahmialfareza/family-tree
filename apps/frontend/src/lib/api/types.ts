@@ -169,6 +169,25 @@ export interface TreeInvite {
   createdAt: string;
 }
 
+export interface TreeInviteLink {
+  _id: string;
+  treeId: string;
+  role: "editor" | "viewer";
+  uses: number;
+  expiresAt: string;
+  createdAt: string;
+  createdBy?: string;
+}
+
+/** GET /api/invites/preview?token= */
+export interface InvitePreview {
+  kind: "email" | "link";
+  treeName: string;
+  invitedBy?: string;
+  role: TreeRole;
+  expiresAt: string;
+}
+
 export interface Session {
   _id: string;
   userAgent: string;

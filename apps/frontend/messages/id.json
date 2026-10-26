@@ -92,7 +92,12 @@
     "createAccount": "Buat akun untuk bergabung",
     "signIn": "Saya sudah punya akun",
     "emailHint": "Gunakan email yang menerima undangan ini.",
-    "invalid": "Tautan undangan ini tidak lengkap."
+    "invalid": "Tautan undangan ini tidak lengkap.",
+    "bodyFrom": "{name} mengundang Anda bergabung ke “{tree}” di Sakdulur sebagai {role}.",
+    "bodyTree": "Anda diundang bergabung ke “{tree}” di Sakdulur sebagai {role}.",
+    "expires": "Undangan ini berlaku sampai {date}.",
+    "gone": "Undangan ini sudah tidak berlaku. Minta undangan baru kepada orang yang mengundang Anda.",
+    "linkHint": "Akun apa pun bisa: masuk atau buat akun, lalu bergabung."
   },
   "shell": {
     "brand": "Sakdulur",
@@ -284,7 +289,7 @@
   "members": {
     "title": "Anggota",
     "description": "Orang yang dapat membuka pohon ini.",
-    "inviteTitle": "Undang keluarga",
+    "inviteTitle": "Undang lewat email",
     "inviteBody": "Kami akan mengirim undangan lewat email. Undangan hanya bisa dipakai sekali, berlaku 7 hari, dan hanya untuk email tersebut.",
     "email": "Alamat email",
     "role": "Peran",
@@ -307,7 +312,21 @@
     "removed": "Anggota dikeluarkan.",
     "leave": "Keluar dari pohon",
     "leaveTitle": "Keluar dari pohon ini?",
-    "leaveBody": "Anda tidak dapat membukanya lagi sampai diundang kembali."
+    "leaveBody": "Anda tidak dapat membukanya lagi sampai diundang kembali.",
+    "linkTitle": "Undang lewat tautan",
+    "linkBody": "Bagikan satu tautan di grup keluarga. Siapa pun yang membukanya sebelum kedaluwarsa bisa bergabung, berapa pun jumlahnya.",
+    "linkRole": "Bergabung sebagai",
+    "linkExpiry": "Kedaluwarsa setelah",
+    "days": "{count} hari",
+    "createLink": "Buat tautan",
+    "linkCreated": "Tautan undangan dibuat.",
+    "linkOnce": "Salin atau bagikan sekarang: demi keamanan, tautan lengkap hanya ditampilkan sekali. Anda selalu bisa membuat yang baru.",
+    "activeLinks": "Tautan undangan aktif",
+    "linkUses": "{count, plural, =0 {belum dipakai} other {dipakai # kali}}",
+    "linkBy": "oleh {name}",
+    "revokeLink": "Matikan tautan ini",
+    "linkRevoked": "Tautan dimatikan. Tidak ada lagi yang bisa bergabung dengannya.",
+    "linkRolesHelp": "Tautan bisa menambah editor atau pembaca. Untuk menjadikan seseorang pemilik, ubah perannya setelah ia bergabung."
   },
   "settings": {
     "title": "Pengaturan pohon",
@@ -319,8 +338,7 @@
     "branchScoped": "Berbagi per cabang",
     "branchScopedHelp": "Jika aktif, editor dan pembaca hanya melihat dan mengubah orang yang dibagikan kepada mereka (tab Berbagi pada tiap orang). Jika nonaktif, semua anggota melihat seluruh pohon.",
     "export": "Ekspor",
-    "exportHelp": "Unduh semua orang, hubungan, dan keluarga di pohon ini sebagai JSON.",
-    "downloadJson": "Unduh JSON",
+    "exportHelp": "Unduh semua orang di pohon ini: sebagai tabel untuk dibaca, dicetak, atau dibagikan, atau sebagai file yang bisa diimpor aplikasi silsilah lain.",
     "danger": "Hapus pohon",
     "deleteHelp": "Menghapus pohon akan menghilangkannya bagi semua anggota.",
     "deleteTree": "Hapus pohon ini",
@@ -330,7 +348,26 @@
     "assistant": "Asisten AI",
     "assistantToggle": "Izinkan anggota bertanya",
     "assistantHelp": "Anggota bisa bertanya, misalnya “Bapaknya Ayu namanya siapa dan tinggal di mana?”, dan editor bisa meminta asisten menambah atau mengubah data orang, hubungan, dan keluarga — setiap perubahan menunggu mereka menekan Terapkan. Untuk menjawab, nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke penyedia AI (Google Gemini atau Groq). Nomor telepon dan foto tidak pernah dikirim, dan percakapan tidak disimpan.",
-    "assistantUnavailable": "Belum tersedia di server ini: penyedia AI belum dikonfigurasi."
+    "assistantUnavailable": "Belum tersedia di server ini: penyedia AI belum dikonfigurasi.",
+    "exportFormats": {
+      "xlsx": {
+        "title": "Tabel (Excel)",
+        "body": "Satu baris per orang lengkap dengan tanggal, tempat, orang tua, pasangan, dan anak. Bisa dibuka di Excel, Google Sheets, atau WPS Office.",
+        "action": "Unduh Excel"
+      },
+      "gedcom": {
+        "title": "GEDCOM (aplikasi silsilah lain)",
+        "body": "Format standar untuk memindahkan pohon ke MyHeritage, Ancestry, FamilySearch, Gramps, dan lainnya.",
+        "action": "Unduh GEDCOM"
+      },
+      "json": {
+        "title": "Cadangan lengkap (JSON)",
+        "body": "Semua data yang disimpan Sakdulur untuk pohon ini, untuk pengembang atau cadangan lengkap.",
+        "action": "Unduh cadangan"
+      }
+    },
+    "exportPicture": "Ingin gambar atau PDF pohonnya?",
+    "exportPictureLink": "Buka pohon lalu pakai “Unduh sebagai gambar” atau “Cetak”."
   },
   "account": {
     "title": "Akun",
