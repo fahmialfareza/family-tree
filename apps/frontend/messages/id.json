@@ -586,18 +586,13 @@
     "openApp": "Buka aplikasi",
     "loadFailed": "Ringkasan tidak dapat dimuat.",
     "users": "Pengguna",
-    "usersHint": "{new} baru dalam 30 hari",
-    "activeUsers": "Pengguna aktif (7 hari)",
-    "activeHint": "{day} hari ini · {month} dalam 30 hari",
+    "activeUsers": "Pengguna aktif",
     "trees": "Pohon",
-    "treesHint": "{new} baru dalam 30 hari",
     "people": "Orang",
-    "peopleHint": "{new} ditambahkan dalam 30 hari",
     "assistantTrees": "Pohon dengan asisten AI",
     "assistantHint": "dari {total} pohon",
-    "signupsTitle": "Pendaftaran baru per hari",
-    "peopleTitle": "Orang ditambahkan per hari",
-    "last30": "30 hari terakhir · total {total}",
+    "signupsTitle": "Pendaftaran baru",
+    "peopleTitle": "Orang ditambahkan",
     "showTable": "Tampilkan sebagai tabel",
     "date": "Tanggal",
     "count": "Jumlah",
@@ -647,6 +642,35 @@
     "statusOff": "Mati",
     "configured": "Terkonfigurasi",
     "notConfigured": "Belum dikonfigurasi",
-    "none": "Tidak ada"
+    "none": "Tidak ada",
+    "period": "Periode",
+    "periods": {
+      "7d": "7 hari",
+      "1m": "1 bulan",
+      "3m": "3 bulan",
+      "6m": "6 bulan",
+      "1y": "1 tahun",
+      "all": "Semua"
+    },
+    "bucketBadge": {
+      "day": "Harian",
+      "week": "Mingguan",
+      "month": "Bulanan"
+    },
+    "range": "{start} – {end} · Asia/Jakarta",
+    "inPeriod": "{count} dalam periode",
+    "vsPrior": "{delta} dibanding sebelumnya",
+    "newVsPrior": "baru dibanding sebelumnya",
+    "activeShare": "{pct} dari semua pengguna dalam periode",
+    "fixedWindows": "Jendela tetap",
+    "activeToday": "{count} aktif hari ini",
+    "active7": "{count} aktif dalam 7 hari",
+    "active30": "{count} aktif dalam 30 hari",
+    "chartSub": {
+      "day": "Per hari · total {total}",
+      "week": "Per minggu · total {total}",
+      "month": "Per bulan · total {total}"
+    },
+    "weekOf": "Minggu {date}"
   }
 }

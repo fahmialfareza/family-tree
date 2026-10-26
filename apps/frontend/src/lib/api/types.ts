@@ -211,12 +211,22 @@ export interface DayCount {
   count: number;
 }
 
-/** GET /api/admin/overview (platform admins only). */
+export type AdminPeriod = "7d" | "1m" | "3m" | "6m" | "1y" | "all";
+
+/** Created in the period, and in the same-length period before it (absent for all time). */
+export interface PeriodCount {
+  count: number;
+  prior?: number;
+}
+
+/** GET /api/admin/overview?period= (platform admins only). */
 export interface AdminOverview {
   generatedAt: string;
-  users: { total: number; verified: number; pending: number; google: number; apple: number; new7d: number; new30d: number; prev30d: number; active1d: number; active7d: number; active30d: number };
-  trees: { total: number; assistantEnabled: number; branchScoped: number; new30d: number };
-  content: { people: number; families: number; relationships: number; photos: number; peopleNew30d: number };
+  period: { key: AdminPeriod; start: string; end: string; bucket: "day" | "week" | "month" };
+  users: { total: number; verified: number; pending: number; google: number; apple: number; active1d: number; active7d: number; active30d: number };
+  trees: { total: number; assistantEnabled: number; branchScoped: number };
+  content: { people: number; families: number; relationships: number; photos: number };
+  inPeriod: { users: PeriodCount; activeUsers: number; trees: PeriodCount; people: PeriodCount };
   signups: DayCount[];
   peopleAdded: DayCount[];
   recentUsers: { id: string; name: string; email?: string; username?: string; emailVerified: boolean; signIn: "google" | "apple" | "password"; trees: number; createdAt: string; lastActiveAt?: string }[];

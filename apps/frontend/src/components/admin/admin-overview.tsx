@@ -1,23 +1,34 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { CircleAlert, CircleCheck, CircleMinus, Loader2, RefreshCw } from "lucide-react";
 import { useFormatter, useTranslations } from "next-intl";
+import { useState } from "react";
 import { Section } from "@/components/common/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { api, errorMessage } from "@/lib/api/client";
-import type { AdminOverview as Overview } from "@/lib/api/types";
+import type { AdminPeriod, AdminOverview as Overview, PeriodCount } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { ColumnChart } from "./column-chart";
 
-function StatTile({ label, value, hint, className }: { label: string; value: string; hint?: string; className?: string }) {
+const PERIODS: AdminPeriod[] = ["7d", "1m", "3m", "6m", "1y", "all"];
+
+function StatTile({ label, value, hint, delta, className }: { label: string; value: string; hint?: string; delta?: { text: string; trend: "up" | "down" | "flat" }; className?: string }) {
   return (
     <div className={cn("rounded-2xl border bg-card p-4 shadow-[var(--shadow-soft)] sm:p-5", className)}>
       <p className="text-sm text-muted-foreground">{label}</p>
       <p className="mt-1 text-3xl font-semibold">{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+      {hint || delta ? (
+        <p className="mt-1 text-xs text-muted-foreground">
+          {hint}
+          {hint && delta ? " · " : null}
+          {delta ? (
+            <span className={cn("font-medium", delta.trend === "up" && "text-success", delta.trend === "down" && "text-warning")}>{delta.text}</span>
+          ) : null}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -56,12 +67,24 @@ function KeyValues({ rows }: { rows: [string, number][] }) {
 export function AdminOverview() {
   const t = useTranslations("admin");
   const format = useFormatter();
+  const [period, setPeriod] = useState<AdminPeriod>("1m");
   const { data, error, isFetching, refetch, dataUpdatedAt } = useQuery({
-    queryKey: ["admin", "overview"],
-    queryFn: () => api.get<Overview>("/api/admin/overview"),
+    queryKey: ["admin", "overview", period],
+    queryFn: () => api.get<Overview>(`/api/admin/overview?period=${period}`),
     refetchInterval: 60_000,
+    placeholderData: keepPreviousData, // switching periods keeps the frame instead of flashing skeletons
   });
   const n = (v: number) => format.number(v);
+  const pct = (v: number) => format.number(v, { style: "percent", maximumFractionDigits: 1 });
+  const inPeriod = (c: PeriodCount) => t("inPeriod", { count: n(c.count) });
+  const delta = (c: PeriodCount) => {
+    if (c.prior === undefined) return undefined;
+    if (c.prior === 0) return c.count > 0 ? { text: t("newVsPrior"), trend: "up" as const } : undefined;
+    const change = (c.count - c.prior) / c.prior;
+    const signed = `${change > 0 ? "+" : ""}${pct(change)}`;
+    return { text: t("vsPrior", { delta: signed }), trend: change > 0 ? ("up" as const) : change < 0 ? ("down" as const) : ("flat" as const) };
+  };
+  const day = (iso: string) => format.dateTime(new Date(`${iso}T00:00:00`), { day: "numeric", month: "short", year: "numeric" });
   // Relative to when the server built the snapshot, so "3 days ago" matches the numbers.
   const when = (iso?: string) => (iso && data ? format.relativeTime(new Date(iso), new Date(data.generatedAt)) : t("never"));
 
@@ -82,6 +105,35 @@ export function AdminOverview() {
         </div>
       </div>
 
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div role="radiogroup" aria-label={t("period")}>
+          {/* Phones: a 3 × 2 grid, so every option is visible without sideways scrolling. */}
+          <div className="grid grid-cols-3 gap-1 rounded-xl border bg-card p-1 sm:inline-flex">
+            {PERIODS.map((p) => (
+              <button
+                key={p}
+                type="button"
+                role="radio"
+                aria-checked={period === p}
+                onClick={() => setPeriod(p)}
+                className={cn(
+                  "h-9 whitespace-nowrap rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground",
+                  period === p && "bg-secondary text-foreground",
+                )}
+              >
+                {t(`periods.${p}`)}
+              </button>
+            ))}
+          </div>
+        </div>
+        {data ? (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <Badge variant="secondary">{t(`bucketBadge.${data.period.bucket}`)}</Badge>
+            {t("range", { start: day(data.period.start), end: day(data.period.end) })}
+          </p>
+        ) : null}
+      </div>
+
       {error && !data ? <p className="rounded-xl border border-destructive/40 p-4 text-sm text-destructive">{errorMessage(error, t("loadFailed"))}</p> : null}
 
       {!data ? (
@@ -93,19 +145,33 @@ export function AdminOverview() {
       ) : (
         <div className={cn("space-y-6 transition-opacity", isFetching && "opacity-70")}>
           <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-            <StatTile label={t("users")} value={n(data.users.total)} hint={t("usersHint", { new: n(data.users.new30d) })} />
-            <StatTile label={t("activeUsers")} value={n(data.users.active7d)} hint={t("activeHint", { day: n(data.users.active1d), month: n(data.users.active30d) })} />
-            <StatTile label={t("trees")} value={n(data.trees.total)} hint={t("treesHint", { new: n(data.trees.new30d) })} />
-            <StatTile label={t("people")} value={n(data.content.people)} hint={t("peopleHint", { new: n(data.content.peopleNew30d) })} />
+            <StatTile label={t("users")} value={n(data.users.total)} hint={inPeriod(data.inPeriod.users)} delta={delta(data.inPeriod.users)} />
+            <StatTile
+              label={t("activeUsers")}
+              value={n(data.inPeriod.activeUsers)}
+              hint={t("activeShare", { pct: pct(data.users.total ? data.inPeriod.activeUsers / data.users.total : 0) })}
+            />
+            <StatTile label={t("trees")} value={n(data.trees.total)} hint={inPeriod(data.inPeriod.trees)} delta={delta(data.inPeriod.trees)} />
+            <StatTile label={t("people")} value={n(data.content.people)} hint={inPeriod(data.inPeriod.people)} delta={delta(data.inPeriod.people)} />
             <StatTile className="col-span-2 lg:col-span-1" label={t("assistantTrees")} value={n(data.trees.assistantEnabled)} hint={t("assistantHint", { total: n(data.trees.total) })} />
+          </div>
+
+          {/* Fixed windows stay available as a steady baseline whatever period is selected. */}
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <span className="text-muted-foreground">{t("fixedWindows")}:</span>
+            {[t("activeToday", { count: n(data.users.active1d) }), t("active7", { count: n(data.users.active7d) }), t("active30", { count: n(data.users.active30d) })].map((s) => (
+              <span key={s} className="rounded-lg border bg-card px-2.5 py-1">
+                {s}
+              </span>
+            ))}
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             <section className="min-w-0 rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
-              <ColumnChart title={t("signupsTitle")} data={data.signups} />
+              <ColumnChart title={t("signupsTitle")} data={data.signups} bucket={data.period.bucket} />
             </section>
             <section className="min-w-0 rounded-2xl border bg-card p-5 shadow-[var(--shadow-soft)]">
-              <ColumnChart title={t("peopleTitle")} data={data.peopleAdded} />
+              <ColumnChart title={t("peopleTitle")} data={data.peopleAdded} bucket={data.period.bucket} />
             </section>
           </div>
 

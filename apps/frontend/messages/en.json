@@ -586,18 +586,13 @@
     "openApp": "Open app",
     "loadFailed": "Couldn't load the overview.",
     "users": "Users",
-    "usersHint": "{new} new in 30 days",
-    "activeUsers": "Active users (7 days)",
-    "activeHint": "{day} today · {month} in 30 days",
+    "activeUsers": "Active users",
     "trees": "Trees",
-    "treesHint": "{new} new in 30 days",
     "people": "People",
-    "peopleHint": "{new} added in 30 days",
     "assistantTrees": "Trees with AI assistant",
     "assistantHint": "of {total} trees",
-    "signupsTitle": "New sign-ups per day",
-    "peopleTitle": "People added per day",
-    "last30": "Last 30 days · total {total}",
+    "signupsTitle": "New sign-ups",
+    "peopleTitle": "People added",
     "showTable": "Show as table",
     "date": "Date",
     "count": "Count",
@@ -647,6 +642,35 @@
     "statusOff": "Off",
     "configured": "Configured",
     "notConfigured": "Not configured",
-    "none": "None"
+    "none": "None",
+    "period": "Period",
+    "periods": {
+      "7d": "7 days",
+      "1m": "1 month",
+      "3m": "3 months",
+      "6m": "6 months",
+      "1y": "1 year",
+      "all": "All time"
+    },
+    "bucketBadge": {
+      "day": "Daily",
+      "week": "Weekly",
+      "month": "Monthly"
+    },
+    "range": "{start} – {end} · Asia/Jakarta",
+    "inPeriod": "{count} in period",
+    "vsPrior": "{delta} vs prior",
+    "newVsPrior": "new vs prior",
+    "activeShare": "{pct} of all users in period",
+    "fixedWindows": "Fixed windows",
+    "activeToday": "{count} active today",
+    "active7": "{count} active in 7 days",
+    "active30": "{count} active in 30 days",
+    "chartSub": {
+      "day": "Per day · total {total}",
+      "week": "Per week · total {total}",
+      "month": "Per month · total {total}"
+    },
+    "weekOf": "Week of {date}"
   }
 }

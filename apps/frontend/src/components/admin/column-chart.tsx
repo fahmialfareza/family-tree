@@ -26,7 +26,7 @@ function columnPath(x: number, y: number, w: number, h: number) {
   return `M${x},${y + h} V${y + r} Q${x},${y} ${x + r},${y} H${x + w - r} Q${x + w},${y} ${x + w},${y + r} V${y + h} Z`;
 }
 
-export function ColumnChart({ title, data }: { title: string; data: DayCount[] }) {
+export function ColumnChart({ title, data, bucket }: { title: string; data: DayCount[]; bucket: "day" | "week" | "month" }) {
   const t = useTranslations("admin");
   const format = useFormatter();
   const wrap = useRef<HTMLDivElement>(null);
@@ -48,7 +48,17 @@ export function ColumnChart({ title, data }: { title: string; data: DayCount[] }
   const band = innerW / Math.max(data.length, 1);
   const barW = Math.max(2, Math.min(24, band - 2)); // 2px surface gap between neighbours
   const y = (v: number) => PAD.top + innerH - (v / top) * innerH;
-  const day = (iso: string) => format.dateTime(new Date(`${iso}T00:00:00`), { day: "numeric", month: "short" });
+  const at = (iso: string) => new Date(`${iso}T00:00:00`);
+  // Axis: short; tooltip and table: the full bucket ("Week of 20 Oct", "October 2026").
+  const axisLabel = (iso: string) =>
+    bucket === "month" ? format.dateTime(at(iso), { month: "short", year: "2-digit" }) : format.dateTime(at(iso), { day: "numeric", month: "short" });
+  const fullLabel = (iso: string) =>
+    bucket === "month"
+      ? format.dateTime(at(iso), { month: "long", year: "numeric" })
+      : bucket === "week"
+        ? t("weekOf", { date: format.dateTime(at(iso), { day: "numeric", month: "short", year: "numeric" }) })
+        : format.dateTime(at(iso), { day: "numeric", month: "short", year: "numeric" });
+  const subtitle = t(`chartSub.${bucket}`, { total: format.number(total) });
   const labelEvery = Math.ceil(data.length / (width < 420 ? 4 : 6));
   const hovered = active !== null ? data[active] : null;
 
@@ -56,11 +66,11 @@ export function ColumnChart({ title, data }: { title: string; data: DayCount[] }
     <figure className="space-y-3">
       <figcaption>
         <p className="font-medium">{title}</p>
-        <p className="text-sm text-muted-foreground">{t("last30", { total: format.number(total) })}</p>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
       </figcaption>
       <div ref={wrap} className="relative w-full min-w-0" onPointerLeave={() => setActive(null)}>
         {/* width 100% + viewBox: the SVG never forces its container wider than the screen while measuring. */}
-        <svg width="100%" height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`} role="img" aria-label={`${title}. ${t("last30", { total })}`} className="block overflow-visible">
+        <svg width="100%" height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`} role="img" aria-label={`${title}. ${subtitle}`} className="block overflow-visible">
           {ticks.map((v) => (
             <g key={v}>
               <line x1={PAD.left} x2={width - PAD.right} y1={y(v)} y2={y(v)} className="stroke-border" strokeWidth={1} />
@@ -86,15 +96,16 @@ export function ColumnChart({ title, data }: { title: string; data: DayCount[] }
                   fill="transparent"
                   tabIndex={0}
                   role="img"
-                  aria-label={`${day(d.date)}: ${d.count}`}
+                  aria-label={`${fullLabel(d.date)}: ${d.count}`}
                   className="cursor-default outline-none focus-visible:stroke-ring"
                   onPointerEnter={() => setActive(i)}
                   onFocus={() => setActive(i)}
                   onBlur={() => setActive(null)}
                 />
-                {i % labelEvery === 0 || i === data.length - 1 ? (
+                {/* Every Nth label plus the last; skip one that would crowd the last label. */}
+                {i === data.length - 1 || (i % labelEvery === 0 && data.length - 1 - i >= Math.max(2, labelEvery / 2)) ? (
                   <text x={PAD.left + i * band + band / 2} y={HEIGHT - 6} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-                    {day(d.date)}
+                    {axisLabel(d.date)}
                   </text>
                 ) : null}
               </g>
@@ -108,7 +119,7 @@ export function ColumnChart({ title, data }: { title: string; data: DayCount[] }
             style={{ left: Math.min(Math.max(PAD.left + active * band + band / 2, 48), width - 48), top: Math.max(y(hovered.count) - 52, 0) }}
           >
             <p className="text-sm font-semibold tabular-nums">{format.number(hovered.count)}</p>
-            <p className="text-xs text-muted-foreground">{day(hovered.date)}</p>
+            <p className="text-xs text-muted-foreground">{fullLabel(hovered.date)}</p>
           </div>
         ) : null}
       </div>
@@ -125,7 +136,7 @@ export function ColumnChart({ title, data }: { title: string; data: DayCount[] }
             <tbody>
               {[...data].reverse().map((d) => (
                 <tr key={d.date} className="border-t">
-                  <td className="px-3 py-1">{day(d.date)}</td>
+                  <td className="px-3 py-1">{fullLabel(d.date)}</td>
                   <td className="px-3 py-1 text-right tabular-nums">{d.count}</td>
                 </tr>
               ))}
