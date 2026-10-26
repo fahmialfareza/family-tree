@@ -772,5 +772,11 @@
     "signUp": "Daftar gratis",
     "signIn": "Saya sudah punya akun",
     "footnote": "Gratis, privat, tanpa iklan."
+  },
+  "native": {
+    "downloading": "Mengunduh…",
+    "savedDesktop": "Tersimpan di folder Unduhan",
+    "savedMobile": "Tersimpan di Files › Sakdulur",
+    "downloadFailed": "Gagal mengunduh. Silakan coba lagi."
   }
 }

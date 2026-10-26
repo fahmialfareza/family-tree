@@ -8,10 +8,14 @@
 //!   system browser or app, never inside the window
 //! - deep links: Google sign-in returns through com.fahmialfareza.sakdulur:/auth/google/complete?...,
 //!   which is loaded in the window so the site finishes the sign-in
-//! - downloads (exports) are saved to the Downloads folder
+//! - downloads (exports) are saved to the Downloads folder; the page is told when one starts and ends (a
+//!   "sakdulur:download" DOM event, so it can show a toast) without the page calling into the app
+
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
 
 use tauri::webview::{DownloadEvent, NewWindowResponse};
-use tauri::{AppHandle, Manager, Url, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Manager, Url, Webview, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_opener::OpenerExt;
 
@@ -93,6 +97,15 @@ fn open_deep_link(app: &AppHandle, link: &Url) {
     }
 }
 
+/// Tells the page about a download: window event "sakdulur:download" with {state, id, name}, where state is
+/// "started", "finished" or "failed" (handled by apps/frontend components/native/download-toasts.tsx).
+fn notify_download(webview: &Webview, state: &str, url: &Url, name: &str) {
+    let detail = serde_json::json!({ "state": state, "id": url.as_str(), "name": name });
+    let _ = webview.eval(format!(
+        "window.dispatchEvent(new CustomEvent('sakdulur:download', {{ detail: {detail} }}))"
+    ));
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let mut builder = tauri::Builder::default();
@@ -118,6 +131,8 @@ pub fn run() {
             let nav_site = site.clone();
             let popup_handle = handle.clone();
             let popup_site = site.clone();
+            // File names by download URL: macOS does not report the path when a download finishes.
+            let downloads: Arc<Mutex<HashMap<String, String>>> = Arc::default();
 
             let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Sakdulur")
@@ -149,9 +164,21 @@ pub fn run() {
                     NewWindowResponse::Deny
                 })
                 // Keep the default destination: the Downloads folder, without overwriting existing files.
-                .on_download(|_webview, event| {
-                    if let DownloadEvent::Finished { url, success: false, .. } = event {
-                        eprintln!("download failed: {url}");
+                .on_download(move |webview, event| {
+                    match event {
+                        DownloadEvent::Requested { url, destination } => {
+                            let name = destination
+                                .file_name()
+                                .map(|n| n.to_string_lossy().into_owned())
+                                .unwrap_or_default();
+                            downloads.lock().unwrap().insert(url.to_string(), name.clone());
+                            notify_download(&webview, "started", &url, &name);
+                        }
+                        DownloadEvent::Finished { url, success, .. } => {
+                            let name = downloads.lock().unwrap().remove(url.as_str()).unwrap_or_default();
+                            notify_download(&webview, if success { "finished" } else { "failed" }, &url, &name);
+                        }
+                        _ => {}
                     }
                     true
                 })

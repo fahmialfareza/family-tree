@@ -772,5 +772,11 @@
     "signUp": "Create a free account",
     "signIn": "I already have an account",
     "footnote": "Free, private, no ads."
+  },
+  "native": {
+    "downloading": "Downloading…",
+    "savedDesktop": "Saved to your Downloads folder",
+    "savedMobile": "Saved to Files › Sakdulur",
+    "downloadFailed": "The download failed. Please try again."
   }
 }

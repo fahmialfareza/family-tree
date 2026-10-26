@@ -114,7 +114,8 @@ export function ExportDialog({
       const ext = FORMATS.find((f) => f.value === format)!.ext;
       const name = `${graph.tree.name}${person && !whole ? ` - ${person.name}` : ""}`.replace(/[\\/:*?"<>|]+/g, "");
       await saveFile(`${name}.${ext}`, await res.blob());
-      toast.success(t("downloaded"));
+      // The app reports its own downloads (components/native/download-toasts.tsx).
+      if (!native) toast.success(t("downloaded"));
       onOpenChange(false);
     } catch {
       toast.error(t("failed"));
