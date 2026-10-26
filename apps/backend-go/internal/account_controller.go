@@ -164,31 +164,3 @@ func exportMe(c *gin.Context) {
 	c.Header("Content-Disposition", `attachment; filename="sakdulur-account.json"`)
 	responseSuccess(c, gin.H{"exportedAt": time.Now(), "user": user, "trees": trees, "sessions": sessions}, 200)
 }
-
-// exportTree returns every person, family, relationship and member of a tree as JSON (owners only).
-func exportTree(c *gin.Context) {
-	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/exportTree").End()
-	access := currentAccess(c)
-	tree, err := getTreeRepo(c, access.TreeID)
-	if err != nil {
-		abortServerError(c, err)
-		return
-	}
-	people, err := repoGetAllPeople(c, access.TreeID, nil)
-	if err != nil {
-		abortServerError(c, err)
-		return
-	}
-	families, err := getAllFamiliesRepo(c, access.TreeID, nil)
-	if err != nil {
-		abortServerError(c, err)
-		return
-	}
-	members, err := listMembersRepo(c, access.TreeID)
-	if err != nil {
-		abortServerError(c, err)
-		return
-	}
-	c.Header("Content-Disposition", `attachment; filename="sakdulur-export.json"`)
-	responseSuccess(c, gin.H{"exportedAt": time.Now(), "tree": tree, "people": people, "families": families, "members": members}, 200)
-}
