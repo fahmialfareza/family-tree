@@ -4,6 +4,9 @@
   "name": "sakdulur",
   "compatibility_date": "2026-01-08",
   "compatibility_flags": ["nodejs_compat"],
+  // keep_names makes esbuild add __name() calls, which break scripts that are inlined via Function#toString
+  // (next-themes' no-flash theme script threw "__name is not defined").
+  "keep_names": false,
   // Runtime variables are managed in the dashboard (Worker > Settings > Variables and Secrets):
   // BACKEND_URL, BACKEND_PUBLIC_URL, plus the BFF_SHARED_SECRET secret. keep_vars stops `wrangler deploy`
   // from deleting those plain-text vars. NEXT_PUBLIC_* values are build-time: set them where the build runs.

@@ -11,15 +11,16 @@ const imageHosts = ["https://res.cloudinary.com", ...(process.env.NEXT_PUBLIC_IM
   .filter(Boolean)
   .join(" ");
 
-// The browser only talks to this origin (API calls go through /api/proxy), so connect-src stays 'self'.
+// The browser only talks to this origin (API calls go through /api/proxy), plus the Cloudflare Web Analytics
+// beacon that Cloudflare injects (loaded from static.cloudflareinsights.com, reporting to cloudflareinsights.com).
 // 'unsafe-inline' scripts are needed for Next.js bootstrapping without nonces; React Flow needs inline styles.
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com${isDev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${imageHosts}`,
   "font-src 'self' data:",
-  `connect-src 'self'${isDev ? " ws: http://localhost:*" : ""}`,
+  `connect-src 'self' https://cloudflareinsights.com${isDev ? " ws: http://localhost:*" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -38,6 +39,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Render metadata in <head> for every client, not only bots: Next streams it into <body> for browsers by
+  // default, which audits (Lighthouse) and some link previews miss.
+  htmlLimitedBots: /.*/,
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
