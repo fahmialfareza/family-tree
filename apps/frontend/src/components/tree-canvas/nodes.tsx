@@ -4,6 +4,7 @@ import { Handle, NodeToolbar, Position, type NodeProps } from "@xyflow/react";
 import { Copy, Eye, Heart, type LucideIcon, Pencil, Plus, Trash2, UserRoundPlus, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createContext, Fragment, memo, useContext, useEffect, useRef, useState } from "react";
+import { DeceasedMark } from "@/components/common/deceased-mark";
 import { PersonAvatar } from "@/components/common/person-avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -146,8 +147,8 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
               </Badge>
             ) : null}
             {deceased ? (
-              <span className="absolute bottom-1.5 right-2 text-xs text-muted-foreground" aria-label={t("deceased")}>
-                †
+              <span className="absolute bottom-1.5 right-2 flex text-muted-foreground" role="img" aria-label={t("deceased")}>
+                <DeceasedMark religion={p.religion} gender={p.gender} />
               </span>
             ) : null}
           </button>

@@ -5,6 +5,7 @@ export type Gender = "male" | "female" | "other" | "unknown";
 export type LifeStatus = "alive" | "deceased";
 export type DatePrecision = "day" | "month" | "year";
 export type DateQualifier = "exact" | "about" | "before" | "after";
+export type Religion = "islam" | "protestant" | "catholic" | "hindu" | "buddhist" | "confucian" | "other";
 
 export interface User {
   _id: string;
@@ -66,6 +67,7 @@ export interface AssistantPersonFields {
   deathPlace?: string;
   address?: string;
   notes?: string;
+  religion?: Religion | "";
 }
 
 export interface AssistantAnswer {
@@ -109,6 +111,7 @@ export interface Person {
   birthDateQualifier?: DateQualifier;
   deathDate?: string;
   deathDatePrecision?: DatePrecision;
+  religion?: Religion;
   deathDateQualifier?: DateQualifier;
   birthPlace?: string;
   deathPlace?: string;
@@ -132,6 +135,7 @@ export interface GraphPerson {
   birthDatePrecision?: DatePrecision;
   deathDate?: string;
   deathDatePrecision?: DatePrecision;
+  religion?: Religion;
   photoUrl?: string;
   canEdit: boolean;
 }

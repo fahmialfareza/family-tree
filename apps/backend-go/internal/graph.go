@@ -28,6 +28,7 @@ type graphPerson struct {
 	BirthDatePrecision *string    `json:"birthDatePrecision"`
 	DeathDate          *time.Time `json:"deathDate"`
 	DeathDatePrecision *string    `json:"deathDatePrecision"`
+	Religion           *string    `json:"religion,omitempty"`
 	PhotoURL           string     `json:"photoUrl"`
 	CanEdit            bool       `json:"canEdit"`
 }
@@ -66,7 +67,7 @@ func repoGetTreeGraph(ctx context.Context, treeID string) (*treeGraph, error) {
 	var people []personRow
 	if err := byCreation(DB.WithContext(ctx)).Scopes(inTree(treeID)).
 		Select("id", "created_at", "name", "nickname", "gender", "status", "birth_date", "birth_date_precision",
-			"death_date", "death_date_precision", "photo_url").
+			"death_date", "death_date_precision", "religion", "photo_url").
 		Limit(maxGraphPeople + 1).Find(&people).Error; err != nil {
 		return nil, err
 	}
@@ -100,7 +101,7 @@ func repoGetTreeGraph(ctx context.Context, treeID string) (*treeGraph, error) {
 		g.People = append(g.People, graphPerson{
 			ID: p.ID, Name: p.Name, Nickname: p.Nickname, Gender: p.Gender, Status: p.Status,
 			BirthDate: utc(p.BirthDate), BirthDatePrecision: p.BirthDatePrecision,
-			DeathDate: utc(p.DeathDate), DeathDatePrecision: p.DeathDatePrecision,
+			DeathDate: utc(p.DeathDate), DeathDatePrecision: p.DeathDatePrecision, Religion: p.Religion,
 			PhotoURL: p.PhotoURL,
 		})
 	}

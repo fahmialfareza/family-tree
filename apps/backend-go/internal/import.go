@@ -325,6 +325,7 @@ func runImport(ctx context.Context, source, dest *treeAccess, body importRequest
 				DeathDateQualifier: src.DeathDateQualifier,
 				BirthPlace:         src.BirthPlace,
 				DeathPlace:         src.DeathPlace,
+				Religion:           src.Religion,
 				SourcePersonID:     &sourceID,
 			}
 			if err := tx.Omit("OwnerLinks", "Relationships").Create(&row).Error; err != nil {
@@ -361,14 +362,14 @@ func runImport(ctx context.Context, source, dest *treeAccess, body importRequest
 
 // genealogyColumns are the fields a copy takes from its original (never photo, phone, address or notes).
 var genealogyColumns = []string{"name", "nickname", "status", "gender", "birth_date", "birth_date_precision",
-	"birth_date_qualifier", "death_date", "death_date_precision", "death_date_qualifier", "birth_place", "death_place"}
+	"birth_date_qualifier", "death_date", "death_date_precision", "death_date_qualifier", "birth_place", "death_place", "religion"}
 
 func refreshCopy(tx *gorm.DB, destTreeID, copyID string, src personRow) error {
 	return tx.Model(&personRow{}).Scopes(inTree(destTreeID)).Where("id = ?", copyID).Select(genealogyColumns).
 		Updates(personRow{Name: src.Name, Nickname: src.Nickname, Status: src.Status, Gender: src.Gender,
 			BirthDate: src.BirthDate, BirthDatePrecision: src.BirthDatePrecision, BirthDateQualifier: src.BirthDateQualifier,
 			DeathDate: src.DeathDate, DeathDatePrecision: src.DeathDatePrecision, DeathDateQualifier: src.DeathDateQualifier,
-			BirthPlace: src.BirthPlace, DeathPlace: src.DeathPlace}).Error
+			BirthPlace: src.BirthPlace, DeathPlace: src.DeathPlace, Religion: src.Religion}).Error
 }
 
 // CopySource tells the client a person was copied from another tree. Tree details are only filled in for

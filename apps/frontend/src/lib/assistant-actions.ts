@@ -41,6 +41,7 @@ function personForm(base: Partial<Person>, f: AssistantPersonFields): FormData {
   fd.set("phone", base.phone ?? "");
   fd.set("address", pick(f.address, base.address, ""));
   fd.set("notes", pick(f.notes, base.notes, ""));
+  fd.set("religion", pick(f.religion, base.religion, ""));
   return fd;
 }
 

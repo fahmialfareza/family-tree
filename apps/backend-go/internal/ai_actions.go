@@ -55,6 +55,7 @@ type personFields struct {
 	DeathPlace         *string `json:"deathPlace,omitempty"`
 	Address            *string `json:"address,omitempty"`
 	Notes              *string `json:"notes,omitempty"`
+	Religion           *string `json:"religion,omitempty"`
 }
 
 // fieldArgs are the person fields as the model sends them (snake_case, all optional).
@@ -71,6 +72,7 @@ type fieldArgs struct {
 	DeathPlace         *string `json:"death_place"`
 	Address            *string `json:"address"`
 	Notes              *string `json:"notes"`
+	Religion           *string `json:"religion"`
 }
 
 var actionDatePattern = regexp.MustCompile(`^\d{4}(-\d{2}(-\d{2})?)?$`)
@@ -97,7 +99,7 @@ func (a fieldArgs) toFields(requireName bool) (*personFields, string) {
 		Name: trim(a.Name), Nickname: trim(a.Nickname), Gender: trim(a.Gender), Status: trim(a.Status),
 		BirthDate: trim(a.BirthDate), BirthDateQualifier: trim(a.BirthDateQualifier), BirthPlace: trim(a.BirthPlace),
 		DeathDate: trim(a.DeathDate), DeathDateQualifier: trim(a.DeathDateQualifier), DeathPlace: trim(a.DeathPlace),
-		Address: trim(a.Address), Notes: trim(a.Notes),
+		Address: trim(a.Address), Notes: trim(a.Notes), Religion: trim(a.Religion),
 	}
 	tooLongField := func(p *string, max int) bool { return p != nil && utf8.RuneCountInString(*p) > max }
 	switch {
@@ -119,6 +121,8 @@ func (a fieldArgs) toFields(requireName bool) (*personFields, string) {
 		return nil, "gender must be male, female, other or unknown"
 	case f.Status != nil && *f.Status != "alive" && *f.Status != "deceased":
 		return nil, "status must be alive or deceased"
+	case f.Religion != nil && *f.Religion != "" && !personReligions[*f.Religion]:
+		return nil, "religion must be islam, protestant, catholic, hindu, buddhist, confucian or other"
 	}
 	for _, d := range []*string{f.BirthDate, f.DeathDate} {
 		if d != nil && *d != "" && !validActionDate(*d) {
@@ -365,6 +369,8 @@ var personFieldProps = map[string]any{
 	"death_place":          map[string]any{"type": "string"},
 	"address":              map[string]any{"type": "string", "description": "Where the person lives"},
 	"notes":                map[string]any{"type": "string"},
+	"religion": map[string]any{"type": "string", "enum": []string{"islam", "protestant", "catholic", "hindu", "buddhist", "confucian", "other"},
+		"description": "Only when the user states it"},
 }
 
 func withProps(extra map[string]any) map[string]any {

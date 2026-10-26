@@ -97,6 +97,8 @@ type personRow struct {
 	BirthPlace         *string
 	DeathPlace         *string
 	Notes              *string
+	// Optional religion (migration 00010): picks how the tree marks a deceased person.
+	Religion *string
 	// Set on people copied from another tree (migration 00005); never sent to clients.
 	SourcePersonID *string `gorm:"type:text"`
 	Phone          string
@@ -199,6 +201,7 @@ func (p *personRow) toModel() *Person {
 	out.BirthPlace = deref(p.BirthPlace)
 	out.DeathPlace = deref(p.DeathPlace)
 	out.Notes = deref(p.Notes)
+	out.Religion = deref(p.Religion)
 	for _, l := range p.OwnerLinks {
 		out.OwnedBy = append(out.OwnedBy, l.UserID)
 		if l.Owner != nil {
@@ -235,6 +238,7 @@ func newPersonRow(p *Person) *personRow {
 		BirthPlace:         nullable(p.BirthPlace),
 		DeathPlace:         nullable(p.DeathPlace),
 		Notes:              nullable(p.Notes),
+		Religion:           nullable(p.Religion),
 	}
 	if !p.BirthDate.IsZero() {
 		bd := p.BirthDate

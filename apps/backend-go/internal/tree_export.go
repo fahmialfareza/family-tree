@@ -180,13 +180,15 @@ func (d *exportData) xlsx(lang string) ([]byte, error) {
 	}
 	gender := map[string]string{"male": tr("Male", "Laki-laki"), "female": tr("Female", "Perempuan"), "other": tr("Other", "Lainnya"), "unknown": ""}
 	status := map[string]string{"alive": tr("Living", "Masih hidup"), "deceased": tr("Deceased", "Sudah meninggal")}
+	religion := map[string]string{"islam": "Islam", "protestant": tr("Protestant", "Kristen"), "catholic": tr("Catholic", "Katolik"),
+		"hindu": "Hindu", "buddhist": tr("Buddhist", "Buddha"), "confucian": tr("Confucian", "Konghucu"), "other": tr("Other", "Lainnya")}
 
 	people := append([]*Person{}, d.people...)
 	sort.SliceStable(people, func(i, j int) bool { return strings.ToLower(people[i].Name) < strings.ToLower(people[j].Name) })
 	peopleRows := make([][]string, 0, len(people))
 	for _, p := range people {
 		peopleRows = append(peopleRows, []string{
-			p.Name, p.Nickname, gender[p.Gender], status[p.Status],
+			p.Name, p.Nickname, gender[p.Gender], status[p.Status], religion[p.Religion],
 			readableDate(birthOf(p), p.BirthDatePrecision, p.BirthDateQualifier, id), p.BirthPlace,
 			readableDate(p.DeathDate, p.DeathDatePrecision, p.DeathDateQualifier, id), p.DeathPlace,
 			p.Address, p.Phone,
@@ -206,10 +208,10 @@ func (d *exportData) xlsx(lang string) ([]byte, error) {
 	return writeXLSX(d.tree.Name, []xlsxSheet{
 		{
 			Name: tr("People", "Orang"),
-			Header: []string{tr("Name", "Nama"), tr("Nickname", "Panggilan"), tr("Gender", "Jenis kelamin"), tr("Status", "Status"),
+			Header: []string{tr("Name", "Nama"), tr("Nickname", "Panggilan"), tr("Gender", "Jenis kelamin"), tr("Status", "Status"), tr("Religion", "Agama"),
 				tr("Birth date", "Tanggal lahir"), tr("Birth place", "Tempat lahir"), tr("Date of death", "Tanggal wafat"), tr("Place of death", "Tempat wafat"),
 				tr("Address", "Alamat"), tr("Phone", "Telepon"), tr("Parents", "Orang tua"), tr("Partners", "Pasangan"), tr("Children", "Anak"), tr("Notes", "Catatan")},
-			Widths: []float64{28, 14, 13, 15, 18, 18, 18, 18, 32, 16, 32, 28, 40, 50},
+			Widths: []float64{28, 14, 13, 15, 12, 18, 18, 18, 18, 32, 16, 32, 28, 40, 50},
 			Rows:   peopleRows,
 		},
 		{
@@ -222,6 +224,9 @@ func (d *exportData) xlsx(lang string) ([]byte, error) {
 }
 
 // ---- GEDCOM 5.5.1 ----
+
+var gedReligion = map[string]string{"islam": "Islam", "protestant": "Protestant", "catholic": "Catholic", "hindu": "Hindu",
+	"buddhist": "Buddhist", "confucian": "Confucian", "other": "Other"}
 
 var gedMonths = []string{"JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"}
 
@@ -347,6 +352,9 @@ func (d *exportData) gedcom() string {
 			sex = "U"
 		}
 		fmt.Fprintf(&b, "1 SEX %s\n", sex)
+		if r := gedReligion[p.Religion]; r != "" {
+			gedText(&b, 1, "RELI", r)
+		}
 		if date, place := gedDate(birthOf(p), p.BirthDatePrecision, p.BirthDateQualifier), p.BirthPlace; date != "" || place != "" {
 			b.WriteString("1 BIRT\n")
 			if date != "" {

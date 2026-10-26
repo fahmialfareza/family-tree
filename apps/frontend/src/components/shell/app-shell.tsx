@@ -1,6 +1,6 @@
 "use client";
 
-import { Ellipsis, Network, Settings, Sparkles, UserRound, Users, UsersRound } from "lucide-react";
+import { Ellipsis, Lightbulb, Network, Settings, Sparkles, UserRound, Users, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -12,6 +12,7 @@ import { useMe } from "@/lib/api/hooks";
 import type { Me } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 import { PersonSearch } from "./search";
+import { useSuggestLink } from "./suggest-feature";
 import { TreeSwitcher } from "./tree-switcher";
 import { UserMenu } from "./user-menu";
 
@@ -43,7 +44,9 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
       ]
     : [];
   const [moreOpen, setMoreOpen] = useState(false);
-  const tabs = nav.length > MAX_TABS ? nav.slice(0, MAX_TABS - 1) : nav;
+  const suggestHref = useSuggestLink();
+  // The last tab is always "More": the overflow pages plus "Suggest a feature".
+  const tabs = nav.slice(0, MAX_TABS - 1);
   const overflow = nav.slice(tabs.length);
   const isActive = (item: NavItem) => (item.exact ? pathname === item.href : pathname.startsWith(item.href));
 
@@ -78,7 +81,15 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
             </Link>
           ))}
         </nav>
-        <div className="mt-auto">
+        <div className="mt-auto flex flex-col gap-1">
+          <a
+            href={suggestHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <Lightbulb className="size-4" aria-hidden /> {t("suggest")}
+          </a>
           <UserMenu user={me.user} />
         </div>
       </aside>
@@ -98,7 +109,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
           {children}
         </main>
 
-        {/* Mobile bottom tabs: up to five; beyond that the last tab opens "More". */}
+        {/* Mobile bottom tabs: four pages, then "More" with the rest and "Suggest a feature". */}
         {treeId ? (
           <nav aria-label={t("mainNav")} className="pb-safe fixed inset-x-0 bottom-0 z-30 grid auto-cols-fr grid-flow-col border-t bg-background/95 backdrop-blur md:hidden">
             {tabs.map((item) => (
@@ -107,35 +118,47 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
                 <span className="max-w-full truncate">{item.label}</span>
               </Link>
             ))}
-            {overflow.length ? (
-              <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
-                <SheetTrigger className={tabClass(overflow.some(isActive))} aria-current={overflow.some(isActive) ? "page" : undefined}>
-                  <Ellipsis className="size-5" aria-hidden />
-                  <span className="max-w-full truncate">{t("more")}</span>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="rounded-t-2xl px-3 pt-2">
-                  <SheetHeader className="px-2 pb-0">
-                    <SheetTitle>{t("more")}</SheetTitle>
-                  </SheetHeader>
-                  <div className="flex flex-col gap-1 pb-3">
-                    {overflow.map((item) => (
-                      <SheetClose asChild key={item.href}>
-                        <Link
-                          href={item.href}
-                          aria-current={isActive(item) ? "page" : undefined}
-                          className={cn(
-                            "flex h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-medium hover:bg-accent",
-                            isActive(item) && "bg-secondary text-primary",
-                          )}
-                        >
-                          <item.icon className="size-5" aria-hidden /> {item.label}
-                        </Link>
-                      </SheetClose>
-                    ))}
-                  </div>
-                </SheetContent>
-              </Sheet>
-            ) : null}
+            <Sheet open={moreOpen} onOpenChange={setMoreOpen}>
+              <SheetTrigger className={tabClass(overflow.some(isActive))} aria-current={overflow.some(isActive) ? "page" : undefined}>
+                <Ellipsis className="size-5" aria-hidden />
+                <span className="max-w-full truncate">{t("more")}</span>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl px-3 pt-2">
+                <SheetHeader className="px-2 pb-0">
+                  <SheetTitle>{t("more")}</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-1 pb-3">
+                  {overflow.map((item) => (
+                    <SheetClose asChild key={item.href}>
+                      <Link
+                        href={item.href}
+                        aria-current={isActive(item) ? "page" : undefined}
+                        className={cn(
+                          "flex h-12 items-center gap-3 rounded-xl px-3 text-[15px] font-medium hover:bg-accent",
+                          isActive(item) && "bg-secondary text-primary",
+                        )}
+                      >
+                        <item.icon className="size-5" aria-hidden /> {item.label}
+                      </Link>
+                    </SheetClose>
+                  ))}
+                  <SheetClose asChild>
+                    <a
+                      href={suggestHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex min-h-12 items-center gap-3 rounded-xl px-3 py-2 hover:bg-accent"
+                    >
+                      <Lightbulb className="size-5 shrink-0" aria-hidden />
+                      <span className="min-w-0">
+                        <span className="block text-[15px] font-medium">{t("suggest")}</span>
+                        <span className="block text-xs text-muted-foreground">{t("suggestHint")}</span>
+                      </span>
+                    </a>
+                  </SheetClose>
+                </div>
+              </SheetContent>
+            </Sheet>
           </nav>
         ) : null}
       </div>

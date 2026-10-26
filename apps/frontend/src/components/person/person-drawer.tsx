@@ -171,6 +171,12 @@ export function PersonDrawer({
                         ) : null}
                       </div>
                     ))}
+                    {person.religion ? (
+                      <div>
+                        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{tp("religion")}</dt>
+                        <dd className="mt-0.5">{tp(`religions.${person.religion}`)}</dd>
+                      </div>
+                    ) : null}
                     {person.address ? (
                       <div>
                         <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{tp("address")}</dt>

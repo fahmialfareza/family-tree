@@ -36,6 +36,9 @@ var dateQualifiers = map[string]bool{"exact": true, "about": true, "before": tru
 
 var personGenders = map[string]bool{"male": true, "female": true, "other": true, "unknown": true}
 
+// personReligions are the allowed values of the optional religion field (Indonesia's six, plus other).
+var personReligions = map[string]bool{"islam": true, "protestant": true, "catholic": true, "hindu": true, "buddhist": true, "confucian": true, "other": true}
+
 var (
 	yearOnly     = regexp.MustCompile(`^\d{4}$`)
 	yearMonth    = regexp.MustCompile(`^\d{4}-\d{2}$`)
@@ -238,6 +241,7 @@ func bindPersonForm(c *gin.Context, p *Person, creating bool) string {
 	birthPlace, _ := optionalText(c, "birthPlace", p.BirthPlace)
 	deathPlace, _ := optionalText(c, "deathPlace", p.DeathPlace)
 	notes, _ := optionalText(c, "notes", p.Notes)
+	religion, _ := optionalText(c, "religion", p.Religion)
 	switch {
 	case tooLong(birthPlace, maxPersonPlaceLength):
 		return fmt.Sprintf("Birth place must be at most %d characters", maxPersonPlaceLength)
@@ -245,6 +249,8 @@ func bindPersonForm(c *gin.Context, p *Person, creating bool) string {
 		return fmt.Sprintf("Death place must be at most %d characters", maxPersonPlaceLength)
 	case tooLong(notes, maxPersonNotesLength):
 		return fmt.Sprintf("Notes must be at most %d characters", maxPersonNotesLength)
+	case religion != "" && !personReligions[religion]:
+		return "Religion must be islam, protestant, catholic, hindu, buddhist, confucian or other"
 	}
 
 	p.Name, p.Nickname, p.Address, p.Status, p.Gender, p.Phone = name, nickname, address, status, gender, phone
@@ -254,6 +260,6 @@ func bindPersonForm(c *gin.Context, p *Person, creating bool) string {
 	}
 	p.BirthDatePrecision, p.BirthDateQualifier = birth.date.Precision, birth.qualifier
 	p.DeathDate, p.DeathDatePrecision, p.DeathDateQualifier = death.date.Time, death.date.Precision, death.qualifier
-	p.BirthPlace, p.DeathPlace, p.Notes = birthPlace, deathPlace, notes
+	p.BirthPlace, p.DeathPlace, p.Notes, p.Religion = birthPlace, deathPlace, notes, religion
 	return ""
 }

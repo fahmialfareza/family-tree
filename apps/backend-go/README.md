@@ -204,10 +204,12 @@ Create/update take multipart (or urlencoded) forms, on both the tree-scoped and 
   only make the precision coarser. `birthDateQualifier`/`deathDateQualifier`: `exact` (default)|`about`|`before`|`after`.
   A death date requires `status=deceased` and cannot be before the birth date (unless either is approximate/open-ended).
 - `birthPlace`, `deathPlace` (≤200), `notes` (≤5000)
-- On update, the newer fields (death date, places, notes, qualifiers) keep their value when absent — legacy clients
+- `religion` (optional): `islam`|`protestant`|`catholic`|`hindu`|`buddhist`|`confucian`|`other`; empty = not set. The tree
+  marks deceased people by it (Alm./Almh., a cross, or a neutral mark when unset). Exported as an Excel column and GEDCOM `RELI`.
+- On update, the newer fields (death date, places, notes, qualifiers, religion) keep their value when absent — legacy clients
   never send them — and are cleared by sending an empty value. Setting `status=alive` drops a stored death date.
 - Responses add `birthDatePrecision`, `birthDateQualifier`, `deathDate`, `deathDatePrecision`, `deathDateQualifier`,
-  `birthPlace`, `deathPlace`, `notes` (omitted when empty). Dates are serialized in UTC.
+  `birthPlace`, `deathPlace`, `notes`, `religion` (omitted when empty). Dates are serialized in UTC.
 - Relationship types are `parent`, `child` or `spouse` (anything else is `400`).
 
 Legacy routes (used by the current frontend) keep the Node.js request/response shapes and the same checks:

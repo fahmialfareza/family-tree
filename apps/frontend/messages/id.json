@@ -122,7 +122,10 @@
     "copyIntoTree": "Salin dari pohon lain…",
     "ask": "Tanya",
     "more": "Lainnya",
-    "admin": "Admin"
+    "admin": "Admin",
+    "suggest": "Usulan Fitur",
+    "suggestHint": "Kirim ide lewat WhatsApp",
+    "suggestMessage": "Halo! Saya mau usul fitur untuk Sakdulur: "
   },
   "canvas": {
     "loading": "Memuat pohon…",
@@ -138,7 +141,7 @@
     "addChild": "Tambah anak",
     "openPerson": "Buka {name}",
     "you": "Anda",
-    "deceased": "Almarhum",
+    "deceased": "Sudah meninggal",
     "depth": "Jangkauan tampilan",
     "depthAll": "Semua",
     "depthN": "{n} langkah",
@@ -186,8 +189,22 @@
     "status": "Status",
     "statuses": {
       "alive": "Masih hidup",
-      "deceased": "Almarhum"
+      "deceased": "Sudah meninggal"
     },
+    "religion": "Agama",
+    "religionHint": "Opsional. Menentukan penanda di pohon setelah orang ini wafat.",
+    "religions": {
+      "none": "Tidak diisi",
+      "islam": "Islam",
+      "protestant": "Kristen",
+      "catholic": "Katolik",
+      "hindu": "Hindu",
+      "buddhist": "Buddha",
+      "confucian": "Konghucu",
+      "other": "Lainnya"
+    },
+    "lateMale": "Alm.",
+    "lateFemale": "Almh.",
     "birthDate": "Tanggal lahir",
     "birthPlace": "Tempat lahir",
     "deathDate": "Tanggal wafat",

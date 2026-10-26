@@ -7,13 +7,13 @@ export function yearOf(iso?: string): number | undefined {
   return y > 1 ? y : undefined;
 }
 
-/** "1950–2010", "b. 1990", "d. 2001" or "" for a node subtitle. */
+/** "1950–2010", "1990", "?–2001" or "" for a node subtitle (no religious symbols: see DeceasedMark). */
 export function lifeSpan(birth?: string, death?: string): string {
   const b = yearOf(birth);
   const d = yearOf(death);
   if (b && d) return `${b}–${d}`;
   if (b) return `${b}`;
-  if (d) return `† ${d}`;
+  if (d) return `?–${d}`;
   return "";
 }
 

@@ -22,7 +22,7 @@ const ICONS = {
 } as const;
 
 const FIELD_ORDER: (keyof AssistantPersonFields)[] = [
-  "name", "nickname", "gender", "status", "birthDate", "birthPlace", "deathDate", "deathPlace", "address", "notes",
+  "name", "nickname", "gender", "status", "birthDate", "birthPlace", "deathDate", "deathPlace", "religion", "address", "notes",
 ];
 
 /** Card title, also used to tell the model afterwards which changes were applied. */
@@ -57,6 +57,7 @@ function FieldList({ fields }: { fields: AssistantPersonFields }) {
     if (v === "") return t("cleared");
     if (k === "gender") return t(`gender.${v}`);
     if (k === "status") return t(`status.${v}`);
+    if (k === "religion") return tp(`religions.${v}`);
     if (k === "birthDate" || k === "deathDate") {
       const q = k === "birthDate" ? fields.birthDateQualifier : fields.deathDateQualifier;
       const prefix = q ? t(`qualifier.${q}`) : "";

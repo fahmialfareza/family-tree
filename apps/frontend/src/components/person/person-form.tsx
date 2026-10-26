@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { errorMessage } from "@/lib/api/client";
 import { useSavePerson } from "@/lib/api/hooks";
-import type { Gender, LifeStatus, Person } from "@/lib/api/types";
+import type { Gender, LifeStatus, Person, Religion } from "@/lib/api/types";
 import { dateParts, partsToValue } from "@/lib/format";
 import { compressImage } from "@/lib/image";
 import { PartialDate, PartialDateInput } from "./partial-date-input";
@@ -41,6 +41,7 @@ export function PersonForm({
   const [nickname, setNickname] = useState(person?.nickname ?? "");
   const [gender, setGender] = useState<Gender>(person?.gender ?? "unknown");
   const [status, setStatus] = useState<LifeStatus>(person?.status ?? "alive");
+  const [religion, setReligion] = useState<Religion | "">(person?.religion ?? "");
   const [birth, setBirth] = useState(initialDate(person?.birthDate, person?.birthDatePrecision, person?.birthDateQualifier));
   const [death, setDeath] = useState(initialDate(person?.deathDate, person?.deathDatePrecision, person?.deathDateQualifier));
   const [birthPlace, setBirthPlace] = useState(person?.birthPlace ?? "");
@@ -98,6 +99,7 @@ export function PersonForm({
     fd.set("phone", phone.trim());
     fd.set("address", address.trim());
     fd.set("notes", notes.trim());
+    fd.set("religion", religion);
     if (photo) fd.set("photo", photo);
     try {
       const saved = await save.mutateAsync({ id: person?._id, form: fd });
@@ -161,6 +163,22 @@ export function PersonForm({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="space-y-1.5">
+          <Label>{t("religion")}</Label>
+          <Select value={religion || "none"} onValueChange={(v) => setReligion(v === "none" ? "" : (v as Religion))}>
+            <SelectTrigger className="w-full" aria-label={t("religion")}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(["none", "islam", "protestant", "catholic", "hindu", "buddhist", "confucian", "other"] as const).map((r) => (
+                <SelectItem key={r} value={r}>
+                  {t(`religions.${r}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">{t("religionHint")}</p>
         </div>
         <div className="space-y-1.5 sm:col-span-2">
           <Label>{t("status")}</Label>

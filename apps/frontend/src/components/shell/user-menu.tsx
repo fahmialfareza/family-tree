@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronsUpDown, LayoutDashboard, LogOut, UserRound } from "lucide-react";
+import { ChevronsUpDown, LayoutDashboard, Lightbulb, LogOut, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LocaleRadio, ThemeRadio } from "@/components/common/preferences";
@@ -16,6 +16,7 @@ import {
 import type { User } from "@/lib/api/types";
 import { initials } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import { useSuggestLink } from "./suggest-feature";
 
 export async function signOut() {
   await fetch("/api/session/logout", { method: "POST" });
@@ -25,6 +26,7 @@ export async function signOut() {
 export function UserMenu({ user, compact, className }: { user: User; compact?: boolean; className?: string }) {
   const t = useTranslations("shell");
   const tp = useTranslations("prefs");
+  const suggestHref = useSuggestLink();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -61,6 +63,11 @@ export function UserMenu({ user, compact, className }: { user: User; compact?: b
             </Link>
           </DropdownMenuItem>
         ) : null}
+        <DropdownMenuItem asChild>
+          <a href={suggestHref} target="_blank" rel="noopener noreferrer">
+            <Lightbulb className="size-4" aria-hidden /> {t("suggest")}
+          </a>
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuLabel>{tp("language")}</DropdownMenuLabel>
         <LocaleRadio />

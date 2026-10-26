@@ -122,7 +122,10 @@
     "copyIntoTree": "Copy from another tree…",
     "ask": "Ask",
     "more": "More",
-    "admin": "Admin"
+    "admin": "Admin",
+    "suggest": "Suggest a feature",
+    "suggestHint": "Send your idea on WhatsApp",
+    "suggestMessage": "Hi! I'd like to suggest a feature for Sakdulur: "
   },
   "canvas": {
     "loading": "Loading the tree…",
@@ -188,6 +191,20 @@
       "alive": "Living",
       "deceased": "Deceased"
     },
+    "religion": "Religion",
+    "religionHint": "Optional. Decides how the tree marks this person after they pass away.",
+    "religions": {
+      "none": "Not set",
+      "islam": "Islam",
+      "protestant": "Christian (Protestant)",
+      "catholic": "Catholic",
+      "hindu": "Hindu",
+      "buddhist": "Buddhist",
+      "confucian": "Confucian",
+      "other": "Other"
+    },
+    "lateMale": "Late",
+    "lateFemale": "Late",
     "birthDate": "Birth date",
     "birthPlace": "Birth place",
     "deathDate": "Date of death",

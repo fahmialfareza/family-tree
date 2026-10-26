@@ -13,6 +13,7 @@ func TestPersonDetailsCreateAndLegacyUpdate(t *testing.T) {
 	created := call(t, carol, "POST", "/api/trees/"+treeB+"/people", form{
 		"name": "  Grandpa  ", "status": "deceased", "birthDate": "1950", "deathDate": "2001-03",
 		"deathDateQualifier": "about", "birthPlace": "Malang", "deathPlace": "Surabaya", "notes": "Loved gardening",
+		"religion": "islam",
 	})
 	p := dataMap(created)
 	if created.Status != 200 {
@@ -22,7 +23,7 @@ func TestPersonDetailsCreateAndLegacyUpdate(t *testing.T) {
 		"name": "Grandpa", "gender": "unknown", "birthDate": "1950-01-01T00:00:00Z", "birthDatePrecision": "year",
 		"birthDateQualifier": "exact", "deathDate": "2001-03-01T00:00:00Z", "deathDatePrecision": "month",
 		"deathDateQualifier": "about", "birthPlace": "Malang", "deathPlace": "Surabaya", "notes": "Loved gardening",
-		"nickname": "", "address": "",
+		"nickname": "", "address": "", "religion": "islam",
 	}
 	for k, v := range want {
 		if p[k] != v {
@@ -30,13 +31,20 @@ func TestPersonDetailsCreateAndLegacyUpdate(t *testing.T) {
 		}
 	}
 	id := fmt.Sprint(p["_id"])
+	// The tree graph carries the religion: it decides how the card marks a deceased person.
+	graph := dataMap(call(t, carol, "GET", "/api/trees/"+treeB+"/graph", nil))
+	for _, gp := range graph["people"].([]any) {
+		if gp := gp.(map[string]any); gp["_id"] == id && gp["religion"] != "islam" {
+			t.Errorf("graph religion = %v", gp["religion"])
+		}
+	}
 
 	// A legacy client only sends the original fields and echoes the full birth date back: the new fields and
 	// the coarser stored precision survive.
 	legacy := form{"name": "Grandpa", "nickname": "gp", "address": "x", "status": "deceased", "gender": "male", "birthDate": "1950-01-01T00:00:00.000Z"}
 	updated := call(t, carol, "PUT", "/api/person/"+id, legacy)
 	u := dataMap(updated)
-	if updated.Status != 200 || u["notes"] != "Loved gardening" || u["deathDate"] != "2001-03-01T00:00:00Z" ||
+	if updated.Status != 200 || u["notes"] != "Loved gardening" || u["religion"] != "islam" || u["deathDate"] != "2001-03-01T00:00:00Z" ||
 		u["birthDatePrecision"] != "year" || u["deathDateQualifier"] != "about" || u["gender"] != "male" {
 		t.Fatalf("legacy update lost data: %d %v", updated.Status, updated.Body)
 	}
@@ -44,8 +52,9 @@ func TestPersonDetailsCreateAndLegacyUpdate(t *testing.T) {
 	// Explicit empty values clear the new fields; going back to alive drops the stored death date.
 	cleared := dataMap(call(t, carol, "PUT", "/api/trees/"+treeB+"/people/"+id, form{
 		"name": "Grandpa", "status": "alive", "gender": "male", "birthDate": "1950-06-15", "notes": "", "birthPlace": "",
+		"religion": "",
 	}))
-	for _, k := range []string{"notes", "birthPlace", "deathDate", "deathDatePrecision", "deathDateQualifier"} {
+	for _, k := range []string{"notes", "birthPlace", "religion", "deathDate", "deathDatePrecision", "deathDateQualifier"} {
 		if _, ok := cleared[k]; ok {
 			t.Errorf("%s should be cleared, got %v", k, cleared[k])
 		}
@@ -79,6 +88,7 @@ func TestPersonValidation(t *testing.T) {
 		{"POST", treePeople, base(form{"birthDate": "1950", "birthDateQualifier": "maybe"})},
 		{"POST", treePeople, base(form{"birthPlace": strings.Repeat("p", 201)})},
 		{"POST", treePeople, base(form{"notes": strings.Repeat("n", 5001)})},
+		{"POST", treePeople, base(form{"religion": "jedi"})},
 		{"POST", treePeople, base(form{"deathDate": "2000"})},
 		{"POST", treePeople, base(form{"status": "deceased", "birthDate": "1950-05", "deathDate": "1950-04-30"})},
 		// Legacy routes keep requiring a gender.

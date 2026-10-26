@@ -122,7 +122,7 @@ func updatePersonRepo(ctx context.Context, p *Person) (*Person, error) {
 		res := tx.Model(&personRow{}).Scopes(inTree(p.TreeID)).Where("id = ?", p.ID).
 			Select("name", "nickname", "address", "status", "gender", "birth_date", "phone", "photo_url",
 				"birth_date_precision", "birth_date_qualifier", "death_date", "death_date_precision", "death_date_qualifier",
-				"birth_place", "death_place", "notes").
+				"birth_place", "death_place", "notes", "religion").
 			Updates(row)
 		if res.Error != nil {
 			return res.Error

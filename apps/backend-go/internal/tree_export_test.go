@@ -56,7 +56,7 @@ func readSheet(t *testing.T, data []byte, n int) ([][]string, []string) {
 	}
 	var rows [][]string
 	for _, r := range ws.Rows {
-		row := make([]string, 14)
+		row := make([]string, 26)
 		for _, c := range r.Cells {
 			col := cellRef.FindStringSubmatch(c.Ref)[1]
 			row[int(col[0]-'A')] = c.Text // tests stay within A..Z
@@ -78,9 +78,9 @@ func rawGet(t *testing.T, user, path string) *httptest.ResponseRecorder {
 func TestTreeExportFormats(t *testing.T) {
 	resetDB(t)
 	// A child of pA1 + pA2 with a partial, approximate birth date and a multi-line note.
-	DB.Exec(`INSERT INTO people (id, tree_id, name, nickname, address, status, gender, birth_date, birth_date_precision, birth_date_qualifier, notes, created_at)
+	DB.Exec(`INSERT INTO people (id, tree_id, name, nickname, address, status, gender, birth_date, birth_date_precision, birth_date_qualifier, notes, religion, created_at)
 		VALUES ('p-kid', ?, 'Kid Sato', 'Kiddo', 'Jl. Ijen 5', 'alive', 'female', '1990-01-01T00:00:00Z', 'year', 'about', 'line one
-line two', now())`, treeA)
+line two', 'protestant', now())`, treeA)
 	DB.Exec(`INSERT INTO relationships (id, tree_id, from_id, to_id, type, sort_order) VALUES
 		('r-k1', ?, ?, 'p-kid', 'parent', 0), ('r-k2', ?, ?, 'p-kid', 'parent', 0)`, treeA, pA1, treeA, pA2)
 	bumpTreeCache(t.Context(), treeA)
@@ -103,7 +103,7 @@ line two', now())`, treeA)
 			kid = r
 		}
 	}
-	if kid == nil || kid[2] != "Perempuan" || kid[4] != "sekitar 1990" || kid[10] != "A One, A Two" {
+	if kid == nil || kid[2] != "Perempuan" || kid[4] != "Kristen" || kid[5] != "sekitar 1990" || kid[11] != "A One, A Two" {
 		t.Errorf("kid row: %q", kid)
 	}
 	if fams, _ := readSheet(t, rec.Body.Bytes(), 2); len(fams) != 3 {
@@ -112,7 +112,7 @@ line two', now())`, treeA)
 
 	rec = rawGet(t, alice, base+"?format=gedcom")
 	ged := rec.Body.String()
-	for _, want := range []string{"0 HEAD", "1 CHAR UTF-8", "1 NAME Kid Sato", "2 NICK Kiddo", "2 DATE ABT 1990", "1 NOTE line one\n2 CONT line two",
+	for _, want := range []string{"0 HEAD", "1 CHAR UTF-8", "1 NAME Kid Sato", "2 NICK Kiddo", "2 DATE ABT 1990", "1 RELI Protestant", "1 NOTE line one\n2 CONT line two",
 		"1 HUSB @I", "1 WIFE @I", "1 CHIL @I", "0 TRLR"} {
 		if !strings.Contains(ged, want) {
 			t.Errorf("gedcom missing %q", want)

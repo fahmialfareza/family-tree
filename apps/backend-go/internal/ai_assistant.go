@@ -40,6 +40,7 @@ type aiPerson struct {
 	DeathPlace string `json:"deathPlace,omitempty"`
 	Address    string `json:"address,omitempty"`
 	Notes      string `json:"notes,omitempty"`
+	Religion   string `json:"religion,omitempty"`
 	birthYear  int
 	search     string // normalized name + nickname
 	places     string // normalized places + address
@@ -116,7 +117,7 @@ func loadAITree(ctx context.Context, treeID string) (*aiTreeData, error) {
 	if err := byCreation(DB.WithContext(ctx)).Scopes(inTree(treeID)).
 		Select("id", "created_at", "name", "nickname", "gender", "status", "address", "birth_date", "birth_date_precision",
 			"birth_date_qualifier", "death_date", "death_date_precision", "death_date_qualifier", "birth_place",
-			"death_place", "notes").
+			"death_place", "notes", "religion").
 		Limit(maxGraphPeople + 1).Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -138,6 +139,7 @@ func loadAITree(ctx context.Context, treeID string) (*aiTreeData, error) {
 			Born:       formatPartialDate(r.BirthDate, r.BirthDatePrecision, r.BirthDateQualifier),
 			Died:       formatPartialDate(r.DeathDate, r.DeathDatePrecision, r.DeathDateQualifier),
 			BirthPlace: deref(r.BirthPlace), DeathPlace: deref(r.DeathPlace), Notes: truncateRunes(deref(r.Notes), 600),
+			Religion: deref(r.Religion),
 		})
 	}
 	cacheSet(ctx, key, data, cacheTTLGraph)

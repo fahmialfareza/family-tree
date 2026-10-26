@@ -84,6 +84,7 @@ type Person struct {
 	DeathDateQualifier string          `json:"deathDateQualifier,omitempty"`
 	BirthPlace         string          `json:"birthPlace,omitempty"`
 	DeathPlace         string          `json:"deathPlace,omitempty"`
+	Religion           string          `json:"religion,omitempty"`
 	Notes              string          `json:"notes,omitempty"`
 	Phone              string          `json:"phone,omitempty"`
 	PhotoURL           string          `json:"photoUrl,omitempty"`
