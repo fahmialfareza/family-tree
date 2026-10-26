@@ -92,9 +92,26 @@ fn open_deep_link(app: &AppHandle, link: &Url) {
     target.set_query(link.query());
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.navigate(target);
+        #[cfg(desktop)]
         let _ = window.unminimize();
         let _ = window.set_focus();
     }
+}
+
+/// dir/name, or dir/"name (1).ext", ... if it exists.
+#[cfg(target_os = "ios")]
+fn unique_path(dir: std::path::PathBuf, name: &str) -> std::path::PathBuf {
+    let (stem, ext) = match name.rsplit_once('.') {
+        Some((stem, ext)) if !stem.is_empty() => (stem.to_string(), format!(".{ext}")),
+        _ => (name.to_string(), String::new()),
+    };
+    let mut path = dir.join(name);
+    let mut n = 1;
+    while path.exists() {
+        path = dir.join(format!("{stem} ({n}){ext}"));
+        n += 1;
+    }
+    path
 }
 
 /// Tells the page about a download: window event "sakdulur:download" with {state, id, name}, where state is
@@ -108,6 +125,7 @@ fn notify_download(webview: &Webview, state: &str, url: &Url, name: &str) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg_attr(mobile, allow(unused_mut))]
     let mut builder = tauri::Builder::default();
     #[cfg(desktop)]
     {
@@ -134,11 +152,16 @@ pub fn run() {
             // File names by download URL: macOS does not report the path when a download finishes.
             let downloads: Arc<Mutex<HashMap<String, String>>> = Arc::default();
 
-            let window = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
+            let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()));
+            // Window size is desktop-only: on phones the window is the screen (a fixed size there made the
+            // page render its desktop layout, cut off, above a black strip).
+            #[cfg(desktop)]
+            let builder = builder
                 .title("Sakdulur")
                 .inner_size(1200.0, 800.0)
                 .min_inner_size(360.0, 640.0)
-                .zoom_hotkeys_enabled(false)
+                .zoom_hotkeys_enabled(false);
+            let window = builder
                 // Read by the launcher (and visible to the site, which does not depend on it).
                 .initialization_script(&format!(
                     "window.__SAKDULUR_APP__ = {{ client: {:?}, site: {:?} }};",
@@ -167,6 +190,12 @@ pub fn run() {
                 .on_download(move |webview, event| {
                     match event {
                         DownloadEvent::Requested { url, destination } => {
+                            // iOS has no Downloads folder: save to the app's Documents, shown in Files › Sakdulur
+                            // (UIFileSharingEnabled). Same "name (1).ext" rule as the desktop default.
+                            #[cfg(target_os = "ios")]
+                            if let (Ok(dir), Some(file)) = (webview.path().document_dir(), destination.file_name()) {
+                                *destination = unique_path(dir, &file.to_string_lossy());
+                            }
                             let name = destination
                                 .file_name()
                                 .map(|n| n.to_string_lossy().into_owned())
