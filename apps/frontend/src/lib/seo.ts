@@ -1,15 +1,21 @@
 import type { Metadata } from "next";
 import { BRAND } from "./brand";
 
+/** The language URL of a public page: localePath("id", "/") = "/id", localePath("en", "/privacy") = "/en/privacy". */
+export function localePath(locale: string, path: string) {
+  return `/${locale}${path === "/" ? "" : path}`;
+}
+
 /**
- * hreflang alternates for a public page. The page itself is locale-free (language from account, cookie or
- * country), so each language gets a ?lang= URL that search engines can index. The canonical URL is the version in
- * the language being served; x-default is the English one (not the plain path, which serves either language and
- * would conflict with its own canonical).
+ * hreflang alternates for a public page. Each language has its own URL (/en, /id/privacy); the plain path picks
+ * the language per visitor (see middleware.ts) and points its canonical to the version it served. x-default is
+ * the English URL, not the plain path, which would conflict with its own canonical.
  */
 export function languageAlternates(path: string, locale: string): NonNullable<Metadata["alternates"]> {
-  const url = (l: string) => `${path}?lang=${l}`;
-  return { canonical: url(locale), languages: { en: url("en"), id: url("id"), "x-default": url("en") } };
+  return {
+    canonical: localePath(locale, path),
+    languages: { en: localePath("en", path), id: localePath("id", path), "x-default": localePath("en", path) },
+  };
 }
 
 const SHARE_IMAGE = { url: "/opengraph-image", width: 1200, height: 630, alt: `${BRAND} — family tree / silsilah keluarga` };
@@ -25,7 +31,7 @@ export function pageSocial(path: string, locale: string, title: string, descript
       siteName: BRAND,
       title,
       description,
-      url: `${path}?lang=${locale}`,
+      url: localePath(locale, path),
       locale: locale === "id" ? "id_ID" : "en_US",
       alternateLocale: locale === "id" ? ["en_US"] : ["id_ID"],
       images: [SHARE_IMAGE],

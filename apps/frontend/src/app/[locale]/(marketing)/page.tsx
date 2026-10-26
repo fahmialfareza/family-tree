@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { BRAND, SITE_URL } from "@/lib/brand";
 import { contactEmail } from "@/lib/legal-content";
 import { type LocaleParams, pageLocale } from "@/i18n/static";
-import { jsonLd, languageAlternates, pageSocial } from "@/lib/seo";
+import { jsonLd, languageAlternates, localePath, pageSocial } from "@/lib/seo";
 
 export async function generateMetadata(props: LocaleParams): Promise<Metadata> {
   const locale = await pageLocale(props);
@@ -98,7 +98,7 @@ export default async function LandingPage(props: LocaleParams) {
       },
       {
         "@type": "FAQPage",
-        "@id": `${SITE_URL}/?lang=${locale}#faq`,
+        "@id": `${SITE_URL}${localePath(locale, "/")}#faq`,
         inLanguage: locale,
         mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.q, acceptedAnswer: { "@type": "Answer", text: f.a } })),
       },
@@ -177,7 +177,7 @@ export default async function LandingPage(props: LocaleParams) {
               {t("privacyTitle")}
             </h2>
             <p className="text-muted-foreground">{t("privacyBody")}</p>
-            <Link href="/privacy" className="inline-block text-sm font-medium text-primary underline-offset-4 hover:underline">
+            <Link href={localePath(locale, "/privacy")} className="inline-block text-sm font-medium text-primary underline-offset-4 hover:underline">
               {t("privacyLink")}
             </Link>
           </div>

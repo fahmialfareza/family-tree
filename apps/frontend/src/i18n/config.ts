@@ -12,9 +12,8 @@ export function isLocale(value: string | null | undefined): value is Locale {
 const INDONESIAN_COUNTRIES = new Set(["ID"]);
 
 /**
- * Language, in order of preference (URLs stay locale-free):
- * 0. ?lang=en|id on public pages: the language versions search engines index (they crawl without cookies and
- *    mostly from US IPs)
+ * Language of a request without a language URL (public pages also have /en/... and /id/..., see middleware.ts):
+ * 0. ?lang=en|id: kept for links into the locale-free app pages (old public ?lang= URLs redirect to /en, /id)
  * 1. the account's language: copied into the NEXT_LOCALE cookie at sign-in (lib/server/session.ts)
  * 2. the NEXT_LOCALE cookie: the last choice in this browser (language switcher)
  * 3. the visitor's country from the IP: Cloudflare's cf-ipcountry header (Vercel's as a fallback)

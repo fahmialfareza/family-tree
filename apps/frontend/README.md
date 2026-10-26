@@ -24,14 +24,16 @@ The browser only talks to this app. Tokens never reach page JavaScript:
   browser-bound `ft_oauth_binding` cookie.
 - `src/app/api/proxy/[...path]` — forwards `/api/proxy/api/...` to the Go API with the bearer token, refreshes the
   session once on 401, and rejects cross-site state-changing requests.
-- `src/middleware.ts` — picks the language (`?lang`, `NEXT_LOCALE` cookie, country, `Accept-Language`; see
-  `src/i18n/config.ts`) and rewrites `/path` to `/{locale}/path`, guards `/app/**`, and refreshes an expired access
-  token before server components render.
+- `src/middleware.ts` — language: public pages have language URLs (`/en`, `/id/privacy`) served as is; other
+  URLs pick the language (`NEXT_LOCALE` cookie, country, `Accept-Language`; see `src/i18n/config.ts`) and are
+  rewritten to `/{locale}/path`. Also guards `/app/**` and refreshes an expired access token before server
+  components render.
 - `src/lib/api/hooks.ts` — TanStack Query hooks; query keys are scoped per tree.
 
 ## Layout
 
-- `src/app/[locale]/` holds every page (locale-free URLs, see middleware). `(marketing)` — landing, privacy, terms,
+- `src/app/[locale]/` holds every page (app URLs are locale-free, see middleware). `(marketing)` — landing, privacy, terms
+  (also at `/en/...` and `/id/...`; build their links with `localePath` from `src/lib/seo.ts`),
   prerendered per language and served from Workers static assets (`open-next.config.ts`); the header reads the
   `ft_signed_in` hint cookie in the browser. `(auth)` — sign-in flows and `/invite`.
   `(app)/app` — the signed-in app: `/app/t/[treeId]` (canvas), `people`, `families`, `members`, `settings`,

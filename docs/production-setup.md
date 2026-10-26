@@ -80,8 +80,9 @@ Local development needs none of these: both apps fall back to `http://localhost:
 
 ## SEO and AI search
 
-- Public pages: `/`, `/privacy`, `/terms`, each in English and Indonesian at `?lang=en` / `?lang=id` (hreflang +
-  canonical in the page metadata; the plain URL is `x-default` and picks the language as usual). Everything under
+- Public pages have a URL per language: `/en`, `/id`, `/en/privacy`, `/id/terms`, ... (hreflang + self canonical;
+  `x-default` is the English URL). The plain `/`, `/privacy` and `/terms` pick the language per visitor and point
+  their canonical to that language's URL. Old `?lang=en|id` URLs redirect (301) to these. Everything under
   `/app`, `/auth`, `/invite` and `/api` is disallowed in `robots.txt`.
 - Landing page carries JSON-LD (Organization, WebSite, WebApplication, FAQPage). `/llms.txt` summarizes Sakdulur for
   AI assistants. `robots.txt` explicitly allows AI crawlers (GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot,
@@ -89,7 +90,7 @@ Local development needs none of these: both apps fall back to `http://localhost:
 - **Cloudflare:** check Security → Bots / AI Crawl Control and keep "Block AI bots" and the managed robots.txt
   **off**, otherwise Cloudflare blocks the AI crawlers the site invites (it is on by default for some new domains).
 - After launch: add `sakdulur.com` to Google Search Console and Bing Webmaster Tools (set the verification env vars
-  above), submit `https://sakdulur.com/sitemap.xml`, and test the landing page in Google's Rich Results Test.
+  above), submit `https://sakdulur.com/sitemap.xml` (resubmit after URL changes), and test the landing page in Google's Rich Results Test.
 
 ## Admin dashboard
 

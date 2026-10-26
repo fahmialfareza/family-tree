@@ -14,6 +14,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { isLocale } from "@/i18n/config";
 
 export function useSetLocale() {
   const router = useRouter();
@@ -22,6 +23,12 @@ export function useSetLocale() {
     start(async () => {
       await fetch("/api/locale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale }) });
       const url = new URL(window.location.href);
+      // Public pages have a URL per language (/en/privacy -> /id/privacy).
+      const prefix = url.pathname.split("/")[1];
+      if (isLocale(prefix)) {
+        router.push(`/${locale}${url.pathname.slice(prefix.length + 1)}${url.hash}`);
+        return;
+      }
       if (url.searchParams.has("lang")) {
         // ?lang= wins over the cookie, so leave the language-specific URL.
         url.searchParams.delete("lang");

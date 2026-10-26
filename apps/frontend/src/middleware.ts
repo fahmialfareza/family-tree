@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { isLocale, LOCALE_COOKIE, pickLocale } from "@/i18n/config";
+import { isLocale, LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, pickLocale } from "@/i18n/config";
+import { localePath } from "@/lib/seo";
 import { SIGNED_IN_COOKIE } from "@/lib/session-hint";
 
 // Runs before every page:
-// - picks the language and rewrites /path to /{locale}/path (app/[locale]); URLs never show the locale, and
-//   pages that don't read cookies (the marketing site) are prerendered once per language
+// - language: pages live under app/[locale]. The public pages have a URL per language (/en, /id/privacy, ...)
+//   that is served as is; their plain URLs (/, /privacy, /terms) and every app page pick the language per
+//   request and are rewritten to /{locale}/path. Public pages are prerendered once per language.
 // - guards /app and /admin: no session cookies at all -> redirect to /auth/login?next=...
 // - keeps the session fresh before pages render (server components cannot set cookies): access cookie expired
 //   but refresh cookie present -> refresh now and set new cookies
@@ -14,9 +16,10 @@ const ACCESS_COOKIE = "ft_access";
 const REFRESH_COOKIE = "ft_refresh";
 // next-intl reads the locale of requests that have no [locale] param set from this header.
 const INTL_LOCALE_HEADER = "X-NEXT-INTL-LOCALE";
-// Prerendered pages: one URL serves either language, so shared caches must not keep them (Next sends
-// s-maxage for prerendered pages). Not no-store, which would keep them out of the back/forward cache.
-const PRERENDERED = new Set(["/", "/privacy", "/terms"]);
+// Public pages, prerendered per language. Their plain URLs serve either language, so shared caches must not
+// keep those (Next sends s-maxage for prerendered pages); /en/... and /id/... are fixed and stay cacheable.
+// Not no-store, which would keep them out of the back/forward cache.
+const PUBLIC_PAGES = new Set(["/", "/privacy", "/terms"]);
 
 function backendUrl() {
   return (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/+$/, "");
@@ -35,17 +38,30 @@ function secure() {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
-  // /en/... and /id/... are internal: send direct visits to the public URL in that language.
-  const prefix = pathname.split("/")[1];
-  if (isLocale(prefix)) {
+  const lang = req.nextUrl.searchParams.get("lang");
+  // Language URLs before /en and /id existed (/?lang=id, still indexed): moved for good.
+  if (PUBLIC_PAGES.has(pathname) && isLocale(lang)) {
     const url = req.nextUrl.clone();
-    url.pathname = pathname.slice(prefix.length + 1) || "/";
-    url.searchParams.set("lang", prefix);
-    return NextResponse.redirect(url);
+    url.pathname = localePath(lang, pathname);
+    url.searchParams.delete("lang");
+    return NextResponse.redirect(url, 301);
+  }
+  const prefix = pathname.split("/")[1];
+  const fixedLocale = isLocale(prefix) ? prefix : null;
+  if (fixedLocale) {
+    const rest = pathname.slice(prefix.length + 1) || "/";
+    // Only public pages have language URLs; the app's stay locale-free (remember the choice instead).
+    if (!PUBLIC_PAGES.has(rest)) {
+      const url = req.nextUrl.clone();
+      url.pathname = rest;
+      const out = NextResponse.redirect(url);
+      out.cookies.set(LOCALE_COOKIE, fixedLocale, { path: "/", maxAge: LOCALE_COOKIE_MAX_AGE, sameSite: "lax" });
+      return out;
+    }
   }
 
-  const locale = pickLocale({
-    lang: req.nextUrl.searchParams.get("lang"),
+  const locale = fixedLocale ?? pickLocale({
+    lang,
     cookie: req.cookies.get(LOCALE_COOKIE)?.value,
     country: req.headers.get("cf-ipcountry") ?? req.headers.get("x-vercel-ip-country"),
     acceptLanguage: req.headers.get("accept-language"),
@@ -54,10 +70,11 @@ export async function middleware(req: NextRequest) {
   const next = () => {
     const headers = new Headers(req.headers);
     headers.set(INTL_LOCALE_HEADER, locale);
+    if (fixedLocale) return NextResponse.next({ request: { headers } });
     const url = req.nextUrl.clone();
-    url.pathname = `/${locale}${pathname === "/" ? "" : pathname}`;
+    url.pathname = localePath(locale, pathname);
     const res = NextResponse.rewrite(url, { request: { headers } });
-    if (PRERENDERED.has(pathname)) res.headers.set("Cache-Control", "private, no-cache");
+    if (PUBLIC_PAGES.has(pathname)) res.headers.set("Cache-Control", "private, no-cache");
     return res;
   };
   const access = req.cookies.get(ACCESS_COOKIE)?.value;
