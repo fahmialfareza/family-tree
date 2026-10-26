@@ -3,12 +3,13 @@ import { BRAND } from "./brand";
 
 /**
  * hreflang alternates for a public page. The page itself is locale-free (language from account, cookie or
- * country), so each language gets a ?lang= URL that search engines can index; x-default is the plain path.
- * The canonical URL is the version in the language being served.
+ * country), so each language gets a ?lang= URL that search engines can index. The canonical URL is the version in
+ * the language being served; x-default is the English one (not the plain path, which serves either language and
+ * would conflict with its own canonical).
  */
 export function languageAlternates(path: string, locale: string): NonNullable<Metadata["alternates"]> {
   const url = (l: string) => `${path}?lang=${l}`;
-  return { canonical: url(locale), languages: { en: url("en"), id: url("id"), "x-default": path } };
+  return { canonical: url(locale), languages: { en: url("en"), id: url("id"), "x-default": url("en") } };
 }
 
 const SHARE_IMAGE = { url: "/opengraph-image", width: 1200, height: 630, alt: `${BRAND} — family tree / silsilah keluarga` };

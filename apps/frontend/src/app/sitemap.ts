@@ -13,7 +13,7 @@ const PAGES: { path: string; priority: number; changeFrequency: "monthly" | "yea
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
   return PAGES.flatMap(({ path, priority, changeFrequency, lastModified }) => {
-    const languages = { en: `${SITE_URL}${path}?lang=en`, id: `${SITE_URL}${path}?lang=id`, "x-default": `${SITE_URL}${path}` };
+    const languages = { en: `${SITE_URL}${path}?lang=en`, id: `${SITE_URL}${path}?lang=id`, "x-default": `${SITE_URL}${path}?lang=en` };
     return (["id", "en"] as const).map((lang) => ({
       url: languages[lang],
       lastModified: lastModified ? new Date(lastModified) : now,
