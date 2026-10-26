@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Plus_Jakarta_Sans } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { notFound } from "next/navigation";
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getMessages, getTranslations, setRequestLocale } from "next-intl/server";
 import { isLocale, locales } from "@/i18n/config";
 import { Providers } from "@/components/providers/providers";
 import { BRAND, SITE_URL } from "@/lib/brand";
@@ -20,6 +20,14 @@ const KEYWORDS: Record<string, string[]> = {
 };
 
 type Props = { params: Promise<{ locale: string }> };
+
+// Messages every page's client components may need; the app, sign-in and admin sections get all of them
+// (components/providers/app-scope.tsx). Keeps the marketing pages' HTML and JavaScript small.
+const SHARED_MESSAGES = ["marketing", "prefs", "errors"];
+
+function pick(messages: Record<string, unknown>, keys: string[]) {
+  return Object.fromEntries(keys.filter((k) => k in messages).map((k) => [k, messages[k]]));
+}
 
 // URLs carry no locale: middleware.ts picks it per request and rewrites /path to /{locale}/path, so pages that
 // don't read cookies (the marketing pages) are prerendered once per language.
@@ -77,7 +85,7 @@ export default async function RootLayout({ children, params }: Readonly<{ childr
   return (
     <html lang={locale} suppressHydrationWarning className={`${sans.variable} ${serif.variable}`}>
       <body className="min-h-dvh">
-        <NextIntlClientProvider>
+        <NextIntlClientProvider messages={pick(await getMessages(), SHARED_MESSAGES)}>
           <Providers>{children}</Providers>
         </NextIntlClientProvider>
       </body>

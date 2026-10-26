@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import { AppScope } from "@/components/providers/app-scope";
 import { AppShell } from "@/components/shell/app-shell";
 import type { Me } from "@/lib/api/types";
 import { BackendError, backendGet } from "@/lib/server/backend";
@@ -14,5 +15,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     if (err instanceof BackendError && err.status === 401) redirect("/auth/login?next=/app");
     throw err;
   }
-  return <AppShell initialMe={me}>{children}</AppShell>;
+  return (
+    <AppScope>
+      <AppShell initialMe={me}>{children}</AppShell>
+    </AppScope>
+  );
 }

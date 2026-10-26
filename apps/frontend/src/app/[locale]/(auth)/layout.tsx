@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/common/logo";
 import { PreferencesMenu, ThemeToggle } from "@/components/common/preferences";
+import { AppScope } from "@/components/providers/app-scope";
 
 export default async function AuthLayout({
   children,
@@ -18,7 +19,9 @@ export default async function AuthLayout({
         </div>
       </header>
       <main className="flex flex-1 items-start justify-center px-4 pb-16 pt-6 sm:items-center sm:pt-0">
-        <div className="w-full max-w-md">{children}</div>
+        <div className="w-full max-w-md">
+          <AppScope>{children}</AppScope>
+        </div>
       </main>
     </div>
   );
