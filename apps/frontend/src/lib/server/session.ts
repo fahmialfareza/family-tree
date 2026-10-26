@@ -4,9 +4,11 @@ import type { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { isLocale, LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from "@/i18n/config";
 import type { TokenPair } from "@/lib/api/types";
+import { SIGNED_IN_COOKIE } from "@/lib/session-hint";
 import { clientIpHeaders, serverEnv } from "./env";
 
-// Session cookies. Both are httpOnly, so page JavaScript can never read a token.
+// Session cookies. Both are httpOnly, so page JavaScript can never read a token; SIGNED_IN_COOKIE (no secret)
+// follows the refresh cookie so prerendered pages can tell signed-in visitors apart.
 // The access cookie expires shortly before the token itself; when it is gone and the refresh
 // cookie is still there, middleware.ts (or the API proxy) refreshes transparently.
 export const ACCESS_COOKIE = "ft_access";
@@ -26,6 +28,7 @@ export function setSessionCookies(jar: CookieJar, pair: TokenPair) {
   jar.set(ACCESS_COOKIE, pair.accessToken, { ...baseCookie(), maxAge: Math.max(expiresIn - 30, 30) });
   if (pair.refreshToken) {
     jar.set(REFRESH_COOKIE, pair.refreshToken, { ...baseCookie(), maxAge: REFRESH_MAX_AGE });
+    jar.set(SIGNED_IN_COOKIE, "1", { ...baseCookie(), httpOnly: false, maxAge: REFRESH_MAX_AGE });
   }
   // The account's language wins over whatever this browser had (see i18n/request.ts).
   if (isLocale(pair.user?.locale)) {
@@ -36,6 +39,7 @@ export function setSessionCookies(jar: CookieJar, pair: TokenPair) {
 export function clearSessionCookies(jar: CookieJar) {
   jar.delete(ACCESS_COOKIE);
   jar.delete(REFRESH_COOKIE);
+  jar.delete(SIGNED_IN_COOKIE);
 }
 
 export function setBindingCookie(jar: CookieJar, value: string) {

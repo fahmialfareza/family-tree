@@ -2,6 +2,7 @@
 
 import { Loader2, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Field, FormError, PasswordInput } from "@/components/common/field";
@@ -85,14 +86,14 @@ export function SignupForm({ next, providers }: { next: string; providers: AuthP
           {t.rich("agree", {
             age: MIN_AGE,
             terms: (c) => (
-              <a href="/terms" className="underline underline-offset-2">
+              <Link href="/terms" className="underline underline-offset-2">
                 {c}
-              </a>
+              </Link>
             ),
             privacy: (c) => (
-              <a href="/privacy" className="underline underline-offset-2">
+              <Link href="/privacy" className="underline underline-offset-2">
                 {c}
-              </a>
+              </Link>
             ),
           })}
         </p>

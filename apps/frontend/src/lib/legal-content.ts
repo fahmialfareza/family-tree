@@ -146,6 +146,7 @@ export function privacyPolicy(locale: string): LegalDoc {
           p: ["Kami hanya menggunakan yang diperlukan agar aplikasi berfungsi:"],
           list: [
             "ft_access dan ft_refresh — sesi masuk Anda (httpOnly, berlaku hingga 30 hari).",
+            "ft_signed_in — menandai bahwa Anda sedang masuk, agar halaman depan menampilkan tombol yang tepat (tanpa data pribadi, hingga 30 hari).",
             "ft_oauth_binding — mengamankan proses masuk dengan Google (10 menit).",
             "NEXT_LOCALE — pilihan bahasa (1 tahun).",
             "theme (penyimpanan lokal browser) — pilihan tema terang/gelap.",
@@ -290,6 +291,7 @@ export function privacyPolicy(locale: string): LegalDoc {
         p: ["We only use what the app needs to work:"],
         list: [
           "ft_access and ft_refresh — your sign-in session (httpOnly, up to 30 days).",
+          "ft_signed_in — marks that you are signed in, so the home page shows the right buttons (no personal data, up to 30 days).",
           "ft_oauth_binding — secures Sign in with Google (10 minutes).",
           "NEXT_LOCALE — your language choice (1 year).",
           "theme (browser local storage) — your light/dark preference.",

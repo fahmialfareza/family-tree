@@ -1,14 +1,15 @@
 import { Copy, HeartHandshake, Lock, MessageCircleQuestion, Network, ShieldCheck, Smartphone, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations } from "next-intl/server";
 import { Button } from "@/components/ui/button";
 import { BRAND, SITE_URL } from "@/lib/brand";
 import { contactEmail } from "@/lib/legal-content";
+import { type LocaleParams, pageLocale } from "@/i18n/static";
 import { jsonLd, languageAlternates, pageSocial } from "@/lib/seo";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata(props: LocaleParams): Promise<Metadata> {
+  const locale = await pageLocale(props);
   const t = await getTranslations("meta");
   return {
     title: { absolute: t("title") },
@@ -54,10 +55,10 @@ function TreePreview({ label }: { label: string }) {
   );
 }
 
-export default async function LandingPage() {
+export default async function LandingPage(props: LocaleParams) {
+  const locale = await pageLocale(props);
   const t = await getTranslations("landing");
   const tm = await getTranslations("meta");
-  const locale = await getLocale();
   const features = [
     { icon: Network, title: t("f1Title"), body: t("f1Body") },
     { icon: HeartHandshake, title: t("f2Title"), body: t("f2Body") },

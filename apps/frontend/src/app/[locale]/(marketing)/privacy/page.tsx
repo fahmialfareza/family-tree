@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { getLocale } from "next-intl/server";
 import { LegalPage } from "@/components/common/legal";
 import { privacyPolicy, terms } from "@/lib/legal-content";
 import { BRAND } from "@/lib/brand";
+import { type LocaleParams, pageLocale } from "@/i18n/static";
 import { languageAlternates, pageSocial } from "@/lib/seo";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata(props: LocaleParams): Promise<Metadata> {
+  const locale = await pageLocale(props);
   const doc = privacyPolicy(locale);
   return {
     title: doc.title,
@@ -16,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function Page() {
-  const locale = await getLocale();
+export default async function Page(props: LocaleParams) {
+  const locale = await pageLocale(props);
   return <LegalPage doc={privacyPolicy(locale)} otherDoc={{ href: "/terms", title: terms(locale).title }} />;
 }

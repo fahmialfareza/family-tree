@@ -1,19 +1,20 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { type LocaleParams, pageLocale } from "@/i18n/static";
 import { Logo } from "@/components/common/logo";
+import { HeaderActions } from "@/components/common/header-actions";
 import { PreferencesMenu, ThemeToggle } from "@/components/common/preferences";
-import { Button } from "@/components/ui/button";
 import { contactEmail } from "@/lib/legal-content";
-import { getAccessToken } from "@/lib/server/session";
 
 export default async function MarketingLayout({
   children,
+  ...props
 }: {
   children: React.ReactNode;
-}) {
+} & LocaleParams) {
+  await pageLocale(props);
   const t = await getTranslations("marketing");
   const tm = await getTranslations("meta");
-  const signedIn = !!(await getAccessToken());
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="sticky top-0 z-30 border-b bg-background/85 pt-[env(safe-area-inset-top)] backdrop-blur">
@@ -25,24 +26,7 @@ export default async function MarketingLayout({
           >
             <ThemeToggle />
             <PreferencesMenu />
-            {signedIn ? (
-              <Button asChild>
-                <Link href="/app">{t("openApp")}</Link>
-              </Button>
-            ) : (
-              <>
-                <Button
-                  asChild
-                  variant="ghost"
-                  className="hidden sm:inline-flex"
-                >
-                  <Link href="/auth/login">{t("signIn")}</Link>
-                </Button>
-                <Button asChild>
-                  <Link href="/auth/signup">{t("getStarted")}</Link>
-                </Button>
-              </>
-            )}
+            <HeaderActions />
           </nav>
         </div>
       </header>

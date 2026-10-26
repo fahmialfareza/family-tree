@@ -33,7 +33,7 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
 
 ### Frontend (`apps/frontend`)
 
-- Follow the existing Next.js App Router structure (`(marketing)`, `(auth)`, `(app)` route groups) and component patterns; see `apps/frontend/README.md`.
+- Follow the existing Next.js App Router structure (`src/app/[locale]/` with `(marketing)`, `(auth)`, `(app)` route groups; locale-free URLs via middleware rewrite) and component patterns; see `apps/frontend/README.md`.
 - The browser never calls the Go API directly: use the TanStack Query hooks in `src/lib/api/hooks.ts`, which go through the `/api/proxy` BFF route; sessions live in httpOnly cookies.
 - Every UI string goes in both `messages/en.json` and `messages/id.json`; use the design tokens in `src/app/globals.css`.
 - Use `pnpm` for dependencies and scripts.
