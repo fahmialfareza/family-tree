@@ -10,7 +10,8 @@ import { OPERATOR_NAME } from "@/lib/legal-content";
 import "../globals.css";
 
 const sans = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
-const serif = Fraunces({ subsets: ["latin"], variable: "--font-serif", display: "swap", axes: ["SOFT", "opsz"] });
+// No extra variable axes (SOFT, opsz): they quadruple the file (~120 KB) and headings look the same.
+const serif = Fraunces({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
 
 // Search keywords per language (Bing still reads them; Google ignores them but they cost nothing).
 const KEYWORDS: Record<string, string[]> = {
