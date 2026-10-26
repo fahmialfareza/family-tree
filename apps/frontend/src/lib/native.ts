@@ -41,30 +41,35 @@ async function sha256Hex(value: string) {
 }
 
 /**
- * Google refuses sign-in inside app windows, so the app opens it in the system browser (navigating to
- * Google is enough: the app sends other sites there). The binding cookie is set here, in the app; the API
- * sends the one-time code back through the app's URL scheme and the app loads /auth/google/complete,
- * where that cookie is read.
+ * Google (and Apple, where the app has no native Apple sheet) sign-in runs in the system browser: Google refuses
+ * app windows, and navigating there is enough, because the app sends other sites to the browser. The binding
+ * cookie is set here, in the app; the API sends the one-time code back through the app's URL scheme and the app
+ * loads /auth/<provider>/complete, where that cookie is read.
  */
-export async function startGoogleSignInNative(next: string) {
-  const res = await fetch(`/api/session/google/start?client=app&next=${encodeURIComponent(next)}`, {
+export async function startBrowserSignIn(provider: "google" | "apple", next: string) {
+  const res = await fetch(`/api/session/${provider}/start?client=app&next=${encodeURIComponent(next)}`, {
     headers: { Accept: "application/json" },
     credentials: "same-origin",
   });
   const body = (await res.json().catch(() => null)) as { url?: string } | null;
-  if (!res.ok || !body?.url) throw new Error("Google sign-in is unavailable");
+  if (!res.ok || !body?.url) throw new Error("Sign-in is unavailable");
   window.location.assign(body.url);
 }
 
 type AppleAuthorization = { identityToken: string; authorizationCode?: string; givenName?: string; familyName?: string };
 type TauriInternals = { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T> };
 
-/** Native Sign in with Apple (iOS app, through its sign-in-with-apple plugin). Resolves once the session cookies are set. */
+/** Platforms whose app shows Apple's own sign-in sheet (the sign-in-with-apple plugin in apps/native). */
+export function hasNativeAppleSignIn(platform: Platform) {
+  return platform === "ios" || platform === "macos";
+}
+
+/** Native Sign in with Apple (iPhone and Mac apps, through the app's plugin). Resolves once the session cookies are set. */
 export async function signInWithAppleNative() {
   const tauri = (window as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__;
   if (!tauri) throw new Error("Sign in with Apple is unavailable");
   const nonce = randomHex();
-  const response = await tauri.invoke<AppleAuthorization>("plugin:sign-in-with-apple|authorize", { nonce: await sha256Hex(nonce) });
+  const response = await tauri.invoke<AppleAuthorization>("plugin:sakdulur|apple_authorize", { nonce: await sha256Hex(nonce) });
   const name = [response.givenName, response.familyName].filter(Boolean).join(" ");
   const res = await fetch("/api/session/apple", {
     method: "POST",

@@ -82,7 +82,14 @@
       "google_token": "Masuk dengan Google tidak dapat diverifikasi.",
       "google_email_unverified": "Email Google Anda belum terverifikasi.",
       "google_account": "Kami tidak dapat memasukkan Anda dengan Google.",
-      "google_conflict": "Email ini milik akun yang terhubung dengan akun Google lain."
+      "google_conflict": "Email ini milik akun yang terhubung dengan akun Google lain.",
+      "apple_state": "Masuk dengan Apple kedaluwarsa. Silakan coba lagi.",
+      "apple_cancelled": "Masuk dengan Apple dibatalkan.",
+      "apple_unavailable": "Masuk dengan Apple sedang tidak tersedia.",
+      "apple_token": "Masuk dengan Apple tidak dapat diverifikasi.",
+      "apple_email": "Apple tidak membagikan alamat email yang terverifikasi.",
+      "apple_account": "Kami tidak dapat memasukkan Anda dengan Apple.",
+      "apple_conflict": "Email ini milik akun yang tertaut ke Apple ID lain."
     }
   },
   "invite": {

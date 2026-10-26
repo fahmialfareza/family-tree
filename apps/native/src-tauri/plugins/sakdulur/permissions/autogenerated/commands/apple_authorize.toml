@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-apple-authorize"
+description = "Enables the apple_authorize command without any pre-configured scope."
+commands.allow = ["apple_authorize"]
+
+[[permission]]
+identifier = "deny-apple-authorize"
+description = "Denies the apple_authorize command without any pre-configured scope."
+commands.deny = ["apple_authorize"]

@@ -16,7 +16,7 @@
     "active": true,
     "targets": "all",
     "publisher": "Fahmi Alfareza",
-    "copyright": "© Fahmi Alfareza",
+    "copyright": "\u00a9 Fahmi Alfareza",
     "category": "Lifestyle",
     "shortDescription": "Family tree, built together",
     "longDescription": "Sakdulur is a private family tree you build together with your family: parents, partners and children across generations, with photos, stories and an AI assistant.",
@@ -29,7 +29,8 @@
       "icons/icon.ico"
     ],
     "iOS": {
-      "minimumSystemVersion": "15.0"
+      "minimumSystemVersion": "15.0",
+      "developmentTeam": "7FCMB3QMK7"
     },
     "macOS": {
       "minimumSystemVersion": "11.0"
@@ -39,12 +40,16 @@
     "deep-link": {
       "mobile": [
         {
-          "scheme": ["com.fahmialfareza.sakdulur"],
+          "scheme": [
+            "com.fahmialfareza.sakdulur"
+          ],
           "appLink": false
         }
       ],
       "desktop": {
-        "schemes": ["com.fahmialfareza.sakdulur"]
+        "schemes": [
+          "com.fahmialfareza.sakdulur"
+        ]
       }
     }
   }

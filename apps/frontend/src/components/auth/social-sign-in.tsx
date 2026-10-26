@@ -5,10 +5,10 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { isUserCancel, signInWithAppleNative, startGoogleSignInNative, useNativePlatform } from "@/lib/native";
+import { hasNativeAppleSignIn, isUserCancel, signInWithAppleNative, startBrowserSignIn, useNativePlatform } from "@/lib/native";
 import { GoogleIcon } from "./auth-card";
 
-export type AuthProviders = { google: boolean; apple: boolean };
+export type AuthProviders = { google: boolean; apple: boolean; appleWeb: boolean };
 
 function AppleIcon() {
   return (
@@ -19,21 +19,23 @@ function AppleIcon() {
 }
 
 /**
- * Social sign-in buttons. On the website Google is a plain link through the BFF. In the mobile app Google
- * runs in the system browser and, on iOS, Sign in with Apple is offered too (an App Store requirement
- * whenever another social login is available).
+ * Social sign-in buttons, Apple first (Apple's guidelines; required on iOS next to any other social login).
+ * - Website: plain links through the BFF (session/<provider>/start).
+ * - iPhone and Mac apps: Apple's native sheet; Google in the system browser.
+ * - Windows, Linux and Android apps: both in the system browser, returning through the app's URL scheme.
  */
 export function SocialSignIn({ next, providers }: { next: string; providers: AuthProviders }) {
   const t = useTranslations("auth");
   const platform = useNativePlatform();
   const [busy, setBusy] = useState<"google" | "apple" | null>(null);
-  const showApple = providers.apple && platform === "ios";
+  const nativeApple = providers.apple && hasNativeAppleSignIn(platform);
+  const showApple = nativeApple || providers.appleWeb;
   if (!providers.google && !showApple) return null;
 
-  async function google() {
-    setBusy("google");
+  async function browser(provider: "google" | "apple") {
+    setBusy(provider);
     try {
-      await startGoogleSignInNative(next);
+      await startBrowserSignIn(provider, next);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("errors.generic"));
     } finally {
@@ -42,13 +44,18 @@ export function SocialSignIn({ next, providers }: { next: string; providers: Aut
   }
 
   async function apple() {
+    if (!nativeApple) return browser("apple");
     setBusy("apple");
     try {
       await signInWithAppleNative();
       window.location.assign(next);
     } catch (err) {
-      if (!isUserCancel(err)) toast.error(err instanceof Error ? err.message : t("errors.generic"));
       setBusy(null);
+      if (isUserCancel(err)) return;
+      // A Mac build without Apple's sign-in entitlement (e.g. not from the App Store) cannot show the sheet:
+      // use the browser flow instead.
+      if (platform === "macos") return browser("apple");
+      toast.error(err instanceof Error ? err.message : t("errors.generic"));
     }
   }
 
@@ -56,9 +63,17 @@ export function SocialSignIn({ next, providers }: { next: string; providers: Aut
     <>
       <div className="space-y-2.5">
         {showApple ? (
-          <Button type="button" className="w-full bg-foreground text-background hover:bg-foreground/90" onClick={apple} disabled={!!busy}>
-            {busy === "apple" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <AppleIcon />} {t("continueWithApple")}
-          </Button>
+          platform === "web" ? (
+            <Button asChild className="w-full bg-foreground text-background hover:bg-foreground/90">
+              <a href={`/api/session/apple/start?next=${encodeURIComponent(next)}`}>
+                <AppleIcon /> {t("continueWithApple")}
+              </a>
+            </Button>
+          ) : (
+            <Button type="button" className="w-full bg-foreground text-background hover:bg-foreground/90" onClick={apple} disabled={!!busy}>
+              {busy === "apple" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <AppleIcon />} {t("continueWithApple")}
+            </Button>
+          )
         ) : null}
         {providers.google ? (
           platform === "web" ? (
@@ -68,7 +83,7 @@ export function SocialSignIn({ next, providers }: { next: string; providers: Aut
               </a>
             </Button>
           ) : (
-            <Button type="button" variant="outline" className="w-full" onClick={google} disabled={!!busy}>
+            <Button type="button" variant="outline" className="w-full" onClick={() => browser("google")} disabled={!!busy}>
               {busy === "google" ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <GoogleIcon />} {t("continueWithGoogle")}
             </Button>
           )

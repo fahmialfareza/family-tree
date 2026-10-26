@@ -2,6 +2,7 @@ package app
 
 import (
 	"log/slog"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -62,6 +63,10 @@ func NewRouter(nrApp *newrelic.Application) (*gin.Engine, error) {
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	config.ExposeHeaders = []string{"Content-Type", "Cache-Control", requestIDHeader}
 	config.MaxAge = 12 * time.Hour
+	// Sign in with Apple on the web returns with a form POST from Apple's page (oauth_apple_web.go).
+	config.AllowOriginWithContextFunc = func(c *gin.Context, origin string) bool {
+		return origin == appleOrigin && c.Request.Method == http.MethodPost && c.Request.URL.Path == appleCallbackPath
+	}
 	r.Use(cors.New(config))
 
 	// New Relic middleware — must be registered before PanicRecovery so txn is in context

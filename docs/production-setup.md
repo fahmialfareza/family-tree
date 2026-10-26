@@ -29,8 +29,9 @@ browser ──► frontend (Cloudflare)  ──BACKEND_URL──►  Go API (Rai
 | `CLOUDINARY_URL` | for photos | `cloudinary://key:secret@cloud`; without it production rejects photo uploads |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional | Enables "Continue with Google". Authorized redirect URI: `${API_BASE_URL}/api/auth/google/callback` |
 | `MOBILE_APP_SCHEME` | desktop/mobile apps | `com.fahmialfareza.sakdulur` — Google sign-in started in the app returns through this URL scheme |
-| `APPLE_CLIENT_IDS` | iOS app | iOS bundle id (`com.fahmialfareza.sakdulur`); enables Sign in with Apple |
-| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | iOS app | "Sign in with Apple" key (.p8, newlines as `\n`); used to revoke Apple tokens on account deletion |
+| `APPLE_CLIENT_IDS` | Sign in with Apple | Accepted token audiences: the app id `com.fahmialfareza.sakdulur` (iPhone/Mac sheet) and the Services ID below |
+| `APPLE_SERVICES_ID` | Sign in with Apple | Services ID for the web flow (website, Windows/Linux/Android apps), e.g. `com.fahmialfareza.sakdulur.web`; return URL `https://api.sakdulur.com/api/auth/apple/callback` |
+| `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | Sign in with Apple | "Sign in with Apple" key (.p8, newlines as `\n`); used to revoke Apple tokens on account deletion |
 | `GEMINI_API_KEY`, `GROQ_API_KEY` | optional | AI assistant; tried in this order, each on when its key is set. Use a **paid** Gemini key for real family data (the free tier may use prompts to improve Google's products) |
 | `AI_GEMINI_MODELS`, `AI_GROQ_MODELS` | optional | Comma-separated models per provider, tried in order (defaults in `.env.example`) |
 | `AI_PROVIDER_TIMEOUT`, `AI_DAILY_LIMIT` | optional | Per-model timeout (default `25s`) and questions per user per day (default `100`) |

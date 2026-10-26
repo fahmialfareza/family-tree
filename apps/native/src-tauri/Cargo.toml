@@ -17,6 +17,7 @@ tauri = { version = "2", features = [] }
 tauri-plugin-deep-link = "2"
 tauri-plugin-opener = "2"
 serde_json = "1"
+tauri-plugin-sakdulur = { path = "plugins/sakdulur" }
 
 [target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
 # Windows and Linux deliver deep links by starting a second instance; this hands them to the running one.

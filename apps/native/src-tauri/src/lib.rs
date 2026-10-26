@@ -1,7 +1,8 @@
 //! Sakdulur for desktop and mobile: one window showing the hosted site (sakdulur.com), which is
 //! server-rendered and keeps its session in httpOnly cookies, so it cannot be bundled.
 //!
-//! The site needs no access to native APIs (no IPC is granted to it). The app does its part here:
+//! The site gets no native access except the sakdulur plugin's commands (plugins/sakdulur: Sign in with Apple
+//! on iPhone and Mac), granted at runtime for the site's own address. The rest of the app's part is here:
 //! - starts on a bundled launcher (launcher/index.html): instant splash, offline screen, then the site's
 //!   /app with ?client=<platform>, which marks the session as the app (see apps/frontend middleware.ts)
 //! - keeps the window on the site: other addresses (Google sign-in, WhatsApp, mailto) open in the
@@ -139,11 +140,19 @@ pub fn run() {
     }
     builder
         .plugin(tauri_plugin_deep_link::init())
+        .plugin(tauri_plugin_sakdulur::init())
         // Used from Rust only. Its default page script intercepts link clicks and asks the plugin from the page,
         // which the site may not do (no IPC), so external links did nothing; on_navigation handles them instead.
         .plugin(tauri_plugin_opener::Builder::new().open_js_links_on_click(false).build())
         .setup(|app| {
             let site = site();
+            // The only IPC the site gets: the plugin's commands, for pages on the site's own address.
+            app.add_capability(
+                tauri::ipc::CapabilityBuilder::new("site")
+                    .remote(format!("{}/*", SITE_URL.trim_end_matches('/')))
+                    .window("main")
+                    .permission("sakdulur:allow-apple-authorize"),
+            )?;
             let handle = app.handle().clone();
             let nav_handle = handle.clone();
             let nav_site = site.clone();

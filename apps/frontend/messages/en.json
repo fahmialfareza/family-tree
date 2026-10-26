@@ -82,7 +82,14 @@
       "google_token": "Google sign-in could not be verified.",
       "google_email_unverified": "Your Google email address is not verified.",
       "google_account": "We couldn't sign you in with Google.",
-      "google_conflict": "This email belongs to an account linked to a different Google account."
+      "google_conflict": "This email belongs to an account linked to a different Google account.",
+      "apple_state": "Apple sign-in expired. Please try again.",
+      "apple_cancelled": "Apple sign-in was cancelled.",
+      "apple_unavailable": "Sign in with Apple is unavailable right now.",
+      "apple_token": "Apple sign-in could not be verified.",
+      "apple_email": "Apple didn't share a verified email address.",
+      "apple_account": "We couldn't sign you in with Apple.",
+      "apple_conflict": "This email belongs to an account linked to a different Apple ID."
     }
   },
   "invite": {

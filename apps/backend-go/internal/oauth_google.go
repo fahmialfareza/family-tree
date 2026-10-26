@@ -382,5 +382,6 @@ func googleExchange(c *gin.Context) {
 
 // googleStatus lets the frontend decide whether to show the Google and Apple buttons.
 func googleStatus(c *gin.Context) {
-	responseSuccess(c, gin.H{"google": googleEnabled(), "apple": appleEnabled()}, 200)
+	// apple: the native sheet (iPhone/Mac apps) works; appleWeb: the website flow works (everywhere else).
+	responseSuccess(c, gin.H{"google": googleEnabled(), "apple": appleEnabled(), "appleWeb": appleWebEnabled()}, 200)
 }
