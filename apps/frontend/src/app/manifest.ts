@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-// Installable web app (Add to Home Screen). The store apps live in apps/mobile.
+// Installable web app (Add to Home Screen). The store apps live in apps/native.
 export default function manifest(): MetadataRoute.Manifest {
   return {
     name: "Sakdulur — silsilah keluarga",

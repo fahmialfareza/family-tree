@@ -1,23 +1,26 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { type AppClient, CLIENT_COOKIE, isAppClient } from "@/lib/app-client";
 
 /*
- * The iOS/Android apps (apps/mobile, Capacitor) load this same website in a native WebView and inject
- * window.Capacitor. Everything here is a no-op on the web, and plugins are imported lazily so the website
- * bundle does not grow.
+ * The desktop and mobile apps (apps/native, Tauri) show this same website in a native window. The app marks
+ * itself with the CLIENT_COOKIE (lib/app-client.ts). Its native work is done by the app itself, not through
+ * an API the page calls: it opens other sites (Google sign-in, WhatsApp, mailto) in the system browser when
+ * the page navigates there, saves downloads to the Downloads folder, and loads sign-in deep links back into
+ * the window. Everything here behaves as before on the web.
  */
 
-export type Platform = "web" | "ios" | "android";
-
-type CapacitorGlobal = { isNativePlatform?: () => boolean; getPlatform?: () => string };
+export type Platform = "web" | AppClient;
 
 export function nativePlatform(): Platform {
-  if (typeof window === "undefined") return "web";
-  const cap = (window as unknown as { Capacitor?: CapacitorGlobal }).Capacitor;
-  if (!cap?.isNativePlatform?.()) return "web";
-  const p = cap.getPlatform?.();
-  return p === "ios" || p === "android" ? p : "web";
+  if (typeof document === "undefined") return "web";
+  const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${CLIENT_COOKIE}=([^;]+)`));
+  return match && isAppClient(match[1]) ? match[1] : "web";
+}
+
+export function isMobilePlatform(platform: Platform) {
+  return platform === "ios" || platform === "android";
 }
 
 const noopSubscribe = () => () => {};
@@ -38,9 +41,10 @@ async function sha256Hex(value: string) {
 }
 
 /**
- * Google refuses sign-in inside embedded WebViews, so the app opens it in the system browser. The binding
- * cookie is set here, in the WebView; the API sends the one-time code back through the app's URL scheme
- * and NativeBridge finishes on /auth/google/complete, where that cookie is read.
+ * Google refuses sign-in inside app windows, so the app opens it in the system browser (navigating to
+ * Google is enough: the app sends other sites there). The binding cookie is set here, in the app; the API
+ * sends the one-time code back through the app's URL scheme and the app loads /auth/google/complete,
+ * where that cookie is read.
  */
 export async function startGoogleSignInNative(next: string) {
   const res = await fetch(`/api/session/google/start?client=app&next=${encodeURIComponent(next)}`, {
@@ -49,32 +53,24 @@ export async function startGoogleSignInNative(next: string) {
   });
   const body = (await res.json().catch(() => null)) as { url?: string } | null;
   if (!res.ok || !body?.url) throw new Error("Google sign-in is unavailable");
-  const { Browser } = await import("@capacitor/browser");
-  await Browser.open({ url: body.url, presentationStyle: "popover" });
+  window.location.assign(body.url);
 }
 
-/** Native Sign in with Apple (iOS). Resolves once the session cookies are set. */
+type AppleAuthorization = { identityToken: string; authorizationCode?: string; givenName?: string; familyName?: string };
+type TauriInternals = { invoke: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T> };
+
+/** Native Sign in with Apple (iOS app, through its sign-in-with-apple plugin). Resolves once the session cookies are set. */
 export async function signInWithAppleNative() {
-  const { SignInWithApple } = await import("@capacitor-community/apple-sign-in");
+  const tauri = (window as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__;
+  if (!tauri) throw new Error("Sign in with Apple is unavailable");
   const nonce = randomHex();
-  // clientId/redirectURI are only used by the web implementation; iOS uses the app's bundle id.
-  const { response } = await SignInWithApple.authorize({
-    clientId: "native",
-    redirectURI: window.location.origin,
-    scopes: "email name",
-    nonce: await sha256Hex(nonce),
-  });
+  const response = await tauri.invoke<AppleAuthorization>("plugin:sign-in-with-apple|authorize", { nonce: await sha256Hex(nonce) });
   const name = [response.givenName, response.familyName].filter(Boolean).join(" ");
   const res = await fetch("/api/session/apple", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({
-      identityToken: response.identityToken,
-      authorizationCode: response.authorizationCode,
-      nonce,
-      name,
-    }),
+    body: JSON.stringify({ identityToken: response.identityToken, authorizationCode: response.authorizationCode, nonce, name }),
   });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;
@@ -88,57 +84,26 @@ export function isUserCancel(err: unknown) {
   return /cancel|1001/i.test(msg);
 }
 
-/** Native share sheet in the app; clipboard on the web. Returns what happened. */
+/** The system share sheet in the app (where the window supports it); the clipboard otherwise. */
 export async function shareLink(opts: { url: string; title?: string; text?: string }): Promise<"shared" | "copied"> {
-  if (nativePlatform() !== "web") {
-    const { Share } = await import("@capacitor/share");
-    await Share.share({ url: opts.url, title: opts.title, text: opts.text, dialogTitle: opts.title });
-    return "shared";
+  if (nativePlatform() !== "web" && typeof navigator.share === "function") {
+    try {
+      await navigator.share({ url: opts.url, title: opts.title, text: opts.text });
+      return "shared";
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return "shared";
+    }
   }
   await navigator.clipboard.writeText(opts.url);
   return "copied";
 }
 
-function blobToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result).split(",", 2)[1] ?? "");
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-/**
- * Saves a file. WebViews ignore <a download>, so in the app the file is written to the cache and handed
- * to the share sheet ("Save to Files", Drive, email...).
- */
+/** Saves a file through the browser's download (the app saves it to the Downloads folder). */
 export async function saveFile(name: string, data: Blob | string) {
-  if (nativePlatform() === "web") {
-    const href = typeof data === "string" ? data : URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = href;
-    a.download = name;
-    a.click();
-    if (typeof data !== "string") setTimeout(() => URL.revokeObjectURL(href), 10_000);
-    return;
-  }
-  const base64 = typeof data === "string" ? data.slice(data.indexOf(",") + 1) : await blobToBase64(data);
-  const [{ Filesystem, Directory }, { Share }] = await Promise.all([import("@capacitor/filesystem"), import("@capacitor/share")]);
-  const file = await Filesystem.writeFile({ path: name, data: base64, directory: Directory.Cache });
-  await Share.share({ files: [file.uri], title: name, dialogTitle: name });
-}
-
-/** onClick for <a href download> links: lets the browser handle them, routes them through saveFile in the app. */
-export function nativeDownloadHandler(url: string, name: string, onError?: (err: unknown) => void) {
-  return async (e: React.MouseEvent) => {
-    if (nativePlatform() === "web") return;
-    e.preventDefault();
-    try {
-      const res = await fetch(url, { credentials: "same-origin" });
-      if (!res.ok) throw new Error(res.statusText);
-      await saveFile(name, await res.blob());
-    } catch (err) {
-      onError?.(err);
-    }
-  };
+  const href = typeof data === "string" ? data : URL.createObjectURL(data);
+  const a = document.createElement("a");
+  a.href = href;
+  a.download = name;
+  a.click();
+  if (typeof data !== "string") setTimeout(() => URL.revokeObjectURL(href), 10_000);
 }

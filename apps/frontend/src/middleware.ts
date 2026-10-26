@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isLocale, LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE, pickLocale } from "@/i18n/config";
+import { CLIENT_COOKIE, isAppClient } from "@/lib/app-client";
 import { localePath } from "@/lib/seo";
 import { SIGNED_IN_COOKIE } from "@/lib/session-hint";
 
@@ -8,6 +9,7 @@ import { SIGNED_IN_COOKIE } from "@/lib/session-hint";
 //   that is served as is; their plain URLs (/, /privacy, /terms) and every app page pick the language per
 //   request and are rewritten to /{locale}/path. Public pages are prerendered once per language.
 // - guards /app and /admin: no session cookies at all -> redirect to /auth/login?next=...
+// - the desktop/mobile app (lib/app-client.ts): no landing page (-> /app), and signed-out users get /welcome
 // - keeps the session fresh before pages render (server components cannot set cookies): access cookie expired
 //   but refresh cookie present -> refresh now and set new cookies
 // Only imports plain modules (edge runtime).
@@ -38,6 +40,26 @@ function secure() {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  // The app opens /app?client=<platform>: remember it, then drop the parameter.
+  const clientParam = req.nextUrl.searchParams.get("client");
+  if (clientParam !== null) {
+    const url = req.nextUrl.clone();
+    url.searchParams.delete("client");
+    const out = NextResponse.redirect(url);
+    if (isAppClient(clientParam)) {
+      out.cookies.set(CLIENT_COOKIE, clientParam, { path: "/", maxAge: 365 * 24 * 60 * 60, sameSite: "lax", secure: secure() });
+    }
+    return out;
+  }
+  const appClient = isAppClient(req.cookies.get(CLIENT_COOKIE)?.value);
+  const hasSession = !!(req.cookies.get(ACCESS_COOKIE)?.value || req.cookies.get(REFRESH_COOKIE)?.value);
+  if (pathname === "/welcome" && (!appClient || hasSession)) {
+    return redirectTo(req, appClient ? "/app" : "/");
+  }
+  // The app has no landing page: its home is the user's trees.
+  if (appClient && (pathname === "/" || pathname === "/en" || pathname === "/id")) {
+    return redirectTo(req, "/app");
+  }
   const lang = req.nextUrl.searchParams.get("lang");
   // Language URLs before /en and /id existed (/?lang=id, still indexed): moved for good.
   if (PUBLIC_PAGES.has(pathname) && isLocale(lang)) {
@@ -118,9 +140,17 @@ export async function middleware(req: NextRequest) {
   return isApp ? redirectToLogin(req) : next();
 }
 
+function redirectTo(req: NextRequest, pathname: string) {
+  const url = req.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  return NextResponse.redirect(url);
+}
+
 function redirectToLogin(req: NextRequest) {
   const url = req.nextUrl.clone();
-  url.pathname = "/auth/login";
+  // Signed out in the app: the welcome screen (sign up or sign in) instead of the sign-in form.
+  url.pathname = isAppClient(req.cookies.get(CLIENT_COOKIE)?.value) ? "/welcome" : "/auth/login";
   url.search = `?next=${encodeURIComponent(req.nextUrl.pathname + req.nextUrl.search)}`;
   return NextResponse.redirect(url);
 }

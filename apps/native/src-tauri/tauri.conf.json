@@ -1,0 +1,51 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Sakdulur",
+  "version": "0.1.0",
+  "identifier": "com.fahmialfareza.sakdulur",
+  "build": {
+    "frontendDist": "../launcher"
+  },
+  "app": {
+    "windows": [],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "Fahmi Alfareza",
+    "copyright": "© Fahmi Alfareza",
+    "category": "Lifestyle",
+    "shortDescription": "Family tree, built together",
+    "longDescription": "Sakdulur is a private family tree you build together with your family: parents, partners and children across generations, with photos, stories and an AI assistant.",
+    "homepage": "https://sakdulur.com",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "iOS": {
+      "minimumSystemVersion": "15.0"
+    },
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  },
+  "plugins": {
+    "deep-link": {
+      "mobile": [
+        {
+          "scheme": ["com.fahmialfareza.sakdulur"],
+          "appLink": false
+        }
+      ],
+      "desktop": {
+        "schemes": ["com.fahmialfareza.sakdulur"]
+      }
+    }
+  }
+}

@@ -28,8 +28,8 @@ browser ──► frontend (Cloudflare)  ──BACKEND_URL──►  Go API (Rai
 | `EMAIL_FROM` | recommended | e.g. `Sakdulur <noreply@sakdulur.com>` on a domain verified in Resend |
 | `CLOUDINARY_URL` | for photos | `cloudinary://key:secret@cloud`; without it production rejects photo uploads |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | optional | Enables "Continue with Google". Authorized redirect URI: `${API_BASE_URL}/api/auth/google/callback` |
-| `MOBILE_APP_SCHEME` | mobile apps | `com.fahmialfareza.familytree` — Google sign-in started in the app returns through this URL scheme |
-| `APPLE_CLIENT_IDS` | iOS app | iOS bundle id (`com.fahmialfareza.familytree`); enables Sign in with Apple |
+| `MOBILE_APP_SCHEME` | desktop/mobile apps | `com.fahmialfareza.sakdulur` — Google sign-in started in the app returns through this URL scheme |
+| `APPLE_CLIENT_IDS` | iOS app | iOS bundle id (`com.fahmialfareza.sakdulur`); enables Sign in with Apple |
 | `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY` | iOS app | "Sign in with Apple" key (.p8, newlines as `\n`); used to revoke Apple tokens on account deletion |
 | `GEMINI_API_KEY`, `GROQ_API_KEY` | optional | AI assistant; tried in this order, each on when its key is set. Use a **paid** Gemini key for real family data (the free tier may use prompts to improve Google's products) |
 | `AI_GEMINI_MODELS`, `AI_GROQ_MODELS` | optional | Comma-separated models per provider, tried in order (defaults in `.env.example`) |
@@ -54,7 +54,7 @@ The others are read at runtime: set them in the Worker (`wrangler secret put` fo
 | `NEXT_PUBLIC_OPERATOR_NAME` | build | Named in the Privacy Policy and Terms (default `Fahmi Alfareza`) |
 | `NEXT_PUBLIC_IMAGE_HOSTS` | build | Extra image origins for the CSP (Cloudinary is built in) |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`, `NEXT_PUBLIC_BING_SITE_VERIFICATION` | build (optional) | Verification codes from Google Search Console / Bing Webmaster Tools (the `content` of their meta tag) |
-| `IOS_APP_IDS` | runtime (mobile) | `<TeamID>.com.fahmialfareza.familytree`; serves `/.well-known/apple-app-site-association` |
+| `IOS_APP_IDS` | runtime (mobile) | `<TeamID>.com.fahmialfareza.sakdulur`; serves `/.well-known/apple-app-site-association` |
 | `ANDROID_APP_PACKAGE`, `ANDROID_CERT_SHA256` | runtime (mobile) | Package name and signing fingerprints; serves `/.well-known/assetlinks.json` |
 
 **Language:** the account's language (applied at sign-in), then the `NEXT_LOCALE` cookie, then the visitor's
@@ -101,10 +101,11 @@ only for accounts with `users.role = 'admin'`; everyone else gets a 404. To make
 
 ## Mobile apps
 
-The iOS and Android apps (`apps/mobile`, Capacitor) load the production frontend in a native WebView and add
-Sign in with Apple, Google sign-in through the system browser, native sharing and file saving. Setup, store
-checklists and the release steps are in [`apps/mobile/README.md`](../apps/mobile/README.md). Migration 00006 adds
-the Apple columns to `users`.
+The desktop and mobile apps (`apps/native`, Tauri 2: macOS, Windows, Linux, iOS, Android) show the production
+site in a native window. They open on `/app` (signed-out users get the app-only `/welcome` screen instead of the
+landing page), do Google sign-in in the system browser with a deep link back, and save downloads natively. Setup
+and release steps are in [`apps/native/README.md`](../apps/native/README.md). Migration 00006 adds the Apple
+columns to `users`.
 
 ## Operations
 

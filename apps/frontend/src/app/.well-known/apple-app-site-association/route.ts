@@ -1,4 +1,4 @@
-// iOS universal links + password autofill for the app (apps/mobile). IOS_APP_IDS lists "<TeamID>.<bundle id>"
+// iOS universal links + password autofill for the app (apps/native). IOS_APP_IDS lists "<TeamID>.<bundle id>"
 // values, comma-separated; without it this file is not served. The app needs the matching Associated Domains
 // (applinks:<domain>, webcredentials:<domain>).
 

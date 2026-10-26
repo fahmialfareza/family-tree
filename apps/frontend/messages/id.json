@@ -758,5 +758,19 @@
       "nearby": "Menampilkan keluarga dekat {name}"
     },
     "showEveryone": "Tampilkan semua"
+  },
+  "welcome": {
+    "title": "Selamat datang di Sakdulur",
+    "slides": "Tentang Sakdulur",
+    "slide": "{n} dari {total}",
+    "s1Title": "Pohon keluarga, disusun bersama",
+    "s1Body": "Petakan orang tua, pasangan, dan anak lintas generasi, lengkap dengan foto dan cerita.",
+    "s2Title": "Ajak keluarga",
+    "s2Body": "Bagikan tautan, kerabat melengkapi cabangnya sendiri. Hanya orang yang Anda undang yang bisa melihat pohon Anda.",
+    "s3Title": "Cukup tanya",
+    "s3Body": "“Siapa bapaknya Ayu?” Tanyakan tentang keluarga Anda, atau tambahkan kerabat cukup lewat obrolan.",
+    "signUp": "Daftar gratis",
+    "signIn": "Saya sudah punya akun",
+    "footnote": "Gratis, privat, tanpa iklan."
   }
 }

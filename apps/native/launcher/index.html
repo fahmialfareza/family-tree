@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sakdulur</title>
+<!--
+  Bundled launcher (src-tauri/src/lib.rs loads it first): shows the brand at once, checks that the site can be
+  reached, then replaces itself with the site's /app. Offline, it says so and offers a retry instead of a blank
+  window. window.__SAKDULUR_APP__ = { client, site } is set by the app.
+-->
+<style>
+  :root { color-scheme: light dark; --bg: #f9f6ef; --fg: #3a3128; --muted: #75695c; --primary: #3f7a52; --on-primary: #fbf7ee; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #221d18; --fg: #f2ede4; --muted: #b9ad9c; --primary: #7cc893; --on-primary: #10261a; } }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+    padding: calc(env(safe-area-inset-top) + 24px) 24px calc(env(safe-area-inset-bottom) + 24px);
+    background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    -webkit-user-select: none; user-select: none; cursor: default; }
+  main { max-width: 22rem; }
+  .logo { width: 72px; height: 72px; }
+  .name { margin: 14px 0 0; font: 600 1.5rem/1.2 Georgia, "Times New Roman", serif; letter-spacing: .01em; }
+  .spinner { width: 22px; height: 22px; margin: 28px auto 0; border-radius: 50%; border: 2.5px solid color-mix(in srgb, var(--primary) 25%, transparent);
+    border-top-color: var(--primary); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+  #offline { display: none; }
+  #offline h1 { font-size: 1.25rem; margin: 22px 0 6px; }
+  #offline p { margin: 0 0 22px; color: var(--muted); }
+  button { min-width: 10rem; padding: 12px 20px; border: 0; border-radius: 12px; background: var(--primary); color: var(--on-primary);
+    font: 600 1rem/1.2 inherit; cursor: pointer; }
+  body.offline .spinner { display: none; }
+  body.offline #offline { display: block; }
+</style>
+</head>
+<body>
+<main>
+  <svg class="logo" viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#3f7a52"/><circle cx="16" cy="11" r="4" fill="#fbf7ee"/><circle cx="9.5" cy="21" r="3.2" fill="#fbf7ee" opacity=".85"/><circle cx="22.5" cy="21" r="3.2" fill="#fbf7ee" opacity=".85"/><path d="M16 15v3.5M16 18.5l-5 1.5M16 18.5l5 1.5" stroke="#fbf7ee" stroke-width="1.6" stroke-linecap="round" fill="none"/><rect x="13" y="25.5" width="6" height="2" rx="1" fill="#c9714a"/></svg>
+  <p class="name">Sakdulur</p>
+  <div class="spinner" role="status" aria-label="Loading"></div>
+  <div id="offline">
+    <h1 id="title">You're offline</h1>
+    <p id="body">Sakdulur needs an internet connection. Check your connection and try again.</p>
+    <button id="retry" type="button">Try again</button>
+  </div>
+</main>
+<script>
+  (function () {
+    var app = window.__SAKDULUR_APP__ || { client: "macos", site: "https://sakdulur.com" };
+    if ((navigator.language || "").toLowerCase().indexOf("id") === 0) {
+      document.documentElement.lang = "id";
+      document.getElementById("title").textContent = "Anda sedang offline";
+      document.getElementById("body").textContent = "Sakdulur membutuhkan koneksi internet. Periksa koneksi Anda lalu coba lagi.";
+      document.getElementById("retry").textContent = "Coba lagi";
+    }
+
+    function start() {
+      document.body.classList.remove("offline");
+      var timeout = new Promise(function (_, reject) { setTimeout(function () { reject(new Error("timeout")); }, 10000); });
+      // An opaque response is enough: it proves the site answers.
+      var ping = fetch(app.site + "/api/healthz", { mode: "no-cors", cache: "no-store" });
+      Promise.race([ping, timeout]).then(
+        function () { location.replace(app.site + "/app?client=" + encodeURIComponent(app.client)); },
+        function () { document.body.classList.add("offline"); }
+      );
+    }
+
+    document.getElementById("retry").addEventListener("click", start);
+    window.addEventListener("online", function () { if (document.body.classList.contains("offline")) start(); });
+    start();
+  })();
+</script>
+</body>
+</html>

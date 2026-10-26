@@ -1,0 +1,3 @@
+# Rust build output and generated schemas (tauri build / dev regenerate them)
+/target/
+/gen/schemas

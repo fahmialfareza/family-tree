@@ -1,4 +1,4 @@
-// Android App Links + shared sign-in credentials for the app (apps/mobile). ANDROID_CERT_SHA256 lists the
+// Android App Links + shared sign-in credentials for the app (apps/native). ANDROID_CERT_SHA256 lists the
 // SHA-256 fingerprints of the signing certificates (Play App Signing key, and the upload key if wanted),
 // comma-separated; without it this file is not served.
 
@@ -16,7 +16,7 @@ export function GET() {
         relation: ["delegate_permission/common.handle_all_urls", "delegate_permission/common.get_login_creds"],
         target: {
           namespace: "android_app",
-          package_name: process.env.ANDROID_APP_PACKAGE || "com.fahmialfareza.familytree",
+          package_name: process.env.ANDROID_APP_PACKAGE || "com.fahmialfareza.sakdulur",
           sha256_cert_fingerprints: fingerprints,
         },
       },

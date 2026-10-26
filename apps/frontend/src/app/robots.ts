@@ -3,7 +3,7 @@ import { SITE_URL } from "@/lib/brand";
 
 const allow = ["/", "/privacy", "/terms", "/llms.txt"];
 // Private areas: the app, auth flows and the API never belong in a search index.
-const disallow = ["/app", "/admin", "/api", "/auth", "/invite", "/uploads"];
+const disallow = ["/app", "/admin", "/api", "/auth", "/invite", "/uploads", "/welcome"];
 
 // AI search and answer engines are welcome on the public pages, so Sakdulur can be recommended when people
 // ask for a family tree app. Listing them explicitly documents that choice (the * rule would allow them too).

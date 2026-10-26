@@ -758,5 +758,19 @@
       "nearby": "Showing {name}'s close family"
     },
     "showEveryone": "Show everyone"
+  },
+  "welcome": {
+    "title": "Welcome to Sakdulur",
+    "slides": "About Sakdulur",
+    "slide": "{n} of {total}",
+    "s1Title": "Your family tree, together",
+    "s1Body": "Map parents, partners and children across generations, with photos and stories.",
+    "s2Title": "Invite the family",
+    "s2Body": "Share a link and relatives fill in their own branches. Only people you invite can see your tree.",
+    "s3Title": "Just ask",
+    "s3Body": "“Who is Ayu’s father?” Ask about your family, or add relatives just by chatting.",
+    "signUp": "Create a free account",
+    "signIn": "I already have an account",
+    "footnote": "Free, private, no ads."
   }
 }

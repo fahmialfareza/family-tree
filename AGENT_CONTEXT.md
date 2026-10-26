@@ -8,7 +8,7 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
 - Active apps:
   - `apps/backend-go`: primary backend service written in Go with Gin. Most backend changes should happen here. Reuse existing code under `internal/`.
   - `apps/frontend`: primary frontend app built with Next.js 16, React 19, and `pnpm`.
-  - `apps/mobile`: iOS/Android apps (Capacitor 8). A native shell that loads the hosted frontend; native code lives in the frontend (`src/lib/native.ts`, `components/providers/native-bridge.tsx`) and is a no-op on the web.
+  - `apps/native`: macOS/Windows/Linux/iOS/Android apps (Tauri 2). A native shell that shows the hosted frontend; its native work is in Rust (`src-tauri/src/lib.rs`). App-only frontend code keys off the `ft_client` cookie (`src/lib/app-client.ts`, `src/lib/native.ts`, middleware) and is a no-op on the web.
 - Maintenance-only app:
   - `apps/backend`: older Express server that is being phased out. Avoid adding new features there unless the user explicitly asks for legacy backend work.
 
