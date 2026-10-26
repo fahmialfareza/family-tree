@@ -4,12 +4,14 @@ import { useEffect } from "react";
 import { useNativePlatform } from "@/lib/native";
 
 /**
- * Glue for the desktop/mobile app (apps/native). Renders nothing and does nothing on the website.
+ * Glue for the desktop/mobile app (apps/native). Does nothing on the website.
  * - marks <html> with native-app classes for CSS (app-like touches: no text selection on chrome, no bounce)
  * - Android back button: the app sends a "sakdulur:back" event; close an open dialog or menu first,
  *   otherwise go back
  */
-export function NativeBridge() {
+// A hook (called by Providers), not a component rendered next to the page: a sibling there shifted React's
+// useId paths when its code loaded after hydration began, so menu ids differed from the server HTML.
+export function useNativeBridge() {
   const platform = useNativePlatform();
 
   useEffect(() => {
@@ -32,6 +34,4 @@ export function NativeBridge() {
       window.removeEventListener("sakdulur:back", onBack);
     };
   }, [platform]);
-
-  return null;
 }

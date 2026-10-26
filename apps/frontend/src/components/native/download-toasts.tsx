@@ -10,8 +10,9 @@ type DownloadDetail = { state: "started" | "finished" | "failed"; id: string; na
 /**
  * In the desktop/mobile app, downloads are saved by the app (apps/native), which reports each one with a
  * "sakdulur:download" event: one toast per file goes from "Downloading…" to saved (or failed). Web: nothing.
+ * A hook (called by AppProviders) rather than a sibling of the page, which would shift React's useId paths.
  */
-export function DownloadToasts() {
+export function useDownloadToasts() {
   const t = useTranslations("native");
   const platform = useNativePlatform();
 
@@ -27,6 +28,4 @@ export function DownloadToasts() {
     window.addEventListener("sakdulur:download", onDownload);
     return () => window.removeEventListener("sakdulur:download", onDownload);
   }, [platform, t]);
-
-  return null;
 }
