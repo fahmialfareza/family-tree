@@ -19,7 +19,6 @@ import {
   Download,
   Loader2,
   Maximize,
-  Printer,
   TreePine,
   UserRoundPlus,
 } from "lucide-react";
@@ -73,7 +72,7 @@ import { errorMessage } from "@/lib/api/client";
 import { ExportDialog } from "@/components/export/export-dialog";
 import { useDeletePerson, useGraph } from "@/lib/api/hooks";
 import { isBranchScope, selectBranch } from "@/lib/branch";
-import { saveFile, useNativePlatform } from "@/lib/native";
+import { saveFile } from "@/lib/native";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
   type FlowNode,
@@ -90,6 +89,30 @@ const FULL_TREE_LIMIT = 250;
 // Below this zoom person cards are too small to read, so the initial view doesn't fit everything.
 const MIN_READABLE_ZOOM = 0.5;
 
+/** Prints one image on its own, via a hidden frame: no sidebar or toolbar, scaled to the paper. */
+function printImage(url: string, title: string, landscape: boolean) {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
+  document.body.appendChild(frame);
+  const doc = frame.contentDocument;
+  if (!doc || !frame.contentWindow) return frame.remove();
+  doc.title = title;
+  const style = doc.createElement("style");
+  style.textContent = `@page { size: ${landscape ? "landscape" : "portrait"}; margin: 10mm; } html, body { margin: 0; height: 100%; } body { display: flex; align-items: center; justify-content: center; } img { max-width: 100%; max-height: 100%; object-fit: contain; }`;
+  doc.head.appendChild(style);
+  const img = doc.createElement("img");
+  img.alt = title;
+  img.onload = () => {
+    frame.contentWindow?.focus();
+    frame.contentWindow?.print();
+    // Most browsers block until the dialog closes; remove the frame afterwards either way.
+    setTimeout(() => frame.remove(), 1000);
+  };
+  img.src = url;
+  doc.body.appendChild(img);
+}
+
 function Canvas({ treeId }: { treeId: string }) {
   const t = useTranslations("canvas");
   const te = useTranslations("export");
@@ -97,8 +120,6 @@ function Canvas({ treeId }: { treeId: string }) {
   const pathname = usePathname();
   const params = useSearchParams();
   const wide = useMediaQuery("(min-width: 1024px)", true);
-  // WebViews cannot print; the app exports a PNG instead.
-  const native = useNativePlatform() !== "web";
   const { data: graph, isLoading, error, dataUpdatedAt } = useGraph(treeId);
   const { fitView, setCenter, getNodes } = useReactFlow();
 
@@ -116,7 +137,8 @@ function Canvas({ treeId }: { treeId: string }) {
   );
   const branchName = branch ? graph?.people.find((p) => p._id === branch.from)?.name : undefined;
   // ?export=png: draw the picture once the tree is laid out, then drop the flag.
-  const exportRequested = params.get("export") === "png";
+  const exportParam = params.get("export");
+  const exportRequested = exportParam === "png" || exportParam === "print" ? exportParam : null;
   const [exportOpen, setExportOpen] = useState(false);
   const autoExported = useRef(false);
   const openId = params.get("person");
@@ -239,11 +261,16 @@ function Canvas({ treeId }: { treeId: string }) {
     [setQuery, role, graph, treeId, copySources.length, setDeleteId, setCopyOut, setQuickAdd],
   );
 
-  const exportPng = useCallback(async () => {
+  /** Draws the laid-out tree and saves it as a PNG, or prints it (light theme, fitted to the page). */
+  const exportTree = useCallback(async (mode: "png" | "print") => {
     const el = document.querySelector<HTMLElement>(".react-flow__viewport");
     const all = getNodes();
     if (!el || !all.length) return;
     setExporting(true);
+    // Paper: draw in the light theme whatever the screen uses, so printing does not spend a page of ink.
+    const root = document.documentElement;
+    const wasDark = mode === "print" && root.classList.contains("dark");
+    if (wasDark) root.classList.remove("dark");
     const bg = getComputedStyle(document.body).backgroundColor;
     // html-to-image cannot draw the lines' translucent oklch() stroke, so the picture had cards but no
     // lines. While drawing, give each line the same color blended onto the background as plain rgb().
@@ -283,8 +310,9 @@ function Canvas({ treeId }: { treeId: string }) {
             node.classList.contains("react-flow__node-toolbar")
           ),
       });
-      const base = `${graph?.tree.name ?? "sakdulur"}${branchName ? ` - ${branchName}` : ""}`;
-      await saveFile(`${base.replace(/[\\/:*?"<>|]+/g, "").trim()}.png`, url);
+      const base = `${graph?.tree.name ?? "sakdulur"}${branchName ? ` - ${branchName}` : ""}`.replace(/[\\/:*?"<>|]+/g, "").trim();
+      if (mode === "print") printImage(url, base, width >= height);
+      else await saveFile(`${base}.png`, url);
     } catch {
       toast.error(t("exportFailed"));
     } finally {
@@ -292,6 +320,7 @@ function Canvas({ treeId }: { treeId: string }) {
         if (style === null) path.removeAttribute("style");
         else path.setAttribute("style", style);
       }
+      if (wasDark) root.classList.add("dark");
       setExporting(false);
     }
   }, [getNodes, graph, t, branchName]);
@@ -305,11 +334,11 @@ function Canvas({ treeId }: { treeId: string }) {
     if (layingOut || !nodes.length || autoExported.current) return;
     autoExported.current = true;
     const id = window.setTimeout(async () => {
-      await exportPng();
+      await exportTree(exportRequested);
       setQuery({ export: null });
     }, 700);
     return () => window.clearTimeout(id);
-  }, [exportRequested, layingOut, nodes, exportPng, setQuery]);
+  }, [exportRequested, layingOut, nodes, exportTree, setQuery]);
 
   if (error) {
     return (
@@ -476,41 +505,17 @@ function Canvas({ treeId }: { treeId: string }) {
               </TooltipTrigger>
               <TooltipContent>{t("fit")}</TooltipContent>
             </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-8"
-                  onClick={() => setExportOpen(true)}
-                  disabled={exporting}
-                  aria-label={t("exportPng")}
-                >
-                  {exporting ? (
-                    <Loader2 className="size-4 animate-spin" aria-hidden />
-                  ) : (
-                    <Download className="size-4" aria-hidden />
-                  )}
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t("exportPng")}</TooltipContent>
-            </Tooltip>
-            {native ? null : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hidden size-8 md:inline-flex"
-                    onClick={() => window.print()}
-                    aria-label={t("print")}
-                  >
-                    <Printer className="size-4" aria-hidden />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>{t("print")}</TooltipContent>
-              </Tooltip>
-            )}
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8"
+              onClick={() => setExportOpen(true)}
+              disabled={exporting}
+              aria-label={t("exportPng")}
+            >
+              {exporting ? <Loader2 className="size-4 animate-spin" aria-hidden /> : <Download className="size-4" aria-hidden />}{" "}
+              <span className="hidden lg:inline">{t("exportPng")}</span>
+            </Button>
             {layingOut ? (
               <Loader2
                 className="mx-1 size-4 animate-spin text-muted-foreground"

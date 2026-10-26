@@ -712,6 +712,10 @@
         "title": "Gambar (PNG)",
         "body": "Gambar pohon untuk dibagikan di obrolan atau dicetak."
       },
+      "print": {
+        "title": "Cetak atau simpan PDF",
+        "body": "Membuka jendela cetak. Pilih printer, atau “Simpan sebagai PDF”."
+      },
       "xlsx": {
         "title": "Tabel (Excel)",
         "body": "Satu baris per orang. Bisa dibuka di Excel, Google Sheets, atau WPS."

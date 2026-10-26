@@ -712,6 +712,10 @@
         "title": "Image (PNG)",
         "body": "A picture of the tree to share in chats or print."
       },
+      "print": {
+        "title": "Print or save as PDF",
+        "body": "Opens the print window. Pick a printer, or “Save as PDF”."
+      },
       "xlsx": {
         "title": "Spreadsheet (Excel)",
         "body": "One row per person. Opens in Excel, Google Sheets or WPS."

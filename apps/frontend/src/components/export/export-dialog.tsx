@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowDown, ArrowUp, ArrowUpDown, Check, DatabaseBackup, FileSpreadsheet, GitFork, Image as ImageIcon, Loader2, Network, Orbit, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, Check, DatabaseBackup, FileSpreadsheet, GitFork, Image as ImageIcon, Loader2, Network, Orbit, Printer, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -14,10 +14,10 @@ import { useGraph } from "@/lib/api/hooks";
 import type { ImportScope } from "@/lib/api/types";
 import { selectBranch } from "@/lib/branch";
 import { lifeSpan } from "@/lib/format";
-import { saveFile } from "@/lib/native";
+import { saveFile, useNativePlatform } from "@/lib/native";
 import { cn } from "@/lib/utils";
 
-export type ExportFormat = "png" | "xlsx" | "gedcom" | "json";
+export type ExportFormat = "png" | "print" | "xlsx" | "gedcom" | "json";
 
 const SCOPES: { value: ImportScope; icon: typeof ArrowDown }[] = [
   { value: "descendants", icon: ArrowDown },
@@ -27,6 +27,7 @@ const SCOPES: { value: ImportScope; icon: typeof ArrowDown }[] = [
 ];
 const FORMATS: { value: ExportFormat; icon: typeof ArrowDown; ext: string; file: boolean }[] = [
   { value: "png", icon: ImageIcon, ext: "png", file: false },
+  { value: "print", icon: Printer, ext: "", file: false },
   { value: "xlsx", icon: FileSpreadsheet, ext: "xlsx", file: true },
   { value: "gedcom", icon: GitFork, ext: "ged", file: true },
   { value: "json", icon: DatabaseBackup, ext: "json", file: true },
@@ -85,15 +86,17 @@ export function ExportDialog({
     if (whole) return graph.people.length;
     return person ? selectBranch(graph, person._id, scope, Number(steps)).size : 0;
   }, [graph, whole, person, scope, steps]);
-  const formats = FORMATS.filter((f) => canExportFiles || !f.file);
+  // The app's WebView cannot print; files are for owners.
+  const native = useNativePlatform() !== "web";
+  const formats = FORMATS.filter((f) => (canExportFiles || !f.file) && !(native && f.value === "print"));
   const ready = !!graph && (whole || !!person);
 
   async function run() {
     if (!graph || !ready) return;
     const branch = whole ? null : { branch: scope, from: person!._id, ...(scope === "nearby" ? { steps } : {}) };
-    if (format === "png") {
-      // The tree page draws the branch and downloads the picture (see tree-canvas.tsx, ?export=png).
-      const q = new URLSearchParams({ ...(branch ?? {}), export: "png" });
+    if (format === "png" || format === "print") {
+      // The tree page draws the branch, then saves or prints the picture (tree-canvas.tsx, ?export=).
+      const q = new URLSearchParams({ ...(branch ?? {}), export: format });
       onOpenChange(false);
       router.push(`/app/t/${treeId}?${q.toString()}`);
       return;
