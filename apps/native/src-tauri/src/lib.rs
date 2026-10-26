@@ -64,13 +64,27 @@ fn open_outside(app: &AppHandle, url: &Url) {
     }
 }
 
-/// com.fahmialfareza.sakdulur:/auth/google/complete?code=... -> https://sakdulur.com/auth/google/complete?code=...
-fn open_deep_link(app: &AppHandle, link: &Url) {
-    if link.scheme() != SCHEME || !DEEP_LINK_PATHS.iter().any(|p| link.path().starts_with(p)) {
-        return;
+/// The site path of a deep link. The API sends com.fahmialfareza.sakdulur://auth/google/complete?code=...
+/// (so "auth" parses as the host); the single-slash form :/auth/google/complete is accepted too.
+fn deep_link_path(link: &Url) -> Option<String> {
+    if link.scheme() != SCHEME {
+        return None;
     }
+    let path = match link.host_str() {
+        Some(host) if !host.is_empty() => format!("/{host}{}", link.path()),
+        _ => link.path().to_string(),
+    };
+    DEEP_LINK_PATHS.iter().any(|p| path.starts_with(p)).then_some(path)
+}
+
+/// Loads a deep link in the window: ...://auth/google/complete?code=... -> https://sakdulur.com/auth/google/complete?code=...
+fn open_deep_link(app: &AppHandle, link: &Url) {
+    let Some(path) = deep_link_path(link) else {
+        eprintln!("ignored deep link: {link}");
+        return;
+    };
     let mut target = site();
-    target.set_path(link.path());
+    target.set_path(&path);
     target.set_query(link.query());
     if let Some(window) = app.get_webview_window("main") {
         let _ = window.navigate(target);
@@ -160,4 +174,24 @@ pub fn run() {
         })
         .run(tauri::generate_context!())
         .expect("error while running Sakdulur");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn path(raw: &str) -> Option<String> {
+        deep_link_path(&Url::parse(raw).unwrap())
+    }
+
+    #[test]
+    fn deep_link_paths() {
+        // What the API sends (oauth_google.go redirectToMobileApp: scheme + ":/" + "/auth/...").
+        assert_eq!(path("com.fahmialfareza.sakdulur://auth/google/complete?code=x").as_deref(), Some("/auth/google/complete"));
+        assert_eq!(path("com.fahmialfareza.sakdulur://auth/login?error=google_state").as_deref(), Some("/auth/login"));
+        assert_eq!(path("com.fahmialfareza.sakdulur:/auth/google/complete?code=x").as_deref(), Some("/auth/google/complete"));
+        assert_eq!(path("com.fahmialfareza.sakdulur://invite?token=t").as_deref(), Some("/invite"));
+        assert_eq!(path("com.fahmialfareza.sakdulur://admin/evil"), None);
+        assert_eq!(path("https://evil.example/auth/google/complete"), None);
+    }
 }
