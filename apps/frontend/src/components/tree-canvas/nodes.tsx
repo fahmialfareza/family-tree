@@ -65,6 +65,7 @@ function usePersonActions(id: string, canEdit: boolean): Action[] {
 
 export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps<PersonFlowNode>) {
   const t = useTranslations("canvas");
+  const tl = useTranslations("links");
   const { open, copyOut, canCopyOut } = useContext(CanvasActions);
   const p = data.person;
   const deceased = p.status === "deceased";
@@ -84,18 +85,33 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
     hideTimer.current = window.setTimeout(() => setActive(false), 180);
   };
   useEffect(() => () => window.clearTimeout(hideTimer.current), []);
-  const hoverProps = { onMouseEnter: show, onMouseLeave: hide, onFocus: show, onBlur: hide };
+  // A press anywhere else hides it (touch screens never send mouseleave).
+  useEffect(() => {
+    if (!active) return;
+    const onDown = (e: PointerEvent) => {
+      const el = e.target as Element | null;
+      if (el?.closest(`.react-flow__node[data-id="${CSS.escape(p._id)}"], [data-toolbar-for="${CSS.escape(p._id)}"]`)) return;
+      window.clearTimeout(hideTimer.current);
+      setActive(false);
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, [active, p._id]);
+  // Only keyboard focus shows it: focus returning to the card after a dialog closes should not.
+  const onFocus = (e: React.FocusEvent) => e.target.matches(":focus-visible") && show();
+  const hoverProps = { onMouseEnter: show, onMouseLeave: hide, onFocus, onBlur: hide };
 
   return (
     <>
       <Handle type="target" position={Position.Top} className="!size-1 !min-h-0 !min-w-0 !border-0 !bg-transparent" isConnectable={false} />
       {actions.length ? (
         <NodeToolbar
-          isVisible={active || selected}
+          isVisible={active}
           position={Position.Top}
           offset={6}
           className="no-print flex gap-0.5 rounded-full border bg-popover p-1 shadow-[var(--shadow-lift)]"
           aria-label={t("personActions", { name: p.name })}
+          data-toolbar-for={p._id}
           {...hoverProps}
         >
           {actions.map((a) => (
@@ -145,6 +161,12 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
               <Badge variant="secondary" className="absolute right-1.5 top-1.5 h-5 px-1.5 text-[10px]">
                 {t("you")}
               </Badge>
+            ) : null}
+            {data.otherParents?.length ? (
+              // Also has foster/step/... parents; their lines show when this person is in focus.
+              <span className="absolute right-2 top-1 text-[10px] font-medium text-terracotta">
+                {[...new Set(data.otherParents)].map((k) => tl(`short.${k}`)).join(" · ")}
+              </span>
             ) : null}
             {deceased ? (
               <span className="absolute bottom-1.5 right-2 flex text-muted-foreground" role="img" aria-label={t("deceased")}>

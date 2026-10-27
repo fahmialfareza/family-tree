@@ -10,6 +10,7 @@ import {
   getNodesBounds,
   getViewportForBounds,
   useReactFlow,
+  useStoreApi,
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -76,6 +77,7 @@ import { saveFile } from "@/lib/native";
 import { useMediaQuery } from "@/lib/use-media-query";
 import {
   type FlowNode,
+  type LinkEdgeData,
   layoutGraph,
   neighbourhood,
   PERSON_HEIGHT,
@@ -119,13 +121,24 @@ function printImage(url: string, title: string, landscape: boolean) {
 function Canvas({ treeId }: { treeId: string }) {
   const t = useTranslations("canvas");
   const te = useTranslations("export");
-  const tl = useTranslations("links");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const wide = useMediaQuery("(min-width: 1024px)", true);
   const { data: graph, isLoading, error, dataUpdatedAt } = useGraph(treeId);
   const { fitView, setCenter, getNodes } = useReactFlow();
+  const store = useStoreApi();
+  // Clicking the empty canvas (or Esc) closes a card's toolbar: unselect it and drop its keyboard focus.
+  const dismissToolbar = useCallback(() => {
+    store.getState().resetSelectedElements();
+    const active = document.activeElement as HTMLElement | null;
+    if (active?.closest(".react-flow")) active.blur();
+  }, [store]);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && dismissToolbar();
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [dismissToolbar]);
 
   const focusId = params.get("focus") ?? undefined;
   // ?branch=descendants|ancestors|both|nearby&from=<id>[&steps=n]: show only that branch (export dialog).
@@ -167,7 +180,19 @@ function Canvas({ treeId }: { treeId: string }) {
   const effectiveDepth = exportRequested && !branch ? "all" : (depth ?? (graph && graph.people.length > FULL_TREE_LIMIT ? "4" : "all"));
   const branchKey = branch ? `${branch.scope}:${branch.from}:${branch.steps}` : "";
   const layoutKey = `${dataUpdatedAt}|${focusId ?? ""}|${effectiveDepth}|${branchKey}`;
-  const { nodes, edges } = layout;
+  const { nodes } = layout;
+  // Foster, step and other non-primary parent lines stay hidden (they cut across the tree) except for the
+  // person in focus or open in the drawer; their cards carry a small mark instead.
+  const edges = useMemo(
+    () =>
+      layout.edges.map((e) => {
+        const people = (e.data as LinkEdgeData | undefined)?.people;
+        if (!people) return e;
+        const shown = (!!focusId && people.includes(focusId)) || (!!openId && people.includes(openId));
+        return shown === !e.hidden ? e : { ...e, hidden: !shown };
+      }),
+    [layout.edges, focusId, openId],
+  );
   const layingOut = !!graph && layout.key !== layoutKey;
 
   const setQuery = useCallback(
@@ -192,13 +217,13 @@ function Canvas({ treeId }: { treeId: string }) {
           focusId,
           effectiveDepth === "all" ? Infinity : Number(effectiveDepth),
         );
-    layoutGraph(graph, visible, { focusId, kindLabel: (k) => tl(`short.${k}`) }).then((res) => {
+    layoutGraph(graph, visible, { focusId }).then((res) => {
       if (!cancelled) setLayout({ key: layoutKey, ...res });
     });
     return () => {
       cancelled = true;
     };
-  }, [graph, focusId, effectiveDepth, layoutKey, branch, tl]);
+  }, [graph, focusId, effectiveDepth, layoutKey, branch]);
 
   // Center on the focus person after each layout, otherwise fit everything.
   useEffect(() => {
@@ -296,10 +321,6 @@ function Canvas({ treeId }: { treeId: string }) {
         path.style.stroke = solid(style.stroke);
         // Dashed lines (foster/step parents, divorced couples) come from CSS classes; keep them in the picture.
         path.style.strokeDasharray = style.strokeDasharray;
-      });
-      el.querySelectorAll<SVGElement>(".react-flow__edge-text, .react-flow__edge-textbg").forEach((label) => {
-        restyled.push([label, label.getAttribute("style")]);
-        label.style.fill = solid(getComputedStyle(label).fill);
       });
       const bounds = getNodesBounds(all);
       const width = Math.min(Math.ceil(bounds.width + 160), 8000);
@@ -438,6 +459,7 @@ function Canvas({ treeId }: { treeId: string }) {
             maxZoom={2}
             proOptions={{ hideAttribution: true }}
             onNodeClick={(_, node) => node.type === "person" && undefined}
+            onPaneClick={dismissToolbar}
             aria-label={t("canvasLabel", { name: graph.tree.name })}
           >
             <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} />
