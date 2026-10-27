@@ -16,8 +16,10 @@ release reaches the apps at once.
 | Downloads (exports) saved to the Downloads folder | `lib.rs` (`on_download`) |
 | App-only touches (share sheet, no print, `native-app` CSS classes, Android back) | `apps/frontend/src/lib/native.ts`, `components/providers/native-bridge.tsx` |
 
-The site gets **no IPC** (`capabilities/default.json` covers only the bundled launcher). On the web nothing changes:
-without the cookie every page behaves as before.
+The site gets almost no IPC: a capability added at runtime in `lib.rs` lets `https://sakdulur.com/*` call only
+`plugin:sakdulur|apple_authorize` (native Apple sheet, iOS/macOS) and `plugin:sakdulur|save_file` (Android downloads),
+from the local plugin `src-tauri/plugins/sakdulur`. On the web nothing changes: without the cookie every page behaves
+as before.
 
 **App id / bundle id / URL scheme:** `com.fahmialfareza.sakdulur`. It can't change after the first store upload.
 
@@ -44,18 +46,14 @@ Linux: GNOME (Wayland) takes the dock icon from an installed `.desktop` file mat
 
 ## Server settings
 
-- API (Railway): `MOBILE_APP_SCHEME=com.fahmialfareza.sakdulur` (Google sign-in in the app);
-  `APPLE_CLIENT_IDS` must include `com.fahmialfareza.sakdulur` once Sign in with Apple ships on iOS.
+- API (Railway): `MOBILE_APP_SCHEME=com.fahmialfareza.sakdulur` (browser sign-in returning to the app) and
+  `APPLE_CLIENT_IDS` including `com.fahmialfareza.sakdulur` (native Apple sheet) and the web Services ID.
 - Google OAuth client: nothing extra; the app uses the web client through the system browser.
 
 ## Status
 
-- [x] Desktop shell: launcher, welcome, navigation guard, Google sign-in deep link, downloads (tested on macOS)
-- [ ] iOS / Android: `pnpm tauri ios init` / `android init`, safe areas, Android back event
-  (`sakdulur:back`, handled by the site), Sign in with Apple plugin (`plugin:sign-in-with-apple|authorize`, port
-  from Malanghub's Swift code; needs a remote capability for that one command)
-- [ ] Release CI per platform (App Store, Play, Mac App Store or notarized DMG, MSIX, Snap/AppImage), modelled on
-  Malanghub's `native-*.yml` workflows, with signing secrets documented here
+- [x] macOS, iPhone, Android, Windows and Ubuntu builds tested on real hardware against production (2026-10-27).
+- [ ] Store releases (`RELEASE.md`): App Store (iOS), Mac App Store and Google Play first; Microsoft Store and
+  Snap Store planned for 2026-11-01 (their workflows exist but are not verified yet).
 
-Apple review (guideline 4.2) rejects "just a website": list the native parts in the review notes (Sign in with
-Apple, offline launcher, deep links, system-browser sign-in, native downloads) and give a demo account.
+Apple review (guideline 4.2) rejects "just a website": the review notes in `RELEASE.md` list the native parts.

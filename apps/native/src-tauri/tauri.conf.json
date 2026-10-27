@@ -33,7 +33,7 @@
       "developmentTeam": "7FCMB3QMK7"
     },
     "macOS": {
-      "minimumSystemVersion": "11.0"
+      "minimumSystemVersion": "13.0"
     }
   },
   "plugins": {

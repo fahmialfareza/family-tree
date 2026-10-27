@@ -1,0 +1,129 @@
+name: Native Android Play Store
+
+# Start with `pnpm release android <build-number>` (apps/native/RELEASE.md).
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Android versionCode (100 = version 1.0.0)."
+        required: true
+        type: string
+      track:
+        description: "Google Play track (alpha = closed testing)."
+        required: true
+        default: alpha
+        type: choice
+        options:
+          - internal
+          - alpha
+          - beta
+          - production
+      status:
+        description: "Release status (draft until the app has passed its first review)."
+        required: true
+        default: draft
+        type: choice
+        options:
+          - draft
+          - inProgress
+          - completed
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-android-play-store
+  cancel-in-progress: false
+
+jobs:
+  build-and-upload:
+    name: Build the Android App Bundle and upload it to Play
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_NDK_VERSION: 27.1.12297006
+      BUILD_NUMBER: ${{ inputs.build_number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.0
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          # The default ("tools platform-tools") fails: the legacy "tools" package is gone.
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+
+      - name: Install Android build tools
+        run: |
+          sdkmanager --install "platforms;android-37.0" "build-tools;37.0.0" "ndk;${ANDROID_NDK_VERSION}"
+          echo "NDK_HOME=$ANDROID_HOME/ndk/${ANDROID_NDK_VERSION}" >> "$GITHUB_ENV"
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/native/src-tauri -> target
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter native
+
+      - name: Apply release version
+        run: pnpm --filter native release:version "$BUILD_NUMBER"
+
+      - name: Configure release signing
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$ANDROID_KEYSTORE_BASE64"
+          test -n "$ANDROID_KEYSTORE_PASSWORD"
+          test -n "$ANDROID_KEY_ALIAS"
+          keystore="$RUNNER_TEMP/sakdulur-upload-key.jks"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore"
+          # Read by gen/android/app/build.gradle.kts (signingConfigs.release).
+          cat > apps/native/src-tauri/gen/android/keystore.properties <<EOF
+          storeFile=$keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=${ANDROID_KEY_PASSWORD:-$ANDROID_KEYSTORE_PASSWORD}
+          EOF
+
+      - name: Build Android App Bundle
+        run: |
+          set -euo pipefail
+          pnpm --filter native tauri android build --aab --ci
+          aab="$(find apps/native/src-tauri/gen/android/app/build/outputs/bundle -name '*.aab' -type f | head -n 1)"
+          test -n "$aab"
+          jarsigner -verify "$aab"
+          echo "AAB_PATH=$aab" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sakdulur-android-aab-${{ inputs.build_number }}
+          path: ${{ env.AAB_PATH }}
+          if-no-files-found: error
+
+      - name: Upload to Google Play
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.fahmialfareza.sakdulur
+          releaseFiles: ${{ env.AAB_PATH }}
+          track: ${{ inputs.track }}
+          status: ${{ inputs.status }}

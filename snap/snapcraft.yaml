@@ -1,0 +1,70 @@
+name: sakdulur
+base: core24
+version: "0.1.0"
+title: Sakdulur
+summary: Family tree, built together
+description: |
+  Sakdulur is a private family tree you build together with your family: parents, partners and
+  children across generations, with photos, stories and an AI assistant.
+website: https://sakdulur.com
+contact: https://sakdulur.com
+license: Proprietary
+grade: stable
+confinement: strict
+icon: apps/native/src-tauri/icons/icon.png
+
+apps:
+  sakdulur:
+    command: usr/bin/sakdulur
+    extensions:
+      - gnome
+    desktop: usr/share/applications/sakdulur.desktop
+    plugs:
+      - browser-support
+      - home
+      - network
+      - opengl
+      - wayland
+      - x11
+
+parts:
+  sakdulur:
+    plugin: nil
+    source: .
+    build-snaps:
+      - node/24/stable
+    build-packages:
+      - build-essential
+      - curl
+      - file
+      - libayatana-appindicator3-dev
+      - librsvg2-dev
+      - libssl-dev
+      - libwebkit2gtk-4.1-dev
+      - patchelf
+      - pkg-config
+    stage-packages:
+      - libwebkit2gtk-4.1-0
+    override-build: |
+      set -eu
+      # Rust from rustup.rs, not the rustup snap: the gnome extension puts the SDK's libc on
+      # LD_LIBRARY_PATH, which crashes the snap's bundled loader (as found in Malanghub).
+      export RUSTUP_HOME="$SNAPCRAFT_PART_BUILD/.rustup"
+      export CARGO_HOME="$SNAPCRAFT_PART_BUILD/.cargo"
+      curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \
+        | sh -s -- -y --profile minimal --default-toolchain stable --no-modify-path
+      export PATH="$CARGO_HOME/bin:$PATH"
+      # The Node snap has no corepack, so install pnpm locally.
+      npm install --prefix "$SNAPCRAFT_PART_BUILD/.pnpm" pnpm@10.20.0
+      export PATH="$SNAPCRAFT_PART_BUILD/.pnpm/node_modules/.bin:$PATH"
+      pnpm install --frozen-lockfile --filter native
+      pnpm --filter native tauri build --bundles deb --ci
+
+      deb="$(find apps/native/src-tauri/target -path '*/bundle/deb/*.deb' -type f | head -n 1)"
+      test -n "$deb"
+      dpkg -x "$deb" "$SNAPCRAFT_PART_INSTALL"
+      # Snap wants the desktop file named after the app, with an absolute icon path inside the snap.
+      apps="$SNAPCRAFT_PART_INSTALL/usr/share/applications"
+      mv "$apps/Sakdulur.desktop" "$apps/sakdulur.desktop"
+      icon="$(find "$SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor" -path '*/apps/sakdulur.png' | sort -V | tail -n 1)"
+      sed -i "s|^Icon=.*|Icon=/${icon#"$SNAPCRAFT_PART_INSTALL/"}|" "$apps/sakdulur.desktop"

@@ -9,7 +9,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "check-types": "turbo run check-types",
     "clean": "rm -rf node_modules && rm -rf apps/**/node_modules && rm -rf packages/**/node_modules && rm -rf dist && rm -rf apps/**/dist && rm -rf packages/**/dist && rm -rf .turbo && rm -rf pnpm-lock.yaml",
-    "reset": "pnpm run clean && pnpm install"
+    "reset": "pnpm run clean && pnpm install",
+    "release": "node ./scripts/release-native.mjs"
   },
   "devDependencies": {
     "prettier": "^3.6.2",

@@ -1,0 +1,69 @@
+name: Native Linux Snapcraft
+
+# Start with `pnpm release linux <build-number>` (apps/native/RELEASE.md). Builds snap/snapcraft.yaml for amd64 and
+# arm64 and publishes it to the Snap Store.
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Release build number (100 = version 1.0.0)."
+        required: true
+        type: string
+      channel:
+        description: "Snap Store channel."
+        required: true
+        default: stable
+        type: choice
+        options:
+          - edge
+          - beta
+          - candidate
+          - stable
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-linux-snapcraft
+  cancel-in-progress: false
+
+jobs:
+  build-and-publish:
+    name: Build and publish the snap (${{ matrix.arch }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply release version
+        run: |
+          build="${{ inputs.build_number }}"
+          version="$((build / 100)).$(((build % 100) / 10)).$((build % 10))"
+          sed -i "s/^version: .*/version: \"${version}\"/" snap/snapcraft.yaml
+          echo "Sakdulur ${version} (build ${build}) for ${{ matrix.arch }}"
+
+      - name: Build the snap
+        id: snapcraft
+        uses: canonical/action-build@v1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sakdulur-snap-${{ matrix.arch }}-${{ inputs.build_number }}
+          path: ${{ steps.snapcraft.outputs.snap }}
+          if-no-files-found: error
+
+      - name: Publish to the Snap Store
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        run: |
+          set -euo pipefail
+          test -n "$SNAPCRAFT_STORE_CREDENTIALS"
+          command -v snapcraft >/dev/null || sudo snap install --classic snapcraft
+          snapcraft upload "${{ steps.snapcraft.outputs.snap }}" --release "${{ inputs.channel }}"

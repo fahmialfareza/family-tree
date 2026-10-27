@@ -8,10 +8,11 @@
     "desktop": "tauri dev",
     "desktop:local": "SAKDULUR_SITE_URL=http://localhost:3000 tauri dev",
     "desktop:build": "tauri build",
-    "icons": "tauri icon app-icon.png",
+    "icons": "tauri icon app-icon.png && swift scripts/ios-icons-opaque.swift src-tauri/gen/apple/Assets.xcassets/AppIcon.appiconset/*.png",
     "desktop:build:signed": "tauri build --config src-tauri/tauri.developer-id.conf.json",
     "desktop:build:dev-signed": "tauri build --bundles app --config src-tauri/tauri.mac-development.conf.json",
-    "ios:device": "scripts/ios-device.sh"
+    "ios:device": "scripts/ios-device.sh",
+    "release:version": "node ./scripts/set-release-version.mjs"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.0"

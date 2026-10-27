@@ -1,0 +1,98 @@
+name: Native Windows MSIX
+
+# Start with `pnpm release windows <build-number>` (apps/native/RELEASE.md). Produces x64 and arm64 MSIX
+# artifacts to upload in Partner Center.
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Release build number (100 = version 1.0.0, MSIX 1.0.0.0)."
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-windows-msix
+  cancel-in-progress: false
+
+jobs:
+  build-msix:
+    name: Build the Windows MSIX (${{ matrix.arch }})
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            target: x86_64-pc-windows-msvc
+          - arch: arm64
+            target: aarch64-pc-windows-msvc
+    env:
+      BUILD_NUMBER: ${{ inputs.build_number }}
+      SAKDULUR_WINDOWS_IDENTITY_NAME: ${{ secrets.SAKDULUR_WINDOWS_IDENTITY_NAME }}
+      SAKDULUR_WINDOWS_PUBLISHER: ${{ secrets.SAKDULUR_WINDOWS_PUBLISHER }}
+      SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME: ${{ secrets.SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.0
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/native/src-tauri -> target
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile --filter native
+
+      - name: Apply release version
+        run: pnpm --filter native release:version "$env:BUILD_NUMBER"
+
+      - name: Build the release executable
+        run: pnpm --filter native tauri build --target ${{ matrix.target }} --no-bundle --ci
+
+      - name: Decode optional sideload certificate
+        env:
+          WINDOWS_PFX_BASE64: ${{ secrets.WINDOWS_PFX_BASE64 }}
+        run: |
+          if ($env:WINDOWS_PFX_BASE64) {
+            $pfx = Join-Path $env:RUNNER_TEMP "sakdulur-msix.pfx"
+            [System.IO.File]::WriteAllBytes($pfx, [System.Convert]::FromBase64String($env:WINDOWS_PFX_BASE64))
+            "WINDOWS_PFX_PATH=$pfx" | Out-File -FilePath $env:GITHUB_ENV -Append
+          }
+
+      - name: Create MSIX
+        env:
+          WINDOWS_PFX_PASSWORD: ${{ secrets.WINDOWS_PFX_PASSWORD }}
+        run: |
+          if (-not $env:SAKDULUR_WINDOWS_IDENTITY_NAME) { throw "SAKDULUR_WINDOWS_IDENTITY_NAME secret is required." }
+          if (-not $env:SAKDULUR_WINDOWS_PUBLISHER) { throw "SAKDULUR_WINDOWS_PUBLISHER secret is required." }
+          if (-not $env:SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME) { throw "SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME secret is required." }
+          $msixVersion = "$env:RELEASE_VERSION.0"
+          $msix = Join-Path $env:RUNNER_TEMP "Sakdulur-$msixVersion-${{ matrix.arch }}.msix"
+          .\apps\native\scripts\create-msix.ps1 `
+            -IdentityName "$env:SAKDULUR_WINDOWS_IDENTITY_NAME" `
+            -Publisher "$env:SAKDULUR_WINDOWS_PUBLISHER" `
+            -PublisherDisplayName "$env:SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME" `
+            -Version $msixVersion `
+            -ProcessorArchitecture "${{ matrix.arch }}" `
+            -OutputPath $msix `
+            -SignPfxPath "$env:WINDOWS_PFX_PATH" `
+            -SignPfxPassword "$env:WINDOWS_PFX_PASSWORD"
+          "MSIX_PATH=$msix" | Out-File -FilePath $env:GITHUB_ENV -Append
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sakdulur-windows-msix-${{ matrix.arch }}-${{ inputs.build_number }}
+          path: ${{ env.MSIX_PATH }}
+          if-no-files-found: error
