@@ -177,6 +177,27 @@
 .react-flow__controls {
   @apply overflow-hidden rounded-lg shadow-[var(--shadow-soft)];
 }
+/* Parents other than the primary set (asuh, tiri, wali, susuan, angkat): dashed, with a small label. */
+.react-flow__edge.link-edge .react-flow__edge-path {
+  stroke: color-mix(in oklch, var(--terracotta) 70%, transparent);
+  stroke-dasharray: 6 4;
+}
+.react-flow__edge.link-edge .react-flow__edge-textbg {
+  fill: var(--card);
+}
+.react-flow__edge.link-edge .react-flow__edge-text {
+  fill: var(--terracotta);
+  font-size: 11px;
+}
+/* Couples: divorced or separated dashed, engaged or unmarried dotted. */
+.react-flow__edge.partner-divorced .react-flow__edge-path,
+.react-flow__edge.partner-separated .react-flow__edge-path {
+  stroke-dasharray: 6 4;
+}
+.react-flow__edge.partner-engaged .react-flow__edge-path,
+.react-flow__edge.partner-partner .react-flow__edge-path {
+  stroke-dasharray: 2 4;
+}
 
 @media print {
   .no-print {

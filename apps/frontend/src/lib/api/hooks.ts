@@ -1,16 +1,21 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { dateParts, partsToValue } from "@/lib/format";
 import { api } from "./client";
 import type {
   AssistantAnswer,
   AssistantTurn,
+  DatePrecision,
+  DateQualifier,
   Family,
   ImportRequest,
   ImportResult,
   Graph,
   Me,
   Page,
+  ParentKind,
+  PartnerStatus,
   Person,
   Relationship,
   Session,
@@ -154,7 +159,40 @@ export function useDeletePerson(treeId: string) {
   });
 }
 
-export type RelationshipInput = { to: string; type: "parent" | "child" | "spouse"; order?: number };
+/** One relationship as sent to the API; dates are "YYYY", "YYYY-MM" or "YYYY-MM-DD". */
+export type RelationshipInput = {
+  to: string;
+  type: "parent" | "child" | "spouse";
+  order?: number;
+  kind?: ParentKind;
+  status?: PartnerStatus;
+  startDate?: string;
+  startDateQualifier?: DateQualifier;
+  startPlace?: string;
+  endDate?: string;
+  endDateQualifier?: DateQualifier;
+};
+
+const dateValue = (iso?: string, precision?: DatePrecision) => {
+  const p = dateParts(iso, precision);
+  return partsToValue(p.year, p.month, p.day);
+};
+
+/** A stored relationship as input, with its details, so re-saving a person's list never resets them. */
+export function relationshipInput(r: Relationship): RelationshipInput {
+  return {
+    to: r.to,
+    type: r.type,
+    order: r.order,
+    kind: r.kind,
+    status: r.status,
+    startDate: dateValue(r.startDate, r.startDatePrecision),
+    startDateQualifier: r.startDateQualifier,
+    startPlace: r.startPlace,
+    endDate: dateValue(r.endDate, r.endDatePrecision),
+    endDateQualifier: r.endDateQualifier,
+  };
+}
 
 /** Replaces the full relationship list of a person (the API diffs it and keeps both directions in sync). */
 export function useSaveRelationships(treeId: string) {
@@ -166,12 +204,18 @@ export function useSaveRelationships(treeId: string) {
   });
 }
 
-/** Adds relationships to a person without dropping the existing ones. */
+/**
+ * Adds relationships to a person, or updates the details of ones that exist (same person and type), keeping
+ * every other link as it is.
+ */
 export async function addRelationships(treeId: string, id: string, add: RelationshipInput[]) {
   const existing = await api.get<Relationship[]>(`${t(treeId)}/people/${encodeURIComponent(id)}/relationships`);
-  const list: RelationshipInput[] = existing.map((r) => ({ to: r.to, type: r.type, order: r.order }));
+  // The API returns the person's rows in both directions; only their own (from = id) make up their list.
+  const list: RelationshipInput[] = existing.filter((r) => r.from === id).map(relationshipInput);
   for (const rel of add) {
-    if (!list.some((r) => r.to === rel.to && r.type === rel.type)) list.push(rel);
+    const at = list.findIndex((r) => r.to === rel.to && r.type === rel.type);
+    if (at >= 0) list[at] = { ...rel, order: rel.order ?? list[at].order };
+    else list.push(rel);
   }
   return api.post(`${t(treeId)}/people/${encodeURIComponent(id)}/relationships`, list);
 }

@@ -25,7 +25,8 @@ import {
 } from "@/components/ui/select";
 import { api, errorMessage } from "@/lib/api/client";
 import { type RelationshipInput, useInvalidateTree } from "@/lib/api/hooks";
-import type { Gender, Graph, Person } from "@/lib/api/types";
+import type { Gender, Graph, ParentKind, PartnerStatus, Person } from "@/lib/api/types";
+import { ParentKindSelect, PartnerStatusSelect } from "./link-fields";
 
 export type QuickAddRequest = {
   anchorId: string;
@@ -119,6 +120,8 @@ function QuickAddForm({
       : "unknown",
   );
   const [year, setYear] = useState("");
+  const [kind, setKind] = useState<ParentKind>("birth");
+  const [status, setStatus] = useState<PartnerStatus>("married");
   const [coParent, setCoParent] = useState<string>(() =>
     request.kind === "child" && partners.length === 1 ? partners[0]._id : NONE,
   );
@@ -139,13 +142,13 @@ function QuickAddForm({
       const created = await api.post<Person>(`/api/trees/${treeId}/people`, fd);
       const links: RelationshipInput[] =
         request.kind === "parent"
-          ? [{ to: request.anchorId, type: "parent" }]
+          ? [{ to: request.anchorId, type: "parent", kind }]
           : request.kind === "spouse"
-            ? [{ to: request.anchorId, type: "spouse" }]
+            ? [{ to: request.anchorId, type: "spouse", status }]
             : [
-                { to: request.anchorId, type: "child" },
+                { to: request.anchorId, type: "child", kind },
                 ...(coParent !== NONE
-                  ? [{ to: coParent, type: "child" as const }]
+                  ? [{ to: coParent, type: "child" as const, kind }]
                   : []),
               ];
       try {
@@ -210,6 +213,11 @@ function QuickAddForm({
           )}
         </Field>
       </div>
+      {request.kind === "spouse" ? (
+        <PartnerStatusSelect value={status} onChange={setStatus} />
+      ) : (
+        <ParentKindSelect value={kind} onChange={setKind} />
+      )}
       {request.kind === "child" && partners.length > 0 ? (
         <div className="space-y-1.5">
           <Label>{t("otherParent")}</Label>

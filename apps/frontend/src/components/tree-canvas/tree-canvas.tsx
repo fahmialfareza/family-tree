@@ -119,6 +119,7 @@ function printImage(url: string, title: string, landscape: boolean) {
 function Canvas({ treeId }: { treeId: string }) {
   const t = useTranslations("canvas");
   const te = useTranslations("export");
+  const tl = useTranslations("links");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -191,13 +192,13 @@ function Canvas({ treeId }: { treeId: string }) {
           focusId,
           effectiveDepth === "all" ? Infinity : Number(effectiveDepth),
         );
-    layoutGraph(graph, visible, { focusId }).then((res) => {
+    layoutGraph(graph, visible, { focusId, kindLabel: (k) => tl(`short.${k}`) }).then((res) => {
       if (!cancelled) setLayout({ key: layoutKey, ...res });
     });
     return () => {
       cancelled = true;
     };
-  }, [graph, focusId, effectiveDepth, layoutKey, branch]);
+  }, [graph, focusId, effectiveDepth, layoutKey, branch, tl]);
 
   // Center on the focus person after each layout, otherwise fit everything.
   useEffect(() => {
@@ -291,7 +292,14 @@ function Canvas({ treeId }: { treeId: string }) {
     try {
       el.querySelectorAll<SVGElement>(".react-flow__edge-path").forEach((path) => {
         restyled.push([path, path.getAttribute("style")]);
-        path.style.stroke = solid(getComputedStyle(path).stroke);
+        const style = getComputedStyle(path);
+        path.style.stroke = solid(style.stroke);
+        // Dashed lines (foster/step parents, divorced couples) come from CSS classes; keep them in the picture.
+        path.style.strokeDasharray = style.strokeDasharray;
+      });
+      el.querySelectorAll<SVGElement>(".react-flow__edge-text, .react-flow__edge-textbg").forEach((label) => {
+        restyled.push([label, label.getAttribute("style")]);
+        label.style.fill = solid(getComputedStyle(label).fill);
       });
       const bounds = getNodesBounds(all);
       const width = Math.min(Math.ceil(bounds.width + 160), 8000);

@@ -47,6 +47,8 @@ export interface AssistantAction {
   relativeId?: string;
   relativeName?: string;
   relation?: "parent" | "child" | "partner";
+  /** The kind of that link: a ParentKind for parent/child, a PartnerStatus for partner. Missing = birth / married. */
+  kind?: ParentKind | PartnerStatus;
   otherParentId?: string;
   otherParentName?: string;
   familyId?: string;
@@ -89,7 +91,25 @@ export interface TokenPair {
   user: User;
 }
 
-export interface Relationship {
+/** How a parent and child are related: kandung, angkat, tiri, asuh, wali, susuan. Missing = birth. */
+export type ParentKind = "birth" | "adopted" | "step" | "foster" | "guardian" | "milk";
+/** A couple's status: menikah, cerai, pisah, tunangan, pasangan (not married). Missing = married. */
+export type PartnerStatus = "married" | "divorced" | "separated" | "engaged" | "partner";
+
+/** Details of a relationship, the same on both people: kind for parents/children, the rest for partners. */
+export interface RelationshipDetails {
+  kind?: ParentKind;
+  status?: PartnerStatus;
+  startDate?: string;
+  startDatePrecision?: DatePrecision;
+  startDateQualifier?: DateQualifier;
+  startPlace?: string;
+  endDate?: string;
+  endDatePrecision?: DatePrecision;
+  endDateQualifier?: DateQualifier;
+}
+
+export interface Relationship extends RelationshipDetails {
   _id: string;
   from: string;
   to: string;
@@ -143,8 +163,20 @@ export interface GraphPerson {
 export interface Graph {
   tree: { _id: string; name: string; role: TreeRole; branchScoped: boolean };
   people: GraphPerson[];
-  unions: { _id: string; partners: [string, string] }[];
-  parentChild: { parent: string; child: string; order?: number }[];
+  unions: GraphUnion[];
+  parentChild: GraphParentChild[];
+}
+
+export interface GraphUnion extends RelationshipDetails {
+  _id: string;
+  partners: [string, string];
+}
+
+export interface GraphParentChild {
+  parent: string;
+  child: string;
+  order?: number;
+  kind?: ParentKind;
 }
 
 export interface Family {

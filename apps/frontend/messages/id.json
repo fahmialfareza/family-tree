@@ -258,7 +258,7 @@
     "parents": "Orang tua",
     "partners": "Pasangan",
     "children": "Anak",
-    "siblings": "Saudara kandung",
+    "siblings": "Saudara",
     "none": "Belum ada.",
     "add": "Tambah",
     "unlink": "Lepas hubungan dengan {name}",
@@ -789,5 +789,68 @@
     "savedDevice": "Tersimpan di ponsel ini",
     "photosDenied": "Sakdulur tidak dapat menambahkan foto. Izinkan di Pengaturan › Sakdulur › Foto.",
     "downloadFailed": "Gagal mengunduh. Silakan coba lagi."
+  },
+  "links": {
+    "kinds": {
+      "birth": "Kandung",
+      "adopted": "Angkat",
+      "step": "Tiri",
+      "foster": "Asuh",
+      "guardian": "Wali",
+      "milk": "Susuan"
+    },
+    "short": {
+      "adopted": "angkat",
+      "step": "tiri",
+      "foster": "asuh",
+      "guardian": "wali",
+      "milk": "susuan"
+    },
+    "parentKinds": {
+      "birth": "Orang tua kandung",
+      "adopted": "Orang tua angkat",
+      "step": "Orang tua tiri",
+      "foster": "Orang tua asuh",
+      "guardian": "Wali",
+      "milk": "Orang tua susuan"
+    },
+    "childKinds": {
+      "birth": "Anak kandung",
+      "adopted": "Anak angkat",
+      "step": "Anak tiri",
+      "foster": "Anak asuh",
+      "guardian": "Anak perwalian",
+      "milk": "Anak susuan"
+    },
+    "statuses": {
+      "married": "Menikah",
+      "divorced": "Cerai",
+      "separated": "Pisah",
+      "engaged": "Tunangan",
+      "partner": "Pasangan (belum menikah)"
+    },
+    "widowed": "Cerai mati",
+    "siblingKinds": {
+      "full": "Saudara kandung",
+      "half": "Saudara seayah/seibu",
+      "step": "Saudara tiri",
+      "adopted": "Saudara angkat",
+      "foster": "Saudara asuh",
+      "milk": "Saudara susuan"
+    },
+    "since": "sejak {date}",
+    "marriedOn": "menikah {date}",
+    "endedOn": "sampai {date}",
+    "edit": "Ubah hubungan dengan {name}",
+    "editTitle": "{person} dan {other}",
+    "editDescription": "Cara mereka berhubungan. Disimpan untuk keduanya.",
+    "kind": "Jenis",
+    "kindHint": "Orang tua kandung tetap menjadi garis utama di pohon; orang tua lainnya digambar dengan garis putus-putus.",
+    "status": "Status",
+    "marriageDate": "Tanggal menikah",
+    "marriagePlace": "Tempat menikah",
+    "endDate": "Tanggal cerai atau pisah",
+    "saved": "Tersimpan.",
+    "as": "Sebagai"
   }
 }

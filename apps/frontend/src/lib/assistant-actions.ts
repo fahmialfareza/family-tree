@@ -1,10 +1,16 @@
 import { api } from "@/lib/api/client";
 import { addRelationships, type RelationshipInput } from "@/lib/api/hooks";
-import type { AssistantAction, AssistantPersonFields, Person } from "@/lib/api/types";
+import type { AssistantAction, AssistantPersonFields, ParentKind, PartnerStatus, Person } from "@/lib/api/types";
 import { dateParts, partsToValue } from "@/lib/format";
 
 // Applies a change the assistant proposed, through the same endpoints and permission checks as the forms.
 // Runs only when the user presses Apply.
+
+/** The proposed link's kind as relationship details: a parent kind, or a partner status. */
+function linkDetails(a: AssistantAction): Pick<RelationshipInput, "kind" | "status"> {
+  if (!a.kind) return {};
+  return a.relation === "partner" ? { status: a.kind as PartnerStatus } : { kind: a.kind as ParentKind };
+}
 
 const RELATION_TYPE: Record<NonNullable<AssistantAction["relation"]>, RelationshipInput["type"]> = {
   parent: "parent",
@@ -51,8 +57,8 @@ export async function applyAssistantAction(treeId: string, a: AssistantAction): 
     case "add_person": {
       const created = await api.post<Person>(`${tree(treeId)}/people`, personForm({}, a.fields ?? {}));
       if (a.relativeId && a.relation) {
-        const links: RelationshipInput[] = [{ to: a.relativeId, type: RELATION_TYPE[a.relation] }];
-        if (a.relation === "child" && a.otherParentId) links.push({ to: a.otherParentId, type: "child" });
+        const links: RelationshipInput[] = [{ to: a.relativeId, type: RELATION_TYPE[a.relation], ...linkDetails(a) }];
+        if (a.relation === "child" && a.otherParentId) links.push({ to: a.otherParentId, type: "child", ...linkDetails(a) });
         await api.post(`${tree(treeId)}/people/${encodeURIComponent(created._id)}/relationships`, links);
       }
       return { personId: created._id };
@@ -64,7 +70,7 @@ export async function applyAssistantAction(treeId: string, a: AssistantAction): 
       return { personId: a.personId };
     }
     case "add_relationship":
-      await addRelationships(treeId, a.personId!, [{ to: a.relativeId!, type: RELATION_TYPE[a.relation!] }]);
+      await addRelationships(treeId, a.personId!, [{ to: a.relativeId!, type: RELATION_TYPE[a.relation!], ...linkDetails(a) }]);
       return { personId: a.personId };
     case "add_family":
       await api.post(`${tree(treeId)}/families`, { name: a.familyName, person: a.personId });

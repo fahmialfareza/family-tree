@@ -4,7 +4,7 @@ import { Check, GitBranch, Loader2, Pencil, RotateCcw, UserRoundPlus, Users, X }
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
-import type { AssistantAction, AssistantPersonFields } from "@/lib/api/types";
+import type { AssistantAction, AssistantPersonFields, ParentKind, PartnerStatus } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
 
 export type ActionState = AssistantAction & {
@@ -28,8 +28,11 @@ const FIELD_ORDER: (keyof AssistantPersonFields)[] = [
 /** Card title, also used to tell the model afterwards which changes were applied. */
 export function useActionTitle() {
   const t = useTranslations("assistant.actions");
+  const tl = useTranslations("links");
   return (a: AssistantAction) => {
-    const relation = a.relation ? t(`relation.${a.relation}`) : "";
+    // "parent (foster)", "partner (divorced)": the kind of the proposed link, if not birth / married.
+    const kind = !a.kind ? "" : a.relation === "partner" ? tl(`statuses.${a.kind as PartnerStatus}`) : tl(`short.${a.kind as Exclude<ParentKind, "birth">}`);
+    const relation = a.relation ? t(`relation.${a.relation}`) + (kind ? ` (${kind.toLowerCase()})` : "") : "";
     const name = a.fields?.name ?? a.personName ?? "";
     switch (a.type) {
       case "add_person":

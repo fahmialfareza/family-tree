@@ -17,7 +17,7 @@ import {
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { lifeSpan } from "@/lib/format";
 import { cn } from "@/lib/utils";
-import type { PersonFlowNode } from "./layout";
+import type { PersonFlowNode, UnionFlowNode } from "./layout";
 
 export type RelativeKind = "parent" | "spouse" | "child";
 
@@ -178,11 +178,19 @@ export const PersonNode = memo(function PersonNode({ data, selected }: NodeProps
   );
 });
 
-export const UnionNode = memo(function UnionNode() {
+export const UnionNode = memo(function UnionNode({ data }: NodeProps<UnionFlowNode>) {
+  // Divorced or separated: a hollow dot; engaged or unmarried partners: a dashed ring; married: filled.
+  const ended = data.status === "divorced" || data.status === "separated";
+  const informal = data.status === "engaged" || data.status === "partner";
   return (
     <>
       <Handle type="target" position={Position.Top} className="!size-1 !min-h-0 !min-w-0 !border-0 !bg-transparent" isConnectable={false} />
-      <div className="flex size-[10px] items-center justify-center rounded-full bg-terracotta" aria-hidden />
+      <div
+        className={`flex size-[10px] items-center justify-center rounded-full ${
+          ended ? "border-2 border-terracotta bg-background" : informal ? "border-2 border-dashed border-terracotta bg-background" : "bg-terracotta"
+        }`}
+        aria-hidden
+      />
       <Handle type="source" position={Position.Bottom} className="!size-1 !min-h-0 !min-w-0 !border-0 !bg-transparent" isConnectable={false} />
     </>
   );
