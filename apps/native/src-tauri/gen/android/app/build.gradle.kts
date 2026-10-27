@@ -17,6 +17,13 @@ val tauriProperties = Properties().apply {
 android {
     compileSdk = 37
     namespace = "com.fahmialfareza.sakdulur"
+    // The NDK Tauri builds with (the release workflow sets NDK_HOME). Gradle needs it to extract the Rust
+    // library's symbol table for Play; without it, it quietly skips that step.
+    System.getenv("NDK_HOME")?.let { file(it) }?.takeIf { it.isDirectory }?.let { ndk ->
+        val props = Properties().apply { ndk.resolve("source.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) } }
+        props.getProperty("Pkg.Revision")?.let { ndkVersion = it }
+        ndkPath = ndk.path
+    }
     defaultConfig {
         manifestPlaceholders["usesCleartextTraffic"] = "false"
         applicationId = "com.fahmialfareza.sakdulur"
@@ -48,12 +55,6 @@ android {
             isDebuggable = true
             isJniDebuggable = true
             isMinifyEnabled = false
-            packaging {
-                jniLibs.keepDebugSymbols.add("*/arm64-v8a/*.so")
-                jniLibs.keepDebugSymbols.add("*/armeabi-v7a/*.so")
-                jniLibs.keepDebugSymbols.add("*/x86/*.so")
-                jniLibs.keepDebugSymbols.add("*/x86_64/*.so")
-            }
         }
         getByName("release") {
             signingConfigs.findByName("release")?.let { signingConfig = it }
@@ -78,6 +79,14 @@ android {
     }
     buildFeatures {
         buildConfig = true
+    }
+}
+
+// Debug builds keep the Rust library's symbols for debugging. (A `packaging` block inside buildTypes would
+// apply to release too: release libraries were never stripped, and Play got no symbol file.)
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.packaging.jniLibs.keepDebugSymbols.add("**/*.so")
     }
 }
 
