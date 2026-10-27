@@ -1,0 +1,5 @@
+• Jenis hubungan: orang tua kandung, angkat, tiri, asuh, wali dan susuan
+• Status pasangan: menikah, cerai, pisah, tunangan; tanggal nikah dan cerai
+• Saudara dikelompokkan: kandung, seayah/seibu, tiri dan asuh
+• Pohon lebih jelas: anak di bawah orang tuanya sendiri, garis asuh putus-putus
+• Setelah login langsung masuk ke pohon

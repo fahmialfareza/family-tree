@@ -1,0 +1,5 @@
+• Relationship kinds: birth, adoptive, step, foster, guardian and milk parents
+• Partner status: married, divorced, separated, engaged; marriage and divorce dates
+• Siblings grouped as full, half, step and foster
+• A clearer tree: each child sits under their own parents, foster lines dashed
+• Sign-in now opens straight to your tree
