@@ -65,6 +65,8 @@ $identity = Escape-Xml $IdentityName
 $publisherXml = Escape-Xml $Publisher
 $publisherDisplay = Escape-Xml $PublisherDisplayName
 
+# Properties/DisplayName must be a name reserved in Partner Center ("Sakdulur: Silsilah Keluarga");
+# VisualElements/DisplayName is what Start and the taskbar show, so it stays "Sakdulur".
 # windows.protocol: Google/Apple sign-in returns through com.fahmialfareza.sakdulur:// links. A packaged app's
 # own registry writes (deep-link register_all) are virtualized, so the scheme must be declared here.
 $manifest = @"
@@ -77,7 +79,7 @@ $manifest = @"
   IgnorableNamespaces="uap uap10 rescap">
   <Identity Name="$identity" Publisher="$publisherXml" Version="$Version" ProcessorArchitecture="$ProcessorArchitecture" />
   <Properties>
-    <DisplayName>Sakdulur</DisplayName>
+    <DisplayName>Sakdulur: Silsilah Keluarga</DisplayName>
     <PublisherDisplayName>$publisherDisplay</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
