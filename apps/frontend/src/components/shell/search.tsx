@@ -3,12 +3,16 @@
 import { Search } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PersonAvatar } from "@/components/common/person-avatar";
 import { Button } from "@/components/ui/button";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useGraph } from "@/lib/api/hooks";
 import { lifeSpan } from "@/lib/format";
+
+// The shortcut as the keyboard shows it: ⌘K on Apple devices, Ctrl K elsewhere (decided after hydration).
+const noSubscribe = () => () => {};
+const shortcutLabel = () => (/Mac|iPhone|iPad|iPod/.test(navigator.userAgent) ? "⌘K" : "Ctrl K");
 
 /** ⌘K / Ctrl+K person search for the current tree; picking someone centers the canvas on them. */
 export function PersonSearch({ treeId, compact }: { treeId: string; compact?: boolean }) {
@@ -16,6 +20,7 @@ export function PersonSearch({ treeId, compact }: { treeId: string; compact?: bo
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const { data } = useGraph(treeId);
+  const shortcut = useSyncExternalStore(noSubscribe, shortcutLabel, () => "⌘K");
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -38,7 +43,7 @@ export function PersonSearch({ treeId, compact }: { treeId: string; compact?: bo
         <Button variant="outline" className="w-full justify-start gap-2 text-muted-foreground" onClick={() => setOpen(true)}>
           <Search className="size-4" aria-hidden />
           <span className="flex-1 text-left">{t("searchPeople")}</span>
-          <kbd className="rounded border bg-muted px-1.5 font-mono text-[10px]">⌘K</kbd>
+          <kbd className="rounded border bg-muted px-1.5 font-mono text-[10px]">{shortcut}</kbd>
         </Button>
       )}
       <CommandDialog open={open} onOpenChange={setOpen} title={t("searchPeople")} description={t("searchHint")}>
