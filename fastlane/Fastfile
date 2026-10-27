@@ -150,16 +150,34 @@ lane :apple_pricing do
   end
 end
 
-# Google Play's contact details (not covered by supply). Category and the App content forms aren't in Google's
-# API; see apps/native/store/google-play.md.
-def play_contact_details(json_key, package_name)
+def play_api(json_key)
   require "googleauth"
   creds = Google::Auth::ServiceAccountCredentials.make_creds(
     json_key_io: File.open(json_key), scope: "https://www.googleapis.com/auth/androidpublisher"
   )
   headers = { "Authorization" => "Bearer #{creds.fetch_access_token!['access_token']}", "Content-Type" => "application/json" }
+  Net::HTTP.start("androidpublisher.googleapis.com", 443, use_ssl: true) { |http| yield http, headers }
+end
+
+# supply always looks up a release, even for listing-only updates; use the newest build on Internal testing.
+def play_internal_version_code(json_key, package_name)
   base = "/androidpublisher/v3/applications/#{package_name}/edits"
-  Net::HTTP.start("androidpublisher.googleapis.com", 443, use_ssl: true) do |http|
+  play_api(json_key) do |http, headers|
+    edit = JSON.parse(http.post(base, "{}", headers).body)
+    UI.user_error!("Google Play: #{edit.dig('error', 'message')}") unless edit["id"]
+    track = JSON.parse(http.get("#{base}/#{edit['id']}/tracks/internal", headers).body)
+    http.request(Net::HTTP::Delete.new("#{base}/#{edit['id']}", headers))
+    codes = (track["releases"] || []).flat_map { |r| r["versionCodes"] || [] }.map(&:to_i)
+    UI.user_error!("No build on Internal testing yet") if codes.empty?
+    codes.max
+  end
+end
+
+# Google Play's contact details (not covered by supply). Category and the App content forms aren't in Google's
+# API; see apps/native/store/google-play.md.
+def play_contact_details(json_key, package_name)
+  base = "/androidpublisher/v3/applications/#{package_name}/edits"
+  play_api(json_key) do |http, headers|
     edit = JSON.parse(http.post(base, "{}", headers).body)
     UI.user_error!("Google Play: #{edit.dig('error', 'message')}") unless edit["id"]
     details = { contactEmail: SUPPORT_EMAIL, contactWebsite: WEBSITE }
@@ -181,6 +199,8 @@ lane :play do |options|
     package_name: package_name,
     json_key: json_key,
     metadata_path: File.join(FL, "metadata", "android"),
+    track: "internal",
+    version_code: play_internal_version_code(json_key, package_name),
     skip_upload_apk: true,
     skip_upload_aab: true,
     skip_upload_changelogs: true,

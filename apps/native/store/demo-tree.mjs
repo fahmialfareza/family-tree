@@ -60,7 +60,7 @@ async function call(method, path, token, body, form) {
   return json.data;
 }
 
-const { accessToken: token } = await call("POST", "/auth/login", null, { email, password });
+const { accessToken: token } = await call("POST", "/auth/login", null, { identifier: email, password });
 const tree = await call("POST", "/trees", token, { name: "Keluarga Wiryo" });
 await call("PATCH", `/trees/${tree._id}`, token, { assistantEnabled: true });
 
@@ -85,8 +85,9 @@ for (const [a, b, children] of couples) {
   rels[b].push({ to: ids[a], type: "spouse" });
   children.forEach((child, order) => {
     for (const parent of [a, b]) {
-      rels[parent].push({ to: ids[child], type: "child", order });
-      rels[child].push({ to: ids[parent], type: "parent" });
+      // The type is this person's role: a parent row runs from the parent to the child.
+      rels[parent].push({ to: ids[child], type: "parent", order });
+      rels[child].push({ to: ids[parent], type: "child" });
     }
   });
 }
