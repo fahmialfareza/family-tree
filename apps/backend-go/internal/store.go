@@ -314,96 +314,81 @@ func getRelationshipsByPersonIdRepo(ctx context.Context, treeID, personId string
 	return res, nil
 }
 
-// insertManyRelationshipsRepo inserts relationships between people of treeID. Any person outside the
-// tree fails the whole batch; relationships that already exist are skipped.
-func insertManyRelationshipsRepo(ctx context.Context, treeID string, rels []Relationship) error {
-	defer newrelic.FromContext(ctx).StartSegment("store/insertManyRelationshipsRepo").End()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+// saveRelationshipChangesRepo applies one person's relationship changes in a single transaction: inserts (pairs
+// that already exist are skipped), updates of order and details, and soft deletes. Anyone outside treeID fails
+// the whole change with errCrossTree, so a half-written pair can't remain.
+func saveRelationshipChangesRepo(ctx context.Context, treeID string, inserts, updates []Relationship, deleteIDs []string) error {
+	defer newrelic.FromContext(ctx).StartSegment("store/saveRelationshipChangesRepo").End()
+	if len(inserts) == 0 && len(updates) == 0 && len(deleteIDs) == 0 {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	ids := make([]string, 0, len(rels)*2)
-	for _, r := range rels {
-		ids = append(ids, r.From, r.To)
-	}
-	trees, err := treeIDsOfPeople(DB.WithContext(ctx), ids)
-	if err != nil {
-		return err
-	}
-	rows := make([]relationshipRow, 0, len(rels))
-	for _, r := range rels {
-		if r.From == "" || r.To == "" {
-			continue // Skip invalid IDs
+	err := DB.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		ids := make([]string, 0, 2*(len(inserts)+len(updates)))
+		for _, r := range append(append([]Relationship{}, inserts...), updates...) {
+			if r.From == "" || r.To == "" {
+				return fmt.Errorf("invalid from or to ID")
+			}
+			ids = append(ids, r.From, r.To)
 		}
-		relTree, err := sameTreeID(trees, r.From, r.To)
+		trees, err := treeIDsOfPeople(tx, ids)
 		if err != nil {
 			return err
 		}
-		if relTree != treeID {
-			return errCrossTree
+		inTreeOnly := func(r Relationship) error {
+			relTree, err := sameTreeID(trees, r.From, r.To)
+			if err != nil {
+				return err
+			}
+			if relTree != treeID {
+				return errCrossTree
+			}
+			return nil
 		}
-		rows = append(rows, relationshipRow{TreeID: treeID, FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order})
-	}
-	if len(rows) == 0 {
+
+		rows := make([]relationshipRow, 0, len(inserts))
+		for _, r := range inserts {
+			if err := inTreeOnly(r); err != nil {
+				return err
+			}
+			row := relationshipRow{TreeID: treeID, FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order}
+			row.setDetails(r.RelationshipDetails)
+			rows = append(rows, row)
+		}
+		if len(rows) > 0 {
+			if err := tx.Omit("From", "To").Clauses(clause.OnConflict{DoNothing: true}).Create(&rows).Error; err != nil {
+				return err
+			}
+		}
+
+		columns := append([]string{"from_id", "to_id", "type", "sort_order"}, relationshipDetailColumns...)
+		for _, r := range updates {
+			if r.ID == "" {
+				return fmt.Errorf("invalid relationship ID")
+			}
+			if err := inTreeOnly(r); err != nil {
+				return err
+			}
+			row := relationshipRow{FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order}
+			row.setDetails(r.RelationshipDetails)
+			res := tx.Model(&relationshipRow{}).Scopes(inTree(treeID)).Where("id = ?", r.ID).Select(columns).Updates(row)
+			if res.Error != nil {
+				return res.Error
+			}
+			if res.RowsAffected == 0 {
+				return gorm.ErrRecordNotFound
+			}
+		}
+
+		if len(deleteIDs) > 0 {
+			if err := tx.Scopes(inTree(treeID)).Where("id IN ?", deleteIDs).Delete(&relationshipRow{}).Error; err != nil {
+				return err
+			}
+		}
 		return nil
-	}
-	err = DB.WithContext(ctx).Omit("From", "To").Clauses(clause.OnConflict{DoNothing: true}).Create(&rows).Error
-	if err == nil {
-		bumpTreeCache(ctx, treeID)
-	}
-	return err
-}
-
-func updateRelationshipRepo(ctx context.Context, treeID string, r Relationship) (*Relationship, error) {
-	defer newrelic.FromContext(ctx).StartSegment("store/updateRelationshipRepo").End()
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	if r.ID == "" {
-		return nil, fmt.Errorf("invalid relationship ID")
-	}
-	if r.From == "" || r.To == "" {
-		return nil, fmt.Errorf("invalid from or to ID")
-	}
-
-	trees, err := treeIDsOfPeople(DB.WithContext(ctx), []string{r.From, r.To})
-	if err != nil {
-		return nil, err
-	}
-	relTree, err := sameTreeID(trees, r.From, r.To)
-	if err != nil {
-		return nil, err
-	}
-	if relTree != treeID {
-		return nil, errCrossTree
-	}
-
-	res := DB.WithContext(ctx).Model(&relationshipRow{}).Scopes(inTree(treeID)).Where("id = ?", r.ID).
-		Select("from_id", "to_id", "type", "sort_order").
-		Updates(relationshipRow{FromID: r.From, ToID: r.To, Type: r.Type, SortOrder: r.Order})
-	if res.Error != nil {
-		return nil, res.Error
-	}
-	if res.RowsAffected == 0 {
-		return nil, gorm.ErrRecordNotFound
-	}
-	var row relationshipRow
-	if err := DB.WithContext(ctx).Where("id = ?", r.ID).First(&row).Error; err != nil {
-		return nil, err
-	}
-	bumpTreeCache(ctx, treeID)
-	return row.toModel(), nil
-}
-
-func deleteRelationshipsRepo(ctx context.Context, treeID string, ids []string) error {
-	defer newrelic.FromContext(ctx).StartSegment("store/deleteRelationshipsRepo").End()
-	if len(ids) == 0 {
-		return nil
-	}
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-
-	// Soft delete: sets deleted_at instead of removing
-	err := DB.WithContext(ctx).Scopes(inTree(treeID)).Where("id IN ?", ids).Delete(&relationshipRow{}).Error
+	})
 	if err == nil {
 		bumpTreeCache(ctx, treeID)
 	}

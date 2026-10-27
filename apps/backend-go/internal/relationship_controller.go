@@ -34,6 +34,10 @@ func getRelationships(c *gin.Context) {
 	responseSuccess(c, filteredRels, 200)
 }
 
+// crudRelationships replaces the relationships of :id with the body: [{to, type, order, kind, status, startDate,
+// startDateQualifier, startPlace, endDate, endDateQualifier}]. Every relationship is stored as a pair (parent/child,
+// spouse/spouse), and both rows get the same order and details (kind for parents and children; status, marriage
+// and end dates for partners; see relationship_details.go). All changes are written in one transaction.
 func crudRelationships(c *gin.Context) {
 	defer newrelic.FromContext(c.Request.Context()).StartSegment("handler/crudRelationships").End()
 	// "from" is accepted for backwards compatibility but ignored: relationships are always written for :id.
@@ -43,16 +47,24 @@ func crudRelationships(c *gin.Context) {
 		Order *int    `json:"order"`
 		Type  string  `json:"type"`
 		ID    *string `json:"_id"`
+		relationshipDetailsInput
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		responseError(c, "Invalid request body", 400)
 		return
 	}
-	for _, rel := range body {
+	details := make([]RelationshipDetails, len(body))
+	for i, rel := range body {
 		if rel.Type != "" && rel.Type != "parent" && rel.Type != "child" && rel.Type != "spouse" {
 			responseError(c, "Relationship type must be parent, child or spouse", 400)
 			return
 		}
+		d, msg := rel.relationshipDetailsInput.details(rel.Type)
+		if msg != "" {
+			responseError(c, msg, 400)
+			return
+		}
+		details[i] = d
 	}
 	id := c.Param("id")
 	treeID := currentAccess(c).TreeID
@@ -63,7 +75,6 @@ func crudRelationships(c *gin.Context) {
 	if !requireWritePerson(c, id) {
 		return
 	}
-	// implement upsert similar to Node: build inserts and updates
 	existing, err := getRelationshipsByPersonIdRepo(c, treeID, id)
 	if err != nil {
 		newrelic.FromContext(c.Request.Context()).NoticeError(err)
@@ -72,52 +83,41 @@ func crudRelationships(c *gin.Context) {
 	}
 	existingMap := map[string]Relationship{}
 	for _, r := range existing {
-		key := r.From + "_" + r.To + "_" + r.Type
-		existingMap[key] = *r
+		existingMap[r.From+"_"+r.To+"_"+r.Type] = *r
 	}
 
 	toInsert := []Relationship{}
 	toUpdate := []Relationship{}
 	seenKeys := map[string]bool{}
-
-	for _, rel := range body {
+	// upsert writes one row of a pair: inserted when missing, updated when its order or details changed.
+	upsert := func(from, to, relType string, order int, d RelationshipDetails) {
+		key := from + "_" + to + "_" + relType
+		if seenKeys[key] {
+			return
+		}
+		seenKeys[key] = true
+		ex, ok := existingMap[key]
+		if !ok {
+			toInsert = append(toInsert, Relationship{From: from, To: to, Type: relType, Order: order, RelationshipDetails: d})
+			return
+		}
+		if ex.Order != order || !ex.RelationshipDetails.equal(d) {
+			ex.Order, ex.RelationshipDetails = order, d
+			ex.FromDetails, ex.ToDetails = nil, nil
+			toUpdate = append(toUpdate, ex)
+		}
+	}
+	inverse := map[string]string{"parent": "child", "child": "parent", "spouse": "spouse"}
+	for i, rel := range body {
 		if rel.To == "" || rel.Type == "" {
 			continue
 		}
-		key := id + "_" + rel.To + "_" + rel.Type
-		seenKeys[key] = true
 		order := 0
 		if rel.Order != nil {
 			order = *rel.Order
 		}
-		if ex, ok := existingMap[key]; !ok {
-			toInsert = append(toInsert, Relationship{From: id, To: rel.To, Type: rel.Type, Order: order})
-		} else {
-			if ex.Order != order {
-				ex.Order = order
-				toUpdate = append(toUpdate, ex)
-			}
-		}
-
-		// inverse
-		invType := ""
-		if rel.Type == "parent" {
-			invType = "child"
-		} else if rel.Type == "child" {
-			invType = "parent"
-		} else if rel.Type == "spouse" {
-			invType = "spouse"
-		}
-		if invType != "" {
-			invKey := rel.To + "_" + id + "_" + invType
-			seenKeys[invKey] = true
-			if ex, ok := existingMap[invKey]; !ok {
-				toInsert = append(toInsert, Relationship{From: rel.To, To: id, Type: invType, Order: order})
-			} else {
-				ex.Order = order
-				toUpdate = append(toUpdate, ex)
-			}
-		}
+		upsert(id, rel.To, rel.Type, order, details[i])
+		upsert(rel.To, id, inverse[rel.Type], order, details[i])
 	}
 
 	// delete those not seen
@@ -131,7 +131,14 @@ func crudRelationships(c *gin.Context) {
 
 	// Every relationship is stored on both people, so the caller must be allowed to change the other side
 	// too; otherwise a branch-scoped editor could rewire people outside their branch.
+	// Every link in the request counts, changed or not: re-saving a link to someone outside the caller's
+	// branch is refused too (see TestBranchScopedEditor).
 	touched := []string{}
+	for _, rel := range body {
+		if rel.To != "" && rel.Type != "" {
+			touched = append(touched, id, rel.To)
+		}
+	}
 	for _, r := range toInsert {
 		touched = append(touched, r.From, r.To)
 	}
@@ -157,30 +164,14 @@ func crudRelationships(c *gin.Context) {
 		return
 	}
 
-	if len(toInsert) > 0 {
-		if err := insertManyRelationshipsRepo(c, treeID, toInsert); err != nil {
-			if errors.Is(err, errCrossTree) || errors.Is(err, gorm.ErrRecordNotFound) {
-				responseError(c, "Related person not found in this tree", 400)
-				return
-			}
-			newrelic.FromContext(c.Request.Context()).NoticeError(err)
-			responseError(c, "Failed to insert relationships", 500)
+	if err := saveRelationshipChangesRepo(c, treeID, toInsert, toUpdate, toDelete); err != nil {
+		if errors.Is(err, errCrossTree) || errors.Is(err, gorm.ErrRecordNotFound) {
+			responseError(c, "Related person not found in this tree", 400)
 			return
 		}
-	}
-	for _, up := range toUpdate {
-		if _, err := updateRelationshipRepo(c, treeID, up); err != nil {
-			newrelic.FromContext(c.Request.Context()).NoticeError(err)
-			responseError(c, "Failed to update relationships", 500)
-			return
-		}
-	}
-	if len(toDelete) > 0 {
-		if err := deleteRelationshipsRepo(c, treeID, toDelete); err != nil {
-			newrelic.FromContext(c.Request.Context()).NoticeError(err)
-			responseError(c, "Failed to delete relationships", 500)
-			return
-		}
+		newrelic.FromContext(c.Request.Context()).NoticeError(err)
+		responseError(c, "Failed to save relationships", 500)
+		return
 	}
 
 	responseSuccess(c, gin.H{"inserted": len(toInsert), "updated": len(toUpdate), "deleted": len(toDelete)}, 201)

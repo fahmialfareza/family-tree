@@ -33,15 +33,19 @@ type graphPerson struct {
 	CanEdit            bool       `json:"canEdit"`
 }
 
+// graphUnion is a couple. Status and the marriage/end dates come from their spouse rows (empty status = married).
 type graphUnion struct {
 	ID       string    `json:"_id"` // "<smaller person id>:<larger person id>"
 	Partners [2]string `json:"partners"`
+	RelationshipDetails
 }
 
+// graphParentChild is a parent link; Kind is empty for birth parents (else adopted, step, foster, guardian, milk).
 type graphParentChild struct {
 	Parent string `json:"parent"`
 	Child  string `json:"child"`
 	Order  int    `json:"order"`
+	Kind   string `json:"kind,omitempty"`
 }
 
 // treeGraph is the cached, user-independent part (CanEdit is always false in it).
@@ -78,7 +82,7 @@ func repoGetTreeGraph(ctx context.Context, treeID string) (*treeGraph, error) {
 	// Soft-deleted relationships are filtered by GORM; the live-person check drops edges to deleted people.
 	var rels []relationshipRow
 	if err := byCreation(DB.WithContext(ctx)).Scopes(inTree(treeID)).
-		Select("id", "created_at", "from_id", "to_id", "type", "sort_order").
+		Select(append([]string{"id", "created_at", "from_id", "to_id", "type", "sort_order"}, relationshipDetailColumns...)).
 		Find(&rels).Error; err != nil {
 		return nil, err
 	}
@@ -130,16 +134,18 @@ func repoGetTreeGraph(ctx context.Context, treeID string) (*treeGraph, error) {
 			id := a + ":" + b
 			if _, ok := unions[id]; !ok {
 				unions[id] = struct{}{}
-				g.Unions = append(g.Unions, graphUnion{ID: id, Partners: [2]string{a, b}})
+				d := r.details()
+				d.Kind = ""
+				g.Unions = append(g.Unions, graphUnion{ID: id, Partners: [2]string{a, b}, RelationshipDetails: d})
 			}
 		case "parent":
 			e := edge{r.FromID, r.ToID}
 			if _, ok := edges[e]; !ok {
 				edges[e] = struct{}{}
-				g.ParentChild = append(g.ParentChild, graphParentChild{Parent: r.FromID, Child: r.ToID, Order: r.SortOrder})
+				g.ParentChild = append(g.ParentChild, graphParentChild{Parent: r.FromID, Child: r.ToID, Order: r.SortOrder, Kind: deref(r.Kind)})
 			}
 		case "child":
-			inferred = append(inferred, graphParentChild{Parent: r.ToID, Child: r.FromID, Order: r.SortOrder})
+			inferred = append(inferred, graphParentChild{Parent: r.ToID, Child: r.FromID, Order: r.SortOrder, Kind: deref(r.Kind)})
 		}
 	}
 	for _, pc := range inferred {

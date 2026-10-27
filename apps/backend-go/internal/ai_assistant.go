@@ -69,6 +69,8 @@ type aiIndex struct {
 	parents    map[string][]string
 	children   map[string][]string
 	partners   map[string][]string
+	linkKind   map[[2]string]string // [parent, child] -> adopted, step, foster, guardian, milk ("" = birth)
+	coupleInfo map[[2]string]string // [a, b] (both orders) -> divorced, separated, engaged, partner ("" = married)
 }
 
 func formatPartialDate(t *time.Time, precision, qualifier *string) string {
@@ -155,7 +157,8 @@ func truncateRunes(s string, n int) string {
 }
 
 func buildAIIndex(d *aiTreeData) *aiIndex {
-	ix := &aiIndex{byID: map[string]*aiPerson{}, familyByID: map[string]*aiFamily{}, parents: map[string][]string{}, children: map[string][]string{}, partners: map[string][]string{}}
+	ix := &aiIndex{byID: map[string]*aiPerson{}, familyByID: map[string]*aiFamily{}, parents: map[string][]string{}, children: map[string][]string{}, partners: map[string][]string{},
+		linkKind: map[[2]string]string{}, coupleInfo: map[[2]string]string{}}
 	for i := range d.Families {
 		f := &d.Families[i]
 		ix.families = append(ix.families, f)
@@ -177,6 +180,9 @@ func buildAIIndex(d *aiTreeData) *aiIndex {
 		}
 		ix.parents[pc.Child] = append(ix.parents[pc.Child], pc.Parent)
 		ix.children[pc.Parent] = append(ix.children[pc.Parent], pc.Child)
+		if pc.Kind != "" {
+			ix.linkKind[[2]string{pc.Parent, pc.Child}] = pc.Kind
+		}
 	}
 	for _, u := range d.Unions {
 		a, b := u.Partners[0], u.Partners[1]
@@ -185,6 +191,9 @@ func buildAIIndex(d *aiTreeData) *aiIndex {
 		}
 		ix.partners[a] = append(ix.partners[a], b)
 		ix.partners[b] = append(ix.partners[b], a)
+		if u.Status != "" {
+			ix.coupleInfo[[2]string{a, b}], ix.coupleInfo[[2]string{b, a}] = u.Status, u.Status
+		}
 	}
 	return ix
 }
@@ -194,6 +203,9 @@ func buildAIIndex(d *aiTreeData) *aiIndex {
 type personRef struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+	// Kind of the link to this person: for parents and children adopted, step, foster, guardian or milk (empty =
+	// birth); for partners divorced, separated, engaged or partner (empty = married).
+	Kind string `json:"kind,omitempty"`
 }
 
 func (ix *aiIndex) refs(ids []string) []personRef {
@@ -202,6 +214,15 @@ func (ix *aiIndex) refs(ids []string) []personRef {
 		if p := ix.byID[id]; p != nil {
 			out = append(out, personRef{ID: p.ID, Name: p.Name})
 		}
+	}
+	return out
+}
+
+// linkedRefs are refs with the kind of each link, from kindOf(other id).
+func (ix *aiIndex) linkedRefs(ids []string, kindOf func(string) string) []personRef {
+	out := ix.refs(ids)
+	for i := range out {
+		out[i].Kind = kindOf(out[i].ID)
 	}
 	return out
 }
@@ -304,9 +325,9 @@ func (ix *aiIndex) getPerson(id string) (map[string]any, bool) {
 	}
 	return map[string]any{
 		"person":   p,
-		"parents":  ix.refs(ix.parents[id]),
-		"partners": ix.refs(ix.partners[id]),
-		"children": ix.refs(ix.children[id]),
+		"parents":  ix.linkedRefs(ix.parents[id], func(p string) string { return ix.linkKind[[2]string{p, id}] }),
+		"partners": ix.linkedRefs(ix.partners[id], func(p string) string { return ix.coupleInfo[[2]string{id, p}] }),
+		"children": ix.linkedRefs(ix.children[id], func(c string) string { return ix.linkKind[[2]string{id, c}] }),
 		"siblings": ix.refs(ix.siblings(id)),
 	}, true
 }
@@ -349,7 +370,21 @@ func (ix *aiIndex) relationshipPath(from, to string) []pathStep {
 	var path []pathStep
 	for cur := to; ; {
 		h := seen[cur]
-		path = append(path, pathStep{ID: cur, Name: ix.byID[cur].Name, Relation: h.rel})
+		rel := h.rel
+		// e.g. "parent (foster)", "partner (divorced)": the kind of that link.
+		kind := ""
+		switch h.rel {
+		case "parent":
+			kind = ix.linkKind[[2]string{cur, h.prev}]
+		case "child":
+			kind = ix.linkKind[[2]string{h.prev, cur}]
+		case "partner":
+			kind = ix.coupleInfo[[2]string{h.prev, cur}]
+		}
+		if kind != "" {
+			rel += " (" + kind + ")"
+		}
+		path = append(path, pathStep{ID: cur, Name: ix.byID[cur].Name, Relation: rel})
 		if cur == from {
 			break
 		}
@@ -493,7 +528,9 @@ Rules:
 - Only answer questions about this family tree and its people; politely decline anything else.
 %s
 
-Kinship words (Indonesian / Javanese): bapak, ayah, papa, rama = father; ibu, mama, biyung = mother; orang tua = parents; anak = child; suami = husband; istri = wife; kakak = older sibling; adik = younger sibling; kakek, mbah kakung, eyang kakung = grandfather; nenek, mbah putri, eyang putri = grandmother; cucu = grandchild; cicit = great-grandchild; paman, om, pakde (older than the parent), paklik/pak lik (younger) = uncle; bibi, tante, bude (older), bulik/bu lik (younger) = aunt; sepupu = cousin; keponakan, ponakan = nephew or niece; mertua = parent-in-law; menantu = child-in-law; ipar = sibling-in-law; besan = co-parent-in-law. "Bapaknya Ayu" means Ayu's father.`,
+Kinship words (Indonesian / Javanese): bapak, ayah, papa, rama = father; ibu, mama, biyung = mother; orang tua = parents; anak = child; suami = husband; istri = wife; kakak = older sibling; adik = younger sibling; kakek, mbah kakung, eyang kakung = grandfather; nenek, mbah putri, eyang putri = grandmother; cucu = grandchild; cicit = great-grandchild; paman, om, pakde (older than the parent), paklik/pak lik (younger) = uncle; bibi, tante, bude (older), bulik/bu lik (younger) = aunt; sepupu = cousin; keponakan, ponakan = nephew or niece; mertua = parent-in-law; menantu = child-in-law; ipar = sibling-in-law; besan = co-parent-in-law. "Bapaknya Ayu" means Ayu's father.
+
+Link kinds: a parent or child may have a "kind": adopted = angkat, step = tiri, foster = asuh (raised the child without adopting), guardian = wali, milk = susuan; no kind = kandung (birth). A partner may have a "kind": divorced = cerai, separated = pisah, engaged = tunangan, partner = pasangan (not married); no kind = married (menikah; if the partner has died, the other is widowed: janda/duda). Someone can have birth parents and other parents at the same time, and the same person can be both a blood relative and, e.g., a foster parent; say both. "Orang tua asuh Nenek" means Nenek's foster parents.`,
 		treeName, time.Now().UTC().Format("2 January 2006"), lang, writeRules(canWrite))
 }
 

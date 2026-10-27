@@ -26,6 +26,8 @@ type exportData struct {
 	children map[string][]string
 	partners map[string][]string
 	families []*Family
+	linkKind map[[2]string]string              // [parent, child] -> kind ("" = birth)
+	couples  map[[2]string]RelationshipDetails // [a, b] in both orders -> status, marriage and end dates
 }
 
 // exportScope is ?scope=all (default) or a branch like the copy dialog: descendants, ancestors, both, or
@@ -79,7 +81,8 @@ func loadExport(c *gin.Context, treeID string, sc exportScope) (*exportData, err
 	// keep: everyone in the branch (nil = whole tree). Relationships to people outside it are dropped.
 	var keep map[string]bool
 	d := &exportData{tree: tree, byID: map[string]*Person{}, parents: map[string][]string{},
-		children: map[string][]string{}, partners: map[string][]string{}}
+		children: map[string][]string{}, partners: map[string][]string{},
+		linkKind: map[[2]string]string{}, couples: map[[2]string]RelationshipDetails{}}
 	if sc.scope != "" {
 		found := false
 		for _, p := range people {
@@ -106,12 +109,17 @@ func loadExport(c *gin.Context, treeID string, sc exportScope) (*exportData, err
 		if in(pc.Parent) && in(pc.Child) {
 			d.parents[pc.Child] = append(d.parents[pc.Child], pc.Parent)
 			d.children[pc.Parent] = append(d.children[pc.Parent], pc.Child)
+			if pc.Kind != "" {
+				d.linkKind[[2]string{pc.Parent, pc.Child}] = pc.Kind
+			}
 		}
 	}
 	for _, u := range g.Unions {
 		if in(u.Partners[0]) && in(u.Partners[1]) {
 			d.partners[u.Partners[0]] = append(d.partners[u.Partners[0]], u.Partners[1])
 			d.partners[u.Partners[1]] = append(d.partners[u.Partners[1]], u.Partners[0])
+			d.couples[[2]string{u.Partners[0], u.Partners[1]}] = u.RelationshipDetails
+			d.couples[[2]string{u.Partners[1], u.Partners[0]}] = u.RelationshipDetails
 		}
 	}
 	for _, f := range families {
@@ -130,6 +138,61 @@ func (d *exportData) names(ids []string) string {
 		}
 	}
 	return strings.Join(out, ", ")
+}
+
+var kindLabels = map[string][2]string{ // en, id
+	"adopted": {"adopted", "angkat"}, "step": {"step", "tiri"}, "foster": {"foster", "asuh"},
+	"guardian": {"guardian", "wali"}, "milk": {"milk", "susuan"},
+	"married": {"married", "menikah"}, "divorced": {"divorced", "cerai"}, "separated": {"separated", "pisah"},
+	"engaged": {"engaged", "tunangan"}, "partner": {"partner", "pasangan"},
+}
+
+func kindLabelOrEmpty(kind string, id bool) string {
+	if kind == "" {
+		return ""
+	}
+	return kindLabel(kind, id)
+}
+
+func kindLabel(kind string, id bool) string {
+	l, ok := kindLabels[kind]
+	if !ok {
+		return kind
+	}
+	if id {
+		return l[1]
+	}
+	return l[0]
+}
+
+// linkedNames lists people with the kind of each link, e.g. "Siti (asuh), Budi".
+func (d *exportData) linkedNames(ids []string, id bool, kindOf func(other string) string) string {
+	var out []string
+	for _, other := range ids {
+		p := d.byID[other]
+		if p == nil {
+			continue
+		}
+		if k := kindOf(other); k != "" {
+			out = append(out, p.Name+" ("+k+")")
+		} else {
+			out = append(out, p.Name)
+		}
+	}
+	return strings.Join(out, ", ")
+}
+
+// partnerNote: "cerai, menikah 1975" / "married 1975"; empty for a married couple without a date.
+func (d *exportData) partnerNote(a, b string, id bool) string {
+	c := d.couples[[2]string{a, b}]
+	var parts []string
+	if c.Status != "" {
+		parts = append(parts, kindLabel(c.Status, id))
+	}
+	if c.StartDate != nil {
+		parts = append(parts, kindLabel("married", id)+" "+readableDate(c.StartDate, c.StartDatePrecision, c.StartDateQualifier, id))
+	}
+	return strings.Join(parts, ", ")
 }
 
 // readableDate: "12 May 1980", "May 1980", "1980", with "about"/"before"/"after" in the export language.
@@ -192,7 +255,9 @@ func (d *exportData) xlsx(lang string) ([]byte, error) {
 			readableDate(birthOf(p), p.BirthDatePrecision, p.BirthDateQualifier, id), p.BirthPlace,
 			readableDate(p.DeathDate, p.DeathDatePrecision, p.DeathDateQualifier, id), p.DeathPlace,
 			p.Address, p.Phone,
-			d.names(d.parents[p.ID]), d.names(d.partners[p.ID]), d.names(d.children[p.ID]),
+			d.linkedNames(d.parents[p.ID], id, func(o string) string { return kindLabelOrEmpty(d.linkKind[[2]string{o, p.ID}], id) }),
+			d.linkedNames(d.partners[p.ID], id, func(o string) string { return d.partnerNote(p.ID, o, id) }),
+			d.linkedNames(d.children[p.ID], id, func(o string) string { return kindLabelOrEmpty(d.linkKind[[2]string{p.ID, o}], id) }),
 			p.Notes,
 		})
 	}
@@ -318,26 +383,34 @@ func (d *exportData) gedcom() string {
 			}
 		}
 	}
+	// A child's parents form one family per kind (birth parents, foster parents, ...), linked with FAMC + PEDI.
+	type famc struct{ id, kind string }
+	famcOf := map[string][]famc{}
 	for _, p := range d.people {
-		var ps []string
+		byKind := map[string][]string{}
+		var kinds []string
 		for _, id := range d.parents[p.ID] {
-			if d.byID[id] != nil && len(ps) < 2 {
-				ps = append(ps, id)
+			if d.byID[id] == nil {
+				continue
+			}
+			k := d.linkKind[[2]string{id, p.ID}]
+			if _, ok := byKind[k]; !ok {
+				kinds = append(kinds, k)
+			}
+			if len(byKind[k]) < 2 {
+				byKind[k] = append(byKind[k], id)
 			}
 		}
-		if len(ps) > 0 {
-			f := get(ps)
+		for _, k := range kinds {
+			f := get(byKind[k])
 			f.children = append(f.children, p.ID)
+			famcOf[p.ID] = append(famcOf[p.ID], famc{f.id, k})
 		}
 	}
 	famsOf := map[string][]string{}
-	famcOf := map[string][]string{}
 	for _, f := range fams {
 		for _, p := range f.parents {
 			famsOf[p] = append(famsOf[p], f.id)
-		}
-		for _, c := range f.children {
-			famcOf[c] = append(famcOf[c], f.id)
 		}
 	}
 
@@ -391,7 +464,14 @@ func (d *exportData) gedcom() string {
 			gedText(&b, 1, "NOTE", p.Notes)
 		}
 		for _, f := range famcOf[p.ID] {
-			fmt.Fprintf(&b, "1 FAMC %s\n", f)
+			fmt.Fprintf(&b, "1 FAMC %s\n", f.id)
+			switch f.kind {
+			case "":
+			case "adopted", "foster":
+				fmt.Fprintf(&b, "2 PEDI %s\n", f.kind)
+			default: // step, guardian, milk: no PEDI value in GEDCOM 5.5.1
+				gedText(&b, 2, "NOTE", kindLabel(f.kind, false)+" parent")
+			}
 		}
 		for _, f := range famsOf[p.ID] {
 			fmt.Fprintf(&b, "1 FAMS %s\n", f)
@@ -423,9 +503,62 @@ func (d *exportData) gedcom() string {
 		for _, c := range f.children {
 			fmt.Fprintf(&b, "1 CHIL %s\n", indi[c])
 		}
+		if len(f.parents) == 2 {
+			d.gedCouple(&b, d.couples[[2]string{f.parents[0], f.parents[1]}], d.isCouple(f.parents[0], f.parents[1]))
+		}
 	}
 	b.WriteString("0 TRLR\n")
 	return b.String()
+}
+
+func (d *exportData) isCouple(a, b string) bool {
+	for _, p := range d.partners[a] {
+		if p == b {
+			return true
+		}
+	}
+	return false
+}
+
+// gedCouple writes a couple's events: MARR (when married or there is a marriage date), DIV, ENGA, separation.
+func (d *exportData) gedCouple(b *strings.Builder, c RelationshipDetails, couple bool) {
+	if !couple {
+		return
+	}
+	event := func(tag string, t *time.Time, precision, qualifier, place string) {
+		date := gedDate(t, precision, qualifier)
+		if date == "" && place == "" {
+			b.WriteString("1 " + tag + " Y\n") // the event happened, date and place unknown
+			return
+		}
+		b.WriteString("1 " + tag + "\n")
+		if date != "" {
+			fmt.Fprintf(b, "2 DATE %s\n", date)
+		}
+		if place != "" {
+			gedText(b, 2, "PLAC", place)
+		}
+	}
+	switch c.Status {
+	case "engaged":
+		event("ENGA", c.StartDate, c.StartDatePrecision, c.StartDateQualifier, c.StartPlace)
+		return
+	case "partner":
+		gedText(b, 1, "NOTE", "Unmarried partners")
+		return
+	}
+	if c.StartDate != nil || c.StartPlace != "" || c.Status == "" {
+		event("MARR", c.StartDate, c.StartDatePrecision, c.StartDateQualifier, c.StartPlace)
+	}
+	switch c.Status {
+	case "divorced":
+		event("DIV", c.EndDate, c.EndDatePrecision, c.EndDateQualifier, "")
+	case "separated":
+		b.WriteString("1 EVEN\n2 TYPE Separation\n")
+		if date := gedDate(c.EndDate, c.EndDatePrecision, c.EndDateQualifier); date != "" {
+			fmt.Fprintf(b, "2 DATE %s\n", date)
+		}
+	}
 }
 
 var unsafeFileChars = regexp.MustCompile(`[^\p{L}\p{N} _-]+`)

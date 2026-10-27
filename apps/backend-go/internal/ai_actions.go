@@ -30,6 +30,9 @@ type assistantAction struct {
 	RelativeID   string `json:"relativeId,omitempty"`
 	RelativeName string `json:"relativeName,omitempty"`
 	Relation     string `json:"relation,omitempty"`
+	// The kind of that link: adopted, step, foster, guardian or milk for a parent/child; divorced, separated,
+	// engaged or partner for a partner. Empty = birth / married.
+	Kind string `json:"kind,omitempty"`
 	// add_person as a child: the other parent, if known.
 	OtherParentID   string `json:"otherParentId,omitempty"`
 	OtherParentName string `json:"otherParentName,omitempty"`
@@ -146,6 +149,22 @@ func (a fieldArgs) toFields(requireName bool) (*personFields, string) {
 
 var relationTypes = map[string]bool{"parent": true, "child": true, "partner": true}
 
+// linkKind checks the optional kind of a proposed link and returns it normalised (birth and married as empty).
+func linkKind(relation, kind string) (string, string) {
+	kind = strings.TrimSpace(kind)
+	switch {
+	case kind == "" || kind == "birth" || kind == "married":
+		return "", ""
+	case relation == "partner" && partnerStatuses[kind]:
+		return kind, ""
+	case relation != "partner" && parentKinds[kind]:
+		return kind, ""
+	case relation == "partner":
+		return "", "kind for a partner must be divorced, separated, engaged or partner (empty = married)"
+	}
+	return "", "kind for a parent or child must be adopted, step, foster, guardian or milk (empty = birth)"
+}
+
 // ---- Tool runner (one per request and model attempt) ----
 
 type toolRunner struct {
@@ -216,6 +235,7 @@ func (r *toolRunner) propose(name, args string) (*assistantAction, string) {
 			fieldArgs
 			RelativeID    string `json:"relative_id"`
 			Relation      string `json:"relation"`
+			Kind          string `json:"kind"`
 			OtherParentID string `json:"other_parent_id"`
 		}
 		if json.Unmarshal(raw, &a) != nil {
@@ -235,6 +255,9 @@ func (r *toolRunner) propose(name, args string) (*assistantAction, string) {
 				return nil, msg
 			}
 			act.RelativeID, act.RelativeName, act.Relation = rel.ID, rel.Name, a.Relation
+			if act.Kind, msg = linkKind(a.Relation, a.Kind); msg != "" {
+				return nil, msg
+			}
 			if a.OtherParentID != "" {
 				if a.Relation != "child" {
 					return nil, "other_parent_id is only for adding a child"
@@ -269,6 +292,7 @@ func (r *toolRunner) propose(name, args string) (*assistantAction, string) {
 			PersonID   string `json:"person_id"`
 			RelativeID string `json:"relative_id"`
 			Relation   string `json:"relation"`
+			Kind       string `json:"kind"`
 		}
 		if json.Unmarshal(raw, &a) != nil {
 			return nil, "invalid arguments"
@@ -287,11 +311,15 @@ func (r *toolRunner) propose(name, args string) (*assistantAction, string) {
 		if p.ID == rel.ID {
 			return nil, "a person cannot be related to themselves"
 		}
+		kind, msg := linkKind(a.Relation, a.Kind)
+		if msg != "" {
+			return nil, msg
+		}
 		if r.ix.related(p.ID, rel.ID, a.Relation) {
 			return nil, "already linked that way"
 		}
 		return &assistantAction{Type: "add_relationship", PersonID: p.ID, PersonName: p.Name,
-			RelativeID: rel.ID, RelativeName: rel.Name, Relation: a.Relation}, ""
+			RelativeID: rel.ID, RelativeName: rel.Name, Relation: a.Relation, Kind: kind}, ""
 	case "propose_add_family":
 		var a struct {
 			Name     string `json:"name"`
@@ -386,6 +414,10 @@ func withProps(extra map[string]any) map[string]any {
 
 var relationProp = map[string]any{"type": "string", "enum": []string{"parent", "child", "partner"}}
 
+var linkKindProp = map[string]any{"type": "string",
+	"enum":        []string{"adopted", "step", "foster", "guardian", "milk", "divorced", "separated", "engaged", "partner"},
+	"description": "Optional kind of the link. Parent/child: adopted (angkat), step (tiri), foster (asuh), guardian (wali), milk (susuan); omit for birth (kandung). Partner: divorced, separated, engaged, partner (unmarried); omit for married."}
+
 var assistantWriteTools = []chatTool{
 	{Type: "function", Function: chatFunction{
 		Name:        "propose_add_person",
@@ -393,6 +425,7 @@ var assistantWriteTools = []chatTool{
 		Parameters: map[string]any{"type": "object", "required": []string{"name"}, "properties": withProps(map[string]any{
 			"relative_id":     map[string]any{"type": "string"},
 			"relation":        relationProp,
+			"kind":            linkKindProp,
 			"other_parent_id": map[string]any{"type": "string", "description": "Only when adding a child: the other parent"},
 		})},
 	}},
@@ -410,6 +443,7 @@ var assistantWriteTools = []chatTool{
 			"person_id":   map[string]any{"type": "string"},
 			"relative_id": map[string]any{"type": "string"},
 			"relation":    relationProp,
+			"kind":        linkKindProp,
 		}},
 	}},
 	{Type: "function", Function: chatFunction{

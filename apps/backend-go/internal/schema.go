@@ -145,6 +145,16 @@ type relationshipRow struct {
 	To        *personRow `gorm:"foreignKey:ToID"`
 	Type      string
 	SortOrder int
+	// Details (migration 00011), the same on both rows of a pair; see relationship_details.go.
+	Kind               *string
+	PartnerStatus      *string
+	StartDate          *time.Time
+	StartDatePrecision *string
+	StartDateQualifier *string
+	StartPlace         *string
+	EndDate            *time.Time
+	EndDatePrecision   *string
+	EndDateQualifier   *string
 }
 
 func (relationshipRow) TableName() string { return "relationships" }
@@ -272,7 +282,7 @@ func (f *familyRow) toModel() *Family {
 }
 
 func (r *relationshipRow) toModel() *Relationship {
-	out := &Relationship{ID: r.ID, From: r.FromID, To: r.ToID, Type: r.Type, Order: r.SortOrder}
+	out := &Relationship{ID: r.ID, From: r.FromID, To: r.ToID, Type: r.Type, Order: r.SortOrder, RelationshipDetails: r.details()}
 	if r.From != nil {
 		out.FromDetails = r.From.toModel()
 		out.FromDetails.OwnedBy = nil

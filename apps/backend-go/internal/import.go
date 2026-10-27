@@ -342,7 +342,9 @@ func runImport(ctx context.Context, source, dest *treeAccess, body importRequest
 			from, okFrom := copyOf[r.FromID]
 			to, okTo := copyOf[r.ToID]
 			if okFrom && okTo {
-				links = append(links, relationshipRow{TreeID: dest.TreeID, FromID: from, ToID: to, Type: r.Type, SortOrder: r.SortOrder})
+				link := relationshipRow{TreeID: dest.TreeID, FromID: from, ToID: to, Type: r.Type, SortOrder: r.SortOrder}
+				link.setDetails(r.details()) // kind, partner status, marriage and end dates travel with the link
+				links = append(links, link)
 			}
 		}
 		if len(links) == 0 {

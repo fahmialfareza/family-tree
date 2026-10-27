@@ -102,11 +102,12 @@ type Family struct {
 }
 
 type Relationship struct {
-	ID          string  `json:"_id"`
-	From        string  `json:"from"`
-	To          string  `json:"to"`
-	Type        string  `json:"type"`
-	Order       int     `json:"order,omitempty"`
+	ID    string `json:"_id"`
+	From  string `json:"from"`
+	To    string `json:"to"`
+	Type  string `json:"type"`
+	Order int    `json:"order,omitempty"`
+	RelationshipDetails
 	ToDetails   *Person `json:"toDetails,omitempty"`
 	FromDetails *Person `json:"fromDetails,omitempty"`
 }
