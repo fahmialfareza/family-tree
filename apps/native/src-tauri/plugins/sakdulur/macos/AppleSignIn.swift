@@ -1,5 +1,6 @@
 import AppKit
 import AuthenticationServices
+import CryptoKit
 import Foundation
 
 // Sign in with Apple on macOS for src/macos.rs: shows Apple's sheet over the app window and blocks the calling
@@ -19,7 +20,8 @@ private final class Coordinator: NSObject, ASAuthorizationControllerDelegate,
     DispatchQueue.main.async {
       let request = ASAuthorizationAppleIDProvider().createRequest()
       request.requestedScopes = [.fullName, .email]
-      request.nonce = nonce
+      // Apple expects the SHA-256 of the nonce; the site keeps the raw value and sends it to the API.
+      request.nonce = SHA256.hash(data: Data(nonce.utf8)).map { String(format: "%02x", $0) }.joined()
       let controller = ASAuthorizationController(authorizationRequests: [request])
       controller.delegate = self
       controller.presentationContextProvider = self

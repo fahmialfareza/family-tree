@@ -197,6 +197,11 @@ pub fn run() {
                     SITE_URL.trim_end_matches('/')
                 ))
                 .on_navigation(move |url| {
+                    // The site's public pages open over the app (the site turns those links into navigations).
+                    if is_internal(url, &nav_site) && is_public_page(url) && url.scheme().starts_with("http") {
+                        open_public_page(&nav_handle, url);
+                        return false;
+                    }
                     if is_internal(url, &nav_site) {
                         return true;
                     }

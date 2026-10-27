@@ -35,11 +35,6 @@ function randomHex(bytes = 32) {
   return Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
 }
 
-async function sha256Hex(value: string) {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
-  return Array.from(new Uint8Array(digest), (x) => x.toString(16).padStart(2, "0")).join("");
-}
-
 /**
  * Google (and Apple, where the app has no native Apple sheet) sign-in runs in the system browser: Google refuses
  * app windows, and navigating there is enough, because the app sends other sites to the browser. The binding
@@ -69,7 +64,8 @@ export async function signInWithAppleNative() {
   const tauri = (window as unknown as { __TAURI_INTERNALS__?: TauriInternals }).__TAURI_INTERNALS__;
   if (!tauri) throw new Error("Sign in with Apple is unavailable");
   const nonce = randomHex();
-  const response = await tauri.invoke<AppleAuthorization>("plugin:sakdulur|apple_authorize", { nonce: await sha256Hex(nonce) });
+  // The app hashes the nonce for Apple; the API checks the token against this raw value.
+  const response = await tauri.invoke<AppleAuthorization>("plugin:sakdulur|apple_authorize", { nonce });
   const name = [response.givenName, response.familyName].filter(Boolean).join(" ");
   const res = await fetch("/api/session/apple", {
     method: "POST",

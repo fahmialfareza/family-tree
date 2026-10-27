@@ -5,7 +5,8 @@
 //!
 //! - `apple_authorize { nonce }`: Apple's sign-in sheet (iPhone and Mac). Returns the identity token, the
 //!   authorization code and the name (Apple only shares it the first time); the site sends them to
-//!   POST /api/session/apple. `nonce` is the SHA-256 of the value the site keeps, as Apple's API expects.
+//!   POST /api/session/apple. `nonce` is the raw value the site keeps; the native code hashes it (SHA-256)
+//!   for Apple, so the site needs no Web Crypto (missing on plain-HTTP pages, e.g. a dev server over Wi-Fi).
 
 use serde::{Deserialize, Serialize};
 use tauri::plugin::{Builder, TauriPlugin};

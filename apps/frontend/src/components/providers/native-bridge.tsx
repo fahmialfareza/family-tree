@@ -9,7 +9,8 @@ import { useNativePlatform } from "@/lib/native";
  * - Android back button: the app sends a "sakdulur:back" event; close an open dialog or menu first,
  *   otherwise go back
  * - links to the site's public pages (Privacy, Terms, landing) open over the app instead of replacing it: they
- *   become new-window requests, which the app shows in an in-app browser sheet (iPhone) or the system browser
+ *   become full navigations, which the app cancels and shows in an in-app browser sheet (iPhone) or the system
+ *   browser (next/link would otherwise route inside the page, where the app cannot see it)
  */
 // A hook (called by Providers), not a component rendered next to the page: a sibling there shifted React's
 // useId paths when its code loaded after hydration began, so menu ids differed from the server HTML.
@@ -41,7 +42,7 @@ export function useNativeBridge() {
       const url = new URL(a.href, window.location.href);
       if (url.origin !== window.location.origin || !PUBLIC_PAGE.test(url.pathname)) return;
       e.preventDefault();
-      window.open(url.href, "_blank");
+      window.location.assign(url.href);
     };
     window.addEventListener("sakdulur:back", onBack);
     document.addEventListener("click", onClick, true);

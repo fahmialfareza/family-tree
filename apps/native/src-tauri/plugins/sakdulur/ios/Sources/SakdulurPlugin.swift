@@ -1,4 +1,5 @@
 import AuthenticationServices
+import CryptoKit
 import SafariServices
 import Tauri
 import UIKit
@@ -24,7 +25,8 @@ class SakdulurPlugin: Plugin, ASAuthorizationControllerDelegate, ASAuthorization
     DispatchQueue.main.async {
       let request = ASAuthorizationAppleIDProvider().createRequest()
       request.requestedScopes = [.fullName, .email]
-      request.nonce = args.nonce
+      // Apple expects the SHA-256 of the nonce; the site keeps the raw value and sends it to the API.
+      request.nonce = SHA256.hash(data: Data(args.nonce.utf8)).map { String(format: "%02x", $0) }.joined()
       let controller = ASAuthorizationController(authorizationRequests: [request])
       controller.delegate = self
       controller.presentationContextProvider = self
