@@ -6,10 +6,29 @@ import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
-export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
+// The page couldn't be loaded, most often because a new version went live while it was open (its navigation
+// requests then fail until a reload) or the server briefly answered 5xx. Reload once by ourselves; the
+// timestamp keeps it from looping when the error is real.
+const AUTO_RELOAD_KEY = "ft-error-reload";
+const AUTO_RELOAD_GAP_MS = 30_000;
+
+function reloadOnce(): boolean {
+  try {
+    const last = Number(sessionStorage.getItem(AUTO_RELOAD_KEY) || 0);
+    if (Date.now() - last < AUTO_RELOAD_GAP_MS) return false;
+    sessionStorage.setItem(AUTO_RELOAD_KEY, String(Date.now()));
+  } catch {
+    return false;
+  }
+  window.location.reload();
+  return true;
+}
+
+export default function ErrorPage({ error }: { error: Error & { digest?: string }; reset: () => void }) {
   const t = useTranslations("errors");
   useEffect(() => {
     console.error(error);
+    reloadOnce();
   }, [error]);
   return (
     <main className="flex min-h-[60dvh] flex-col items-center justify-center gap-4 px-6 text-center">
@@ -18,7 +37,8 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
       <p className="max-w-md text-muted-foreground">{t("errorBody")}</p>
       {error.digest ? <p className="font-mono text-xs text-muted-foreground">{error.digest}</p> : null}
       <div className="flex gap-2">
-        <Button onClick={reset}>
+        {/* A full reload: reset() only re-renders, which can't recover a page whose data failed to load. */}
+        <Button onClick={() => window.location.reload()}>
           <RotateCcw className="size-4" aria-hidden /> {t("retry")}
         </Button>
         <Button asChild variant="outline">
