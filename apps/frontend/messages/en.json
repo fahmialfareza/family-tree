@@ -784,6 +784,10 @@
     "downloading": "Downloading…",
     "savedDesktop": "Saved to your Downloads folder",
     "savedMobile": "Saved to Files › Sakdulur",
+    "savedGallery": "Saved to Gallery › Sakdulur",
+    "savedPhotos": "Saved to Photos",
+    "savedDevice": "Saved on this phone",
+    "photosDenied": "Sakdulur can't add photos. Allow it in Settings › Sakdulur › Photos.",
     "downloadFailed": "The download failed. Please try again."
   }
 }

@@ -108,26 +108,37 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
+export type SavedLocation = "gallery" | "photos" | "downloads" | "device";
+export type DownloadDetail = {
+  state: "started" | "finished" | "failed";
+  id: string;
+  name: string;
+  location?: SavedLocation;
+  reason?: "photos-denied";
+};
+
 /**
- * Android web views ignore downloads, so the Android app saves files natively (plugin save_file, to the phone's
- * Downloads) and reports them with the same "sakdulur:download" events the other apps send (download toasts).
+ * Files the phone apps save natively (plugin save_file), reported with the same "sakdulur:download" events the
+ * other apps send (download toasts). Android: every download (its web view ignores them); pictures go to the
+ * Gallery, other files to Downloads. iPhone: pictures, to Photos.
  */
-async function saveFileAndroid(name: string, blob: Blob) {
-  const id = `android-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-  const report = (state: "started" | "finished" | "failed", file: string) =>
-    window.dispatchEvent(new CustomEvent("sakdulur:download", { detail: { state, id, name: file } }));
-  report("started", name);
+async function saveFileNative(name: string, blob: Blob) {
+  const id = `save-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const report = (detail: Omit<DownloadDetail, "id">) =>
+    window.dispatchEvent(new CustomEvent<DownloadDetail>("sakdulur:download", { detail: { ...detail, id } }));
+  report({ state: "started", name });
   try {
     const tauri = tauriInternals();
     if (!tauri) throw new Error("unavailable");
-    const saved = await tauri.invoke<{ name: string }>("plugin:sakdulur|save_file", {
+    const saved = await tauri.invoke<{ name: string; location: SavedLocation }>("plugin:sakdulur|save_file", {
       name,
       mime: blob.type || "application/octet-stream",
       data: await blobToBase64(blob),
     });
-    report("finished", saved.name);
-  } catch {
-    report("failed", name);
+    report({ state: "finished", name: saved.name, location: saved.location });
+  } catch (err) {
+    const denied = String(err).includes("photos-denied");
+    report({ state: "failed", name, reason: denied ? "photos-denied" : undefined });
   }
 }
 
@@ -135,7 +146,7 @@ async function saveFileAndroid(name: string, blob: Blob) {
 export async function downloadLinkAndroid(href: string, name: string) {
   const res = await fetch(href, { credentials: "same-origin" });
   if (!res.ok) throw new Error(res.statusText);
-  await saveFileAndroid(name, await res.blob());
+  await saveFileNative(name, await res.blob());
 }
 
 /** A data: URL as a Blob. Not via fetch(): the site's CSP (connect-src) blocks fetching data: URLs. */
@@ -148,11 +159,15 @@ function dataUrlToBlob(url: string) {
   return new Blob([bytes], { type });
 }
 
-/** Saves a file through the browser's download (desktop and iPhone apps save it natively; Android via the plugin). */
+/**
+ * Saves a file through the browser's download (the desktop apps save it to Downloads, the iPhone app to Files).
+ * Phone apps save pictures to the Gallery / Photos instead, and Android every file, via the plugin.
+ */
 export async function saveFile(name: string, data: Blob | string) {
-  if (nativePlatform() === "android") {
-    return saveFileAndroid(name, typeof data === "string" ? dataUrlToBlob(data) : data);
-  }
+  const platform = nativePlatform();
+  const blob = () => (typeof data === "string" ? dataUrlToBlob(data) : data);
+  const picture = typeof data === "string" ? data.startsWith("data:image/") : data.type.startsWith("image/");
+  if (platform === "android" || (platform === "ios" && picture)) return saveFileNative(name, blob());
   const href = typeof data === "string" ? data : URL.createObjectURL(data);
   const a = document.createElement("a");
   a.href = href;

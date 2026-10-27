@@ -83,6 +83,9 @@ import {
 } from "./layout";
 import { CanvasActions, nodeTypes, type RelativeKind } from "./nodes";
 
+const TRANSPARENT_PIXEL =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
 const DEPTHS = ["2", "4", "6", "all"] as const;
 // Above this size the canvas starts with a neighbourhood around the focus person instead of everyone.
 const FULL_TREE_LIMIT = 250;
@@ -299,6 +302,8 @@ function Canvas({ treeId }: { treeId: string }) {
         width,
         height,
         pixelRatio: 2,
+        // A photo that can't be loaded (deleted, offline) would otherwise fail the whole picture.
+        imagePlaceholder: TRANSPARENT_PIXEL,
         style: {
           width: `${width}px`,
           height: `${height}px`,
@@ -313,7 +318,8 @@ function Canvas({ treeId }: { treeId: string }) {
       const base = `${graph?.tree.name ?? "sakdulur"}${branchName ? ` - ${branchName}` : ""}`.replace(/[\\/:*?"<>|]+/g, "").trim();
       if (mode === "print") printImage(url, base, width >= height);
       else await saveFile(`${base}.png`, url);
-    } catch {
+    } catch (err) {
+      console.error("Tree image export failed", err);
       toast.error(t("exportFailed"));
     } finally {
       for (const [path, style] of restyled) {

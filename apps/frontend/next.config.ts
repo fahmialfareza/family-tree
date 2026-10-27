@@ -12,7 +12,8 @@ const imageHosts = ["https://res.cloudinary.com", ...(process.env.NEXT_PUBLIC_IM
   .join(" ");
 
 // The browser only talks to this origin (API calls go through /api/proxy), plus the Cloudflare Web Analytics
-// beacon that Cloudflare injects (loaded from static.cloudflareinsights.com, reporting to cloudflareinsights.com).
+// beacon that Cloudflare injects (loaded from static.cloudflareinsights.com, reporting to cloudflareinsights.com),
+// and reads photos from the image hosts when the tree is saved as a picture (html-to-image embeds them).
 // 'unsafe-inline' scripts are needed for Next.js bootstrapping without nonces; React Flow needs inline styles.
 const csp = [
   "default-src 'self'",
@@ -20,7 +21,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   `img-src 'self' data: blob: ${imageHosts}`,
   "font-src 'self' data:",
-  `connect-src 'self' https://cloudflareinsights.com${isDev ? " ws: http://localhost:*" : ""}`,
+  `connect-src 'self' https://cloudflareinsights.com ${imageHosts}${isDev ? " ws: http://localhost:*" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

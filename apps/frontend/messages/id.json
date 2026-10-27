@@ -784,6 +784,10 @@
     "downloading": "Mengunduh…",
     "savedDesktop": "Tersimpan di folder Unduhan",
     "savedMobile": "Tersimpan di Files › Sakdulur",
+    "savedGallery": "Tersimpan di Galeri › Sakdulur",
+    "savedPhotos": "Tersimpan di Foto",
+    "savedDevice": "Tersimpan di ponsel ini",
+    "photosDenied": "Sakdulur tidak dapat menambahkan foto. Izinkan di Pengaturan › Sakdulur › Foto.",
     "downloadFailed": "Gagal mengunduh. Silakan coba lagi."
   }
 }

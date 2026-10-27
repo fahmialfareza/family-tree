@@ -3,9 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { useNativePlatform } from "@/lib/native";
-
-type DownloadDetail = { state: "started" | "finished" | "failed"; id: string; name: string };
+import { type DownloadDetail, useNativePlatform } from "@/lib/native";
 
 /**
  * In the desktop/mobile app, downloads are saved by the app (apps/native), which reports each one with a
@@ -19,11 +17,18 @@ export function useDownloadToasts() {
   useEffect(() => {
     if (platform === "web") return;
     const onDownload = (e: Event) => {
-      const { state, id, name } = (e as CustomEvent<DownloadDetail>).detail;
+      const { state, id, name, location, reason } = (e as CustomEvent<DownloadDetail>).detail;
       const opts = { id, description: name || undefined };
       if (state === "started") toast.loading(t("downloading"), opts);
-      else if (state === "finished") toast.success(t(platform === "ios" ? "savedMobile" : "savedDesktop"), opts);
-      else toast.error(t("downloadFailed"), opts);
+      else if (state === "finished") {
+        const where =
+          location === "gallery" ? "savedGallery"
+          : location === "photos" ? "savedPhotos"
+          : location === "device" ? "savedDevice"
+          : platform === "ios" ? "savedMobile"
+          : "savedDesktop";
+        toast.success(t(where), opts);
+      } else toast.error(t(reason === "photos-denied" ? "photosDenied" : "downloadFailed"), opts);
     };
     window.addEventListener("sakdulur:download", onDownload);
     return () => window.removeEventListener("sakdulur:download", onDownload);
