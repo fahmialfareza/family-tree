@@ -7,7 +7,7 @@ import { BRAND } from "./brand";
 export type LegalSection = { h: string; p?: string[]; list?: string[] };
 export type LegalDoc = { title: string; updated: string; intro: string; sections: LegalSection[] };
 
-export const LEGAL_UPDATED = "2026-10-26";
+export const LEGAL_UPDATED = "2026-10-27";
 export const MIN_AGE = 13;
 
 const operator = process.env.NEXT_PUBLIC_OPERATOR_NAME || "Fahmi Alfareza";
@@ -37,6 +37,7 @@ export function privacyPolicy(locale: string): LegalDoc {
             "Nama, alamat email, dan nama pengguna (untuk akun lama).",
             "Kata sandi — hanya disimpan sebagai hash bcrypt; kami tidak pernah dapat melihat kata sandi Anda.",
             "Jika Anda masuk dengan Google: ID akun Google, nama, dan email yang diberikan Google. Kami tidak menerima kata sandi Google Anda.",
+            "Jika Anda masuk dengan Apple: ID akun Apple, email yang diberikan Apple (dapat berupa alamat relai pribadi jika Anda memilih menyembunyikan email), dan nama Anda saat pertama kali masuk. Kami tidak menerima kata sandi Akun Apple Anda.",
             "Sesi masuk: jenis browser/perangkat, alamat IP, waktu dibuat dan terakhir digunakan.",
           ],
         },
@@ -52,7 +53,16 @@ export function privacyPolicy(locale: string): LegalDoc {
           list: [
             "Log server (alamat IP, waktu, halaman yang diminta, kode status) untuk keamanan dan pemecahan masalah. Isi permintaan, kata sandi, dan token tidak dicatat.",
             "Data kesalahan dan kinerja aplikasi melalui layanan pemantauan.",
-            "Kami tidak menggunakan iklan, pelacak pihak ketiga, atau profil perilaku.",
+            "Statistik kunjungan anonim untuk situs web melalui Cloudflare Web Analytics (halaman yang dilihat, situs perujuk, negara, jenis browser dan perangkat). Layanan ini tidak memasang cookie dan tidak melacak Anda di situs lain.",
+            "Kami tidak menggunakan iklan, pelacak lintas situs, atau profil perilaku.",
+          ],
+        },
+        {
+          h: "Aplikasi kami",
+          list: [
+            "Aplikasi Sakdulur untuk iPhone, Android, Mac, Windows, dan Linux membuka layanan yang sama ini di jendela aplikasi. Aplikasi tidak mengumpulkan data selain yang dijelaskan dalam kebijakan ini dan tidak menambahkan iklan atau analitik sendiri.",
+            "File yang Anda ekspor atau unduh di aplikasi disimpan di perangkat Anda. Untuk masuk dengan Apple atau Google, aplikasi menggunakan lembar masuk Apple atau browser Anda.",
+            "Toko aplikasi tempat Anda memasang aplikasi (seperti App Store atau Google Play) memproses data unduhan dan pemasangan sesuai kebijakan privasinya sendiri.",
           ],
         },
         {
@@ -79,13 +89,13 @@ export function privacyPolicy(locale: string): LegalDoc {
           h: "5. Penyedia layanan (pemroses data)",
           p: ["Kami menggunakan penyedia berikut, yang memproses data atas nama kami hanya untuk menjalankan layanan:"],
           list: [
-            "Railway — server API dan basis data.",
-            "Cloudflare — aplikasi web dan penyimpanan cadangan basis data (R2).",
+            "Railway — server API, basis data, dan cache.",
+            "Cloudflare — aplikasi web, statistik kunjungan anonim (Web Analytics), dan penyimpanan cadangan basis data (R2).",
             "Cloudinary — penyimpanan dan pengolahan foto.",
             "Resend — pengiriman email transaksional.",
             "New Relic — pemantauan kesalahan dan kinerja.",
             "Google — hanya jika Anda memilih masuk dengan Google.",
-            "Apple — hanya jika Anda memilih masuk dengan Apple (aplikasi iOS).",
+            "Apple — hanya jika Anda memilih masuk dengan Apple.",
             "Google (Gemini) dan Groq — hanya untuk pohon yang asisten AI-nya diaktifkan oleh pemilik. Saat anggota bertanya atau meminta perubahan, pesan mereka beserta nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke salah satu penyedia ini untuk menyusun jawaban atau usulan perubahan, yang baru tersimpan setelah anggota menekan Terapkan. Nomor telepon dan foto tidak dikirim, dan percakapan tidak kami simpan.",
           ],
         },
@@ -147,10 +157,11 @@ export function privacyPolicy(locale: string): LegalDoc {
           list: [
             "ft_access dan ft_refresh — sesi masuk Anda (httpOnly, berlaku hingga 30 hari).",
             "ft_signed_in — menandai bahwa Anda sedang masuk, agar halaman depan menampilkan tombol yang tepat (tanpa data pribadi, hingga 30 hari).",
-            "ft_oauth_binding — mengamankan proses masuk dengan Google (10 menit).",
+            "ft_oauth_binding, serta ft_oauth dan ft_oauth_apple di api.sakdulur.com — mengamankan proses masuk dengan Google dan Apple (10 menit).",
+            "ft_client — hanya di aplikasi Sakdulur: aplikasi yang Anda gunakan (iOS, Android, macOS, Windows, atau Linux), agar aplikasi terbuka di layar awalnya sendiri (1 tahun).",
             "NEXT_LOCALE — pilihan bahasa (1 tahun).",
             "theme (penyimpanan lokal browser) — pilihan tema terang/gelap.",
-            "Tidak ada cookie analitik, pelacakan, atau iklan, sehingga tidak diperlukan banner persetujuan cookie.",
+            "Tidak ada cookie analitik, pelacakan, atau iklan (statistik kunjungan di atas tidak memakai cookie), sehingga tidak diperlukan banner persetujuan cookie.",
           ],
         },
         {
@@ -182,6 +193,7 @@ export function privacyPolicy(locale: string): LegalDoc {
           "Name, email address, and username (for older accounts).",
           "Password — stored only as a bcrypt hash; we can never see your password.",
           "If you sign in with Google: your Google account ID, name and email as provided by Google. We never receive your Google password.",
+          "If you sign in with Apple: your Apple account ID, your email as provided by Apple (which may be a private relay address if you chose to hide yours), and your name the first time you sign in. We never receive your Apple Account password.",
           "Sign-in sessions: browser/device type, IP address, when they were created and last used.",
         ],
       },
@@ -197,7 +209,16 @@ export function privacyPolicy(locale: string): LegalDoc {
         list: [
           "Server logs (IP address, time, requested page, status code) for security and troubleshooting. Request bodies, passwords and tokens are not logged.",
           "Application error and performance data through a monitoring service.",
-          "We use no advertising, third-party trackers, or behavioural profiling.",
+          "Anonymous visit statistics for the website through Cloudflare Web Analytics (pages viewed, referring site, country, browser and device type). It sets no cookies and does not follow you across other sites.",
+          "We use no advertising, cross-site trackers, or behavioural profiling.",
+        ],
+      },
+      {
+        h: "Our apps",
+        list: [
+          "The Sakdulur apps for iPhone, Android, Mac, Windows and Linux open this same service in an app window. They collect nothing beyond what this policy describes and add no advertising or analytics of their own.",
+          "Files you export or download in an app are saved on your device. The app uses Apple's sign-in sheet, or your browser, to sign you in with Apple or Google.",
+          "The app store you install from (such as the App Store or Google Play) processes download and installation data under its own privacy policy.",
         ],
       },
       {
@@ -224,13 +245,13 @@ export function privacyPolicy(locale: string): LegalDoc {
         h: "5. Service providers (processors)",
         p: ["We use these providers, who process data on our behalf only to run the service:"],
         list: [
-          "Railway — API servers and database.",
-          "Cloudflare — the web app and database backup storage (R2).",
+          "Railway — API servers, database and cache.",
+          "Cloudflare — the web app, anonymous visit statistics (Web Analytics), and database backup storage (R2).",
           "Cloudinary — photo storage and processing.",
           "Resend — transactional email delivery.",
           "New Relic — error and performance monitoring.",
           "Google — only if you choose Sign in with Google.",
-          "Apple — only if you choose Sign in with Apple (iOS app).",
+          "Apple — only if you choose Sign in with Apple.",
           "Google (Gemini) and Groq — only for trees whose owner turned on the AI assistant. When a member asks a question or asks for a change, their message and the names, dates, places, addresses and notes of the people involved are sent to one of these providers to write the answer or propose the change, which is saved only when the member presses Apply. Phone numbers and photos are not sent, and we do not store the conversation.",
         ],
       },
@@ -292,10 +313,11 @@ export function privacyPolicy(locale: string): LegalDoc {
         list: [
           "ft_access and ft_refresh — your sign-in session (httpOnly, up to 30 days).",
           "ft_signed_in — marks that you are signed in, so the home page shows the right buttons (no personal data, up to 30 days).",
-          "ft_oauth_binding — secures Sign in with Google (10 minutes).",
+          "ft_oauth_binding, and ft_oauth and ft_oauth_apple on api.sakdulur.com — secure Sign in with Google and Apple (10 minutes).",
+          "ft_client — only in the Sakdulur apps: which app you are using (iOS, Android, macOS, Windows or Linux), so it opens on the app's own start screen (1 year).",
           "NEXT_LOCALE — your language choice (1 year).",
           "theme (browser local storage) — your light/dark preference.",
-          "There are no analytics, tracking or advertising cookies, so no cookie consent banner is needed.",
+          "There are no analytics, tracking or advertising cookies (the visit statistics above are cookieless), so no cookie consent banner is needed.",
         ],
       },
       {
