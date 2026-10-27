@@ -564,6 +564,10 @@
     "thinking": "Looking through the tree…",
     "disclaimer": "AI can make mistakes; check important details on the person's page. Changes are only saved when you press Apply. Your question and the people it looks up are sent to an AI provider and are not stored by us.",
     "answeredBy": "Answered by {model}",
+    "report": "Report",
+    "reportLabel": "Report this AI answer",
+    "reportSubject": "Report an AI answer in Sakdulur",
+    "reportBody": "What is wrong with this answer?\n\n\n---\nQuestion: {question}\nAnswer: {answer}\nModel: {model}",
     "openPerson": "Open {name}",
     "tryAsking": "Try asking",
     "suggestions": [

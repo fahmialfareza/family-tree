@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowUp, Loader2, RotateCcw, Sparkles, UserRound } from "lucide-react";
+import { ArrowUp, Flag, Loader2, RotateCcw, Sparkles, UserRound } from "lucide-react";
 import Link from "next/link";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
@@ -11,6 +11,7 @@ import { errorMessage } from "@/lib/api/client";
 import { useAskAssistant, useInvalidateTree, useTree } from "@/lib/api/hooks";
 import type { AssistantAnswer, AssistantTurn } from "@/lib/api/types";
 import { applyAssistantAction } from "@/lib/assistant-actions";
+import { contactEmail } from "@/lib/legal-content";
 import { cn } from "@/lib/utils";
 import { ActionCards, type ActionState, useActionTitle } from "@/components/assistant/action-cards";
 
@@ -134,6 +135,15 @@ function Conversation({ treeId }: { treeId: string }) {
     }
   }
 
+  // A prefilled email with the question and the answer (cut short: mail apps limit link length).
+  function reportLink(index: number) {
+    const answer = messages[index];
+    const question = messages.slice(0, index).reverse().find((m) => m.role === "user")?.content ?? "";
+    const clip = (s: string) => (s.length > 600 ? `${s.slice(0, 600)}…` : s);
+    const body = t("reportBody", { question: clip(question), answer: clip(answer.content), model: answer.model ?? "-" });
+    return `mailto:${contactEmail}?subject=${encodeURIComponent(t("reportSubject"))}&body=${encodeURIComponent(body)}`;
+  }
+
   function retry() {
     const lastQuestion = [...messages].reverse().find((m) => m.role === "user");
     if (!lastQuestion) return;
@@ -216,7 +226,17 @@ function Conversation({ treeId }: { treeId: string }) {
                   <RotateCcw className="size-4" aria-hidden /> {t("retry")}
                 </Button>
               ) : null}
-              {m.model ? <p className="text-[11px] text-muted-foreground">{t("answeredBy", { model: m.model })}</p> : null}
+              {m.role === "assistant" && !m.error ? (
+                <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+                  <span>{m.model ? t("answeredBy", { model: m.model }) : null}</span>
+                  {contactEmail ? (
+                    // Lets anyone flag a wrong or harmful AI answer (store policies for generative AI).
+                    <a href={reportLink(i)} className="inline-flex items-center gap-1 rounded hover:text-foreground" aria-label={t("reportLabel")}>
+                      <Flag className="size-3" aria-hidden /> {t("report")}
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </div>
         ))}

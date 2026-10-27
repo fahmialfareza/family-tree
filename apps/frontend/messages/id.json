@@ -564,6 +564,10 @@
     "thinking": "Mencari di pohon keluarga…",
     "disclaimer": "AI bisa keliru; periksa detail penting di halaman orangnya. Perubahan baru tersimpan setelah Anda menekan Terapkan. Pertanyaan Anda dan data orang yang dicari dikirim ke penyedia AI dan tidak kami simpan.",
     "answeredBy": "Dijawab oleh {model}",
+    "report": "Laporkan",
+    "reportLabel": "Laporkan jawaban AI ini",
+    "reportSubject": "Laporan jawaban AI di Sakdulur",
+    "reportBody": "Apa yang salah dari jawaban ini?\n\n\n---\nPertanyaan: {question}\nJawaban: {answer}\nModel: {model}",
     "openPerson": "Buka {name}",
     "tryAsking": "Coba tanyakan",
     "suggestions": [
