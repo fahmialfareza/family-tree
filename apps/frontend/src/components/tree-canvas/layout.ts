@@ -166,23 +166,40 @@ export async function layoutGraph(
     for (const m of order) blockOf.set(m, id);
   }
 
-  // ELK lays out blocks; an edge from the parents' block to the child's block keeps generations apart.
-  const elkNodes: ElkNode[] = [...blocks].map(([id, members]) => ({
-    id,
-    width: members.length * PERSON_WIDTH + (members.length - 1) * PARTNER_GAP,
-    height: PERSON_HEIGHT,
-  }));
+  // ELK lays out blocks. Each block has a port under every couple's dot (and every parent) and one above every
+  // member, so crossing minimisation puts each child under their own parents, not under a parent's other partner.
+  const slot = (i: number) => i * (PERSON_WIDTH + PARTNER_GAP);
+  const elkNodes: ElkNode[] = [...blocks].map(([id, members]) => {
+    const index = new Map(members.map((m, i) => [m, i]));
+    const bottom = members.map((m, i) => ({ id: `pb:${m}`, x: slot(i) + PERSON_WIDTH / 2 }));
+    for (const uid of couples) {
+      const [, a, b] = uid.split(":");
+      if (index.has(a) && index.has(b)) bottom.push({ id: `pb:${uid}`, x: (slot(index.get(a)!) + slot(index.get(b)!) + PERSON_WIDTH) / 2 });
+    }
+    return {
+      id,
+      width: slot(members.length - 1) + PERSON_WIDTH,
+      height: PERSON_HEIGHT,
+      layoutOptions: { "elk.portConstraints": "FIXED_POS" },
+      ports: [
+        ...bottom.map((port) => ({ ...port, y: PERSON_HEIGHT, width: 1, height: 1, layoutOptions: { "elk.port.side": "SOUTH" } })),
+        ...members.map((m, i) => ({ id: `pt:${m}`, x: slot(i) + PERSON_WIDTH / 2, y: 0, width: 1, height: 1, layoutOptions: { "elk.port.side": "NORTH" } })),
+      ],
+    };
+  });
   const elkEdges: ElkExtendedEdge[] = [];
-  const blockEdges = new Set<string>();
   const children = [...primaryParents.keys()].sort((a, b) => (orderOf.get(a) ?? 0) - (orderOf.get(b) ?? 0));
   for (const child of children) {
-    const from = blockOf.get(primaryParents.get(child)![0])!;
-    const to = blockOf.get(child)!;
-    const id = `be:${from}:${to}`;
-    if (from !== to && !blockEdges.has(id)) {
-      blockEdges.add(id);
-      elkEdges.push({ id, sources: [from], targets: [to] });
-    }
+    const parents = primaryParents.get(child)!;
+    if (blockOf.get(parents[0]) === blockOf.get(child)) continue;
+    const from = parents.length === 2 && couples.has(unionId(parents[0], parents[1])) ? `pb:${unionId(parents[0], parents[1])}` : `pb:${parents[0]}`;
+    elkEdges.push({ id: `be:${child}`, sources: [from], targets: [`pt:${child}`] });
+  }
+  // Other parents too, so foster or step parents sit a generation above the child even while their line is hidden.
+  for (const x of extra) {
+    if (blockOf.get(x.parents[0]) === blockOf.get(x.child)) continue;
+    const from = x.parents.length === 2 && couples.has(unionId(x.parents[0], x.parents[1])) ? `pb:${unionId(x.parents[0], x.parents[1])}` : `pb:${x.parents[0]}`;
+    elkEdges.push({ id: `bx:${x.kind}:${x.child}`, sources: [from], targets: [`pt:${x.child}`] });
   }
 
   const result = await elk.layout({
@@ -192,6 +209,7 @@ export async function layoutGraph(
       "elk.direction": "DOWN",
       "elk.layered.spacing.nodeNodeBetweenLayers": "84",
       "elk.spacing.nodeNode": "36",
+      "elk.spacing.componentComponent": "84",
       "elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
       "elk.layered.considerModelOrder.strategy": "NODES_AND_EDGES",
       "elk.layered.crossingMinimization.forceNodeModelOrder": "false",
