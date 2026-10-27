@@ -1,7 +1,8 @@
 // Turns the raw screens from capture.cjs into the store images: brand background, a headline in Fraunces, and
-// the screen with rounded corners (a window title bar on the Mac). Also draws the Play icon and feature graphic.
-//   IN=/tmp/sakdulur-shots node compose.cjs
-// Writes into fastlane/screenshots/{ios,mac}/<locale> and fastlane/metadata/android/<locale>/images.
+// the screen with rounded corners (a window title bar on the Mac and on Windows). Also draws the Play icon and
+// feature graphic.
+//   IN=/tmp/sakdulur-shots node compose.cjs            (ONLY=windows for one store)
+// Writes into fastlane/screenshots/{ios,mac,windows}/<locale> and fastlane/metadata/android/<locale>/images.
 const { chromium } = require("playwright-core");
 const fs = require("node:fs");
 const path = require("node:path");
@@ -31,6 +32,8 @@ const TARGETS = [
   { store: "ios", device: "iphone", w: 1320, h: 2868, dir: (l) => path.join(FL, "screenshots/ios", LOCALE[l]), file: (i, s) => `iphone-0${i + 1}-${s}.png` },
   { store: "ios", device: "ipad", w: 2064, h: 2752, dir: (l) => path.join(FL, "screenshots/ios", LOCALE[l]), file: (i, s) => `ipad-0${i + 1}-${s}.png` },
   { store: "mac", device: "mac", w: 2880, h: 1800, dir: (l) => path.join(FL, "screenshots/mac", LOCALE[l]), file: (i, s) => `mac-0${i + 1}-${s}.png` },
+  // Microsoft Store: the desktop screens in a Windows window (it rejects screenshots showing another platform).
+  { store: "windows", device: "windows", w: 2560, h: 1600, dir: (l) => path.join(FL, "screenshots/windows", LOCALE[l]), file: (i, s) => `windows-0${i + 1}-${s}.png` },
   { store: "play", device: "android", w: 1080, h: 2160, dir: (l) => path.join(FL, "metadata/android", LOCALE[l], "images/phoneScreenshots"), file: (i, s) => `0${i + 1}-${s}.png` },
   { store: "play", device: "ipad", w: 2064, h: 2752, dir: (l) => path.join(FL, "metadata/android", LOCALE[l], "images/tenInchScreenshots"), file: (i, s) => `0${i + 1}-${s}.png` },
   { store: "play", device: "ipad", w: 2064, h: 2752, dir: (l) => path.join(FL, "metadata/android", LOCALE[l], "images/sevenInchScreenshots"), file: (i, s) => `0${i + 1}-${s}.png` },
@@ -56,9 +59,15 @@ function slideHtml(t, slide, lang, img) {
       .win{flex:1;border-radius:${0.9 * u}px;overflow:hidden;box-shadow:0 ${1.2 * u}px ${4 * u}px rgba(47,79,58,.22),0 0 0 1px rgba(58,49,40,.08);background:#fff}
       .bar{height:${2.1 * u}px;background:#ece7dc;display:flex;align-items:center;gap:${0.55 * u}px;padding:0 ${0.9 * u}px}
       .bar i{width:${0.75 * u}px;height:${0.75 * u}px;border-radius:50%;display:block}
-      .win img{display:block;width:100%}</style></head><body>
+      .win img{display:block;width:100%}
+      .win.windows{border-radius:${0.45 * u}px}
+      .windows .bar{background:#f3f3f3;gap:${0.6 * u}px;padding:0 0 0 ${0.9 * u}px;font:${0.85 * u}px "Segoe UI",sans-serif;color:#1f1f1f}
+      .windows .bar img{width:${1.1 * u}px;height:${1.1 * u}px}.windows .bar span{flex:1}
+      .windows .bar b{width:${3.4 * u}px;height:100%;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:${0.95 * u}px}</style></head><body>
       <div class="text"><h1>${l1}<br><span class="accent">${l2}</span></h1><p>${sub}</p></div>
-      <div class="win"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div><img src="${img}"></div>
+      ${t.store === "windows"
+        ? `<div class="win windows"><div class="bar"><img src="data:image/png;base64,${ICON}"><span>Sakdulur</span><b>&#x2500;</b><b>&#x2610;</b><b>&#x2715;</b></div><img src="${img}"></div>`
+        : `<div class="win"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div><img src="${img}"></div>`}
       </body></html>`;
   }
   const phone = t.h / t.w > 1.6;
@@ -97,7 +106,7 @@ function featureHtml(lang) {
   };
   let made = 0;
   for (const lang of Object.keys(LOCALE)) {
-    for (const t of TARGETS) {
+    for (const t of TARGETS.filter((t) => !process.env.ONLY || t.store === process.env.ONLY)) {
       for (const [i, slide] of SLIDES.entries()) {
         const raw = path.join(IN, `${lang}-${t.device}-${slide.shot}.png`);
         if (!fs.existsSync(raw)) continue;
@@ -106,6 +115,7 @@ function featureHtml(lang) {
         made++;
       }
     }
+    if (process.env.ONLY && process.env.ONLY !== "play") continue;
     const images = path.join(FL, "metadata/android", LOCALE[lang], "images");
     await render(featureHtml(lang), 1024, 500, path.join(images, "featureGraphic.png"));
     // Play's icon: 512×512.

@@ -71,9 +71,10 @@ Apple (App Store and Mac App Store):
 | `APP_STORE_CONNECT_PRIVATE_KEY_BASE64` | base64 of its `AuthKey_<KEY_ID>.p8` |
 | `APP_STORE_CONNECT_APPLE_ID` | numeric Apple ID of the Sakdulur app record (iPhone and Mac share one record) |
 
-Windows (2026-11-01): `SAKDULUR_WINDOWS_IDENTITY_NAME`, `SAKDULUR_WINDOWS_PUBLISHER`,
+Windows: `SAKDULUR_WINDOWS_IDENTITY_NAME`, `SAKDULUR_WINDOWS_PUBLISHER`,
 `SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME` (Partner Center > Product identity); optional `WINDOWS_PFX_BASE64` /
-`WINDOWS_PFX_PASSWORD` to sign the artifact for sideload tests.
+`WINDOWS_PFX_PASSWORD` to sign the artifact for sideload tests. Partner Center steps, listing text and reviewer
+notes: `store/microsoft-store.md`.
 
 Linux (2026-11-01): `SNAPCRAFT_STORE_CREDENTIALS` from
 `snapcraft export-login --snaps sakdulur --acls package_upload,package_release -`.

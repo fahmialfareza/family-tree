@@ -21,11 +21,15 @@ const ipadUA =
   "Mozilla/5.0 (iPad; CPU OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
 const androidUA =
   "Mozilla/5.0 (Linux; Android 15; SM-A546E) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36";
+const windowsUA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36";
 // Viewport in CSS pixels, shaped like the screen area of the store image (compose.cjs) so nothing is cropped.
 const DEVICES = {
   iphone: { client: "ios", viewport: { width: 430, height: 884 }, scale: 3, mobile: true, ua: iphoneUA },
   ipad: { client: "ios", viewport: { width: 1032, height: 1336 }, scale: 2, mobile: true, ua: ipadUA },
   mac: { client: null, viewport: { width: 1280, height: 760 }, scale: 2, mobile: false },
+  // Same desktop screens with a Windows user agent (the search box shows Ctrl K), for the Microsoft Store.
+  windows: { client: null, viewport: { width: 1280, height: 760 }, scale: 2, mobile: false, ua: windowsUA },
   android: { client: "android", viewport: { width: 400, height: 757 }, scale: 3, mobile: true, ua: androidUA },
 };
 const THINKING = { id: "Mencari di pohon", en: "Looking through the tree" };
@@ -74,7 +78,7 @@ async function demoData(page) {
       };
       for (const shot of shots) {
         if (shot === "tree") {
-          await page.goto(`${tree}?focus=${name === "mac" || name === "ipad" ? demo.bambang : demo.sri}`);
+          await page.goto(`${tree}?focus=${name === "mac" || name === "windows" || name === "ipad" ? demo.bambang : demo.sri}`);
           await page.waitForSelector(".react-flow__node", { timeout: 20000 });
           // Phones: zoom out, so three generations and their partners fit.
           if (name === "iphone" || name === "android") {
