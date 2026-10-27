@@ -138,10 +138,20 @@ export async function downloadLinkAndroid(href: string, name: string) {
   await saveFileAndroid(name, await res.blob());
 }
 
+/** A data: URL as a Blob. Not via fetch(): the site's CSP (connect-src) blocks fetching data: URLs. */
+function dataUrlToBlob(url: string) {
+  const [head, body = ""] = url.split(",", 2);
+  const type = /^data:([^;,]+)/.exec(head)?.[1] ?? "application/octet-stream";
+  const bytes = head.endsWith(";base64")
+    ? Uint8Array.from(atob(body), (c) => c.charCodeAt(0))
+    : new TextEncoder().encode(decodeURIComponent(body));
+  return new Blob([bytes], { type });
+}
+
 /** Saves a file through the browser's download (desktop and iPhone apps save it natively; Android via the plugin). */
 export async function saveFile(name: string, data: Blob | string) {
   if (nativePlatform() === "android") {
-    return saveFileAndroid(name, typeof data === "string" ? await (await fetch(data)).blob() : data);
+    return saveFileAndroid(name, typeof data === "string" ? dataUrlToBlob(data) : data);
   }
   const href = typeof data === "string" ? data : URL.createObjectURL(data);
   const a = document.createElement("a");
