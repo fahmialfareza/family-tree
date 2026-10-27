@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useNativePlatform } from "@/lib/native";
+import { downloadLinkAndroid, useNativePlatform } from "@/lib/native";
 
 /**
  * Glue for the desktop/mobile app (apps/native). Does nothing on the website.
@@ -11,6 +11,7 @@ import { useNativePlatform } from "@/lib/native";
  * - links to the site's public pages (Privacy, Terms, landing) open over the app instead of replacing it: they
  *   become full navigations, which the app cancels and shows in an in-app browser sheet (iPhone) or the system
  *   browser (next/link would otherwise route inside the page, where the app cannot see it)
+ * - Android: download links are fetched and saved by the app (Android web views ignore downloads)
  */
 // A hook (called by Providers), not a component rendered next to the page: a sibling there shifted React's
 // useId paths when its code loaded after hydration began, so menu ids differed from the server HTML.
@@ -38,8 +39,15 @@ export function useNativeBridge() {
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
       const a = (e.target as Element | null)?.closest?.("a[href]");
-      if (!(a instanceof HTMLAnchorElement) || a.hasAttribute("download")) return;
+      if (!(a instanceof HTMLAnchorElement)) return;
       const url = new URL(a.href, window.location.href);
+      if (a.hasAttribute("download")) {
+        if (platform === "android" && url.origin === window.location.origin) {
+          e.preventDefault();
+          void downloadLinkAndroid(url.href, a.download || url.pathname.split("/").pop() || "download");
+        }
+        return;
+      }
       if (url.origin !== window.location.origin || !PUBLIC_PAGE.test(url.pathname)) return;
       e.preventDefault();
       window.location.assign(url.href);

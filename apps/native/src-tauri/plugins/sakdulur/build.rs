@@ -1,7 +1,7 @@
-const COMMANDS: &[&str] = &["apple_authorize"];
+const COMMANDS: &[&str] = &["apple_authorize", "save_file"];
 
 fn main() {
-    tauri_plugin::Builder::new(COMMANDS).ios_path("ios").build();
+    tauri_plugin::Builder::new(COMMANDS).ios_path("ios").android_path("android").build();
     if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("macos") {
         compile_macos_apple_sign_in();
     }

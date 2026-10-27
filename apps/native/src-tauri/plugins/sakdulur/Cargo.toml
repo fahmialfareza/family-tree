@@ -1,13 +1,14 @@
 [package]
 name = "tauri-plugin-sakdulur"
 version = "0.1.0"
-description = "Native pieces of the Sakdulur app the site can call: Sign in with Apple (iPhone, Mac)"
+description = "Native pieces of the Sakdulur app: Sign in with Apple (iPhone, Mac), in-app browser, Android downloads"
 edition = "2021"
 links = "tauri-plugin-sakdulur"
 
 [dependencies]
 tauri = { version = "2" }
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [build-dependencies]
 tauri-plugin = { version = "2", features = ["build"] }

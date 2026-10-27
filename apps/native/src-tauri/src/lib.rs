@@ -70,6 +70,11 @@ fn open_outside(app: &AppHandle, url: &Url) {
     }
 }
 
+/// A page of the site itself (not the bundled launcher, which is http(s)://tauri.localhost/ on Android).
+fn is_site_page(url: &Url, site: &Url) -> bool {
+    url.scheme() == site.scheme() && url.host_str() == site.host_str() && url.port_or_known_default() == site.port_or_known_default()
+}
+
 /// The site's public pages (landing, Privacy, Terms, with or without /en and /id): marketing pages that don't
 /// belong inside the app window.
 fn is_public_page(url: &Url) -> bool {
@@ -171,7 +176,8 @@ pub fn run() {
                 tauri::ipc::CapabilityBuilder::new("site")
                     .remote(format!("{}/*", SITE_URL.trim_end_matches('/')))
                     .window("main")
-                    .permission("sakdulur:allow-apple-authorize"),
+                    .permission("sakdulur:allow-apple-authorize")
+                    .permission("sakdulur:allow-save-file"),
             )?;
             let handle = app.handle().clone();
             let nav_handle = handle.clone();
@@ -201,7 +207,7 @@ pub fn run() {
                 .initialization_script(include_str!("no_zoom.js"))
                 .on_navigation(move |url| {
                     // The site's public pages open over the app (the site turns those links into navigations).
-                    if is_internal(url, &nav_site) && is_public_page(url) && url.scheme().starts_with("http") {
+                    if is_site_page(url, &nav_site) && is_public_page(url) {
                         open_public_page(&nav_handle, url);
                         return false;
                     }
@@ -214,7 +220,7 @@ pub fn run() {
                 // target="_blank" links: the site in this window, its public pages and other sites outside (the site
                 // opens Privacy/Terms links this way in the app, see apps/frontend native-bridge.tsx).
                 .on_new_window(move |url, _features| {
-                    if is_internal(&url, &popup_site) && is_public_page(&url) {
+                    if is_site_page(&url, &popup_site) && is_public_page(&url) {
                         open_public_page(&popup_handle, &url);
                     } else if is_internal(&url, &popup_site) {
                         if let Some(window) = popup_handle.get_webview_window("main") {
@@ -279,6 +285,15 @@ mod tests {
 
     fn path(raw: &str) -> Option<String> {
         deep_link_path(&Url::parse(raw).unwrap())
+    }
+
+    #[test]
+    fn launcher_is_not_a_site_page() {
+        let site = Url::parse("https://sakdulur.com").unwrap();
+        for launcher in ["http://tauri.localhost/", "https://tauri.localhost/index.html", "tauri://localhost/"] {
+            assert!(!is_site_page(&Url::parse(launcher).unwrap(), &site), "{launcher}");
+        }
+        assert!(is_site_page(&Url::parse("https://sakdulur.com/privacy").unwrap(), &site));
     }
 
     #[test]

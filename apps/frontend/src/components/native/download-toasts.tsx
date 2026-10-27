@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect } from "react";
 import { toast } from "sonner";
-import { isMobilePlatform, useNativePlatform } from "@/lib/native";
+import { useNativePlatform } from "@/lib/native";
 
 type DownloadDetail = { state: "started" | "finished" | "failed"; id: string; name: string };
 
@@ -22,7 +22,7 @@ export function useDownloadToasts() {
       const { state, id, name } = (e as CustomEvent<DownloadDetail>).detail;
       const opts = { id, description: name || undefined };
       if (state === "started") toast.loading(t("downloading"), opts);
-      else if (state === "finished") toast.success(t(isMobilePlatform(platform) ? "savedMobile" : "savedDesktop"), opts);
+      else if (state === "finished") toast.success(t(platform === "ios" ? "savedMobile" : "savedDesktop"), opts);
       else toast.error(t("downloadFailed"), opts);
     };
     window.addEventListener("sakdulur:download", onDownload);
