@@ -123,10 +123,13 @@
     padding-right: env(safe-area-inset-right);
   }
   /* Inside the desktop/mobile app (see components/providers/native-bridge.tsx): no rubber-band page bounce
-     and no long-press link previews, which make a web page feel like one. */
+     and no long-press link previews, which make a web page feel like one. Not on Linux: WebKitGTK stops
+     wheel and touchpad scrolling at a body with overscroll-behavior: none (found in Malanghub). */
   .native-app body {
-    overscroll-behavior: none;
     -webkit-touch-callout: none;
+  }
+  .native-app:not(.native-linux) body {
+    overscroll-behavior: none;
   }
   body {
     @apply bg-background text-foreground font-sans antialiased;
