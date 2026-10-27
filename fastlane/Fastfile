@@ -62,6 +62,10 @@ lane :apple do |options|
   api_key = asc_api_key
   email, password = demo_account
 
+  # Indonesian is the primary language (shown where the user's language isn't listed).
+  app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
+  app.update(attributes: { primaryLocale: "id" }) unless app.primary_locale == "id"
+
   platforms.each do |platform|
     screenshots = File.join(FL, "screenshots", platform == "osx" ? "mac" : "ios")
     UI.header("#{platform == 'osx' ? 'macOS' : 'iOS'} #{APP_VERSION}: #{what}")
@@ -173,20 +177,20 @@ def play_internal_version_code(json_key, package_name)
   end
 end
 
-# Google Play's contact details (not covered by supply). Category and the App content forms aren't in Google's
+# Google Play's default language and contact details (not covered by supply). Category and the App content forms aren't in Google's
 # API; see apps/native/store/google-play.md.
 def play_contact_details(json_key, package_name)
   base = "/androidpublisher/v3/applications/#{package_name}/edits"
   play_api(json_key) do |http, headers|
     edit = JSON.parse(http.post(base, "{}", headers).body)
     UI.user_error!("Google Play: #{edit.dig('error', 'message')}") unless edit["id"]
-    details = { contactEmail: SUPPORT_EMAIL, contactWebsite: WEBSITE }
+    details = { defaultLanguage: "id", contactEmail: SUPPORT_EMAIL, contactWebsite: WEBSITE }
     res = http.request(Net::HTTP::Patch.new("#{base}/#{edit['id']}/details", headers).tap { |r| r.body = details.to_json })
     UI.user_error!("Google Play details: #{res.body}") unless res.code.start_with?("2")
     res = http.post("#{base}/#{edit['id']}:commit", "", headers)
     UI.user_error!("Google Play commit: #{res.body}") unless res.code.start_with?("2")
   end
-  UI.success("Google Play contact details: #{SUPPORT_EMAIL}, #{WEBSITE}")
+  UI.success("Google Play: default language Indonesian; contact #{SUPPORT_EMAIL}, #{WEBSITE}")
 end
 
 lane :play do |options|
