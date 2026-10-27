@@ -7,8 +7,10 @@
 //!   authorization code and the name (Apple only shares it the first time); the site sends them to
 //!   POST /api/session/apple. `nonce` is the raw value the site keeps; the native code hashes it (SHA-256)
 //!   for Apple, so the site needs no Web Crypto (missing on plain-HTTP pages, e.g. a dev server over Wi-Fi).
-//! - `save_file { name, mime, data }` (Android): downloads, which Android web views ignore. `data` is base64;
-//!   the file goes to the phone's Downloads folder. Returns the name it was saved as.
+//! - `save_file { name, mime, data }` (phones): `data` is base64. Android: every download (its web view ignores
+//!   them); pictures go to the Gallery (Pictures/Sakdulur), other files to Downloads. iPhone: pictures only, to
+//!   Photos (other files are ordinary downloads, saved to Files › Sakdulur by the app). Returns the name it was
+//!   saved as and `location`: "gallery", "downloads", "photos", or "device" (Android 7–9: the app's own folder).
 
 use serde::{Deserialize, Serialize};
 use tauri::plugin::{Builder, TauriPlugin};
@@ -74,6 +76,7 @@ pub struct SaveFile {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SavedFile {
     pub name: String,
+    pub location: String,
 }
 
 #[tauri::command]
@@ -81,14 +84,14 @@ async fn save_file<R: Runtime>(app: AppHandle<R>, name: String, mime: String, da
     if name.is_empty() || name.len() > 255 || data.len() > 100 * 1024 * 1024 {
         return Err("invalid file".into());
     }
-    #[cfg(target_os = "android")]
+    #[cfg(mobile)]
     return tauri::async_runtime::spawn_blocking(move || mobile::save_file(&app, SaveFile { name, mime, data }))
         .await
         .map_err(|e| e.to_string())?;
-    #[cfg(not(target_os = "android"))]
+    #[cfg(not(mobile))]
     {
         let _ = (app, mime);
-        Err("save_file is only needed on Android".into())
+        Err("save_file is only needed on phones".into())
     }
 }
 

@@ -31,8 +31,9 @@ class SaveFileArgs {
 /**
  * Native pieces of the Sakdulur app on Android (see the plugin's src/lib.rs):
  * - openInAppBrowser: the site's public pages in Chrome's Custom Tab sheet (called by the app's Rust code)
- * - saveFile: downloads, which Android web views ignore; the site hands the file over and it is saved to
- *   Downloads (MediaStore, no storage permission; a taken name gets " (1)" etc.)
+ * - saveFile: downloads, which Android web views ignore; the site hands the file over. Pictures go to the
+ *   Gallery (Pictures/Sakdulur), other files to Downloads (MediaStore, no storage permission; a taken name
+ *   gets " (1)" etc.)
  */
 @TauriPlugin
 class SakdulurPlugin(private val activity: Activity) : Plugin(activity) {
@@ -66,29 +67,38 @@ class SakdulurPlugin(private val activity: Activity) : Plugin(activity) {
         try {
             val bytes = Base64.decode(data, Base64.DEFAULT)
             val mime = args.mime?.takeIf { it.isNotBlank() } ?: "application/octet-stream"
+            val picture = mime.startsWith("image/")
             val savedAs = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 val resolver = activity.contentResolver
+                val collection = if (picture) MediaStore.Images.Media.EXTERNAL_CONTENT_URI else MediaStore.Downloads.EXTERNAL_CONTENT_URI
+                val folder = if (picture) "${Environment.DIRECTORY_PICTURES}/Sakdulur" else Environment.DIRECTORY_DOWNLOADS
                 val values = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, name)
-                    put(MediaStore.Downloads.MIME_TYPE, mime)
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                    put(MediaStore.Downloads.IS_PENDING, 1)
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, name)
+                    put(MediaStore.MediaColumns.MIME_TYPE, mime)
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, folder)
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
                 }
-                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                val uri = resolver.insert(collection, values)
                     ?: throw IllegalStateException("could not create the file")
                 resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: throw IllegalStateException("could not write the file")
                 values.clear()
-                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                values.put(MediaStore.MediaColumns.IS_PENDING, 0)
                 resolver.update(uri, values, null, null)
-                resolver.query(uri, arrayOf(MediaStore.Downloads.DISPLAY_NAME), null, null, null)?.use { c ->
+                resolver.query(uri, arrayOf(MediaStore.MediaColumns.DISPLAY_NAME), null, null, null)?.use { c ->
                     if (c.moveToFirst()) c.getString(0) else name
                 } ?: name
             } else {
-                // Android 7–9: the app's own Downloads folder (no storage permission needed).
-                val dir = activity.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: activity.filesDir
+                // Android 7–9: the app's own folder (no storage permission needed).
+                val dir = activity.getExternalFilesDir(if (picture) Environment.DIRECTORY_PICTURES else Environment.DIRECTORY_DOWNLOADS)
+                    ?: activity.filesDir
                 File(dir, name).apply { writeBytes(bytes) }.name
             }
-            invoke.resolve(JSObject().put("name", savedAs))
+            val location = when {
+                Build.VERSION.SDK_INT < Build.VERSION_CODES.Q -> "device"
+                picture -> "gallery"
+                else -> "downloads"
+            }
+            invoke.resolve(JSObject().put("name", savedAs).put("location", location))
         } catch (e: Exception) {
             invoke.reject(e.message ?: "could not save the file")
         }

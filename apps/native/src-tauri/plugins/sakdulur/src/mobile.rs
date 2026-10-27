@@ -33,7 +33,6 @@ pub fn open_in_app_browser<R: Runtime>(app: &AppHandle<R>, url: &str) -> Result<
     call::<R, serde_json::Value>(app, "openInAppBrowser", serde_json::json!({ "url": url })).map(|_| ())
 }
 
-#[cfg(target_os = "android")]
 pub fn save_file<R: Runtime>(app: &AppHandle<R>, args: crate::SaveFile) -> Result<crate::SavedFile, String> {
     call(app, "saveFile", args)
 }

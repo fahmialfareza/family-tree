@@ -1,5 +1,6 @@
 import AuthenticationServices
 import CryptoKit
+import Photos
 import SafariServices
 import Tauri
 import UIKit
@@ -13,8 +14,15 @@ struct OpenUrlArgs: Decodable {
   let url: String
 }
 
-// Native pieces of the Sakdulur app (see ../src/lib.rs): Sign in with Apple (Apple's sheet over the app) and an
-// in-app browser sheet for the site's public pages (Privacy, Terms), called from the app's Rust code.
+struct SaveFileArgs: Decodable {
+  let name: String
+  let mime: String
+  let data: String  // base64
+}
+
+// Native pieces of the Sakdulur app (see ../src/lib.rs): Sign in with Apple (Apple's sheet over the app), saving
+// exported pictures to Photos, and an in-app browser sheet for the site's public pages (Privacy, Terms), called from
+// the app's Rust code.
 class SakdulurPlugin: Plugin, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
   private var pending: Invoke?
   private var controller: ASAuthorizationController?
@@ -32,6 +40,37 @@ class SakdulurPlugin: Plugin, ASAuthorizationControllerDelegate, ASAuthorization
       controller.presentationContextProvider = self
       self.controller = controller
       controller.performRequests()
+    }
+  }
+
+  // Pictures only (other files are ordinary downloads, saved to Files › Sakdulur). Asks for "add only" access,
+  // which can't read the library (Info.plist NSPhotoLibraryAddUsageDescription).
+  @objc public func saveFile(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(SaveFileArgs.self)
+    guard args.mime.hasPrefix("image/"), let data = Data(base64Encoded: args.data, options: .ignoreUnknownCharacters) else {
+      invoke.reject("only pictures can be saved to Photos")
+      return
+    }
+    guard #available(iOS 14, *) else {  // the app needs iOS 15; the package itself declares iOS 13
+      invoke.reject("photos-denied")
+      return
+    }
+    PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+      guard status == .authorized || status == .limited else {
+        invoke.reject("photos-denied")
+        return
+      }
+      PHPhotoLibrary.shared().performChanges({
+        let options = PHAssetResourceCreationOptions()
+        options.originalFilename = args.name
+        PHAssetCreationRequest.forAsset().addResource(with: .photo, data: data, options: options)
+      }) { ok, error in
+        if ok {
+          invoke.resolve(["name": args.name, "location": "photos"])
+        } else {
+          invoke.reject(error?.localizedDescription ?? "could not save to Photos")
+        }
+      }
     }
   }
 
