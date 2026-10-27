@@ -6,7 +6,7 @@ Sakdulur (sakdulur.com) is a family tree web app. This repository (family-tree) 
 
 - `apps/backend-go`: primary backend service written in Go with Gin.
 - `apps/frontend`: primary frontend app built with Next.js 16, React 19, and `pnpm`.
-- `apps/backend`: legacy Express backend kept for maintenance-only work.
+- `apps/native`: the Sakdulur apps for macOS, Windows, Linux, iOS and Android (Tauri 2); see `apps/native/README.md` and `apps/native/RELEASE.md`.
 
 ## Prerequisites
 

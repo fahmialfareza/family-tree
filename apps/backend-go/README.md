@@ -108,8 +108,6 @@ All tables (users, people, families, relationships) implement soft delete via `g
   people shared with them through `person_owners`. Pre-workspace data lives in one branch-scoped tree (migration 00002).
   Legacy routes without a tree in the URL place new rows in the caller's first tree.
 - IDs are `text`: rows migrated from MongoDB keep their 24-char hex ObjectIDs, new rows get UUIDv7 strings.
-- `cmd/mongo2pg` is a one-off tool that copies the legacy MongoDB data into Postgres
-  (`MONGO_URI`, `MONGO_DB`, `DATABASE_URL`; truncates and reloads, safe to re-run). Remove it after the cutover.
 - Backups: see `docs/postgres-backup.md`.
 
 ## Authentication

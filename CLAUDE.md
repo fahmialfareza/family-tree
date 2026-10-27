@@ -5,7 +5,7 @@ This file is the entrypoint for Claude Code when working in this repository.
 ## Start Here
 
 - Read `AGENT_CONTEXT.md` first. It contains the shared repository facts and workflow rules that should stay aligned across Claude Code, Codex, and GitHub Copilot.
-- Apply matching file-scoped guidance from `.github/instructions/*.instructions.md` when you edit code in `apps/frontend`, `apps/backend-go`, or `apps/backend`.
+- Apply matching file-scoped guidance from `.github/instructions/*.instructions.md` when you edit code in `apps/frontend` or `apps/backend-go`.
 - Reusable prompt starters live in `docs/ai-workflows/`.
 - Treat `.claude/settings.local.json` as developer-local configuration, not as shared project policy.
 - Keep this file aligned with `AGENT_CONTEXT.md`, `AGENTS.md`, and `.github/copilot-instructions.md` when shared guidance changes.
@@ -15,7 +15,6 @@ This file is the entrypoint for Claude Code when working in this repository.
 - Active backend: `apps/backend-go`
 - Active frontend: `apps/frontend`
 - Desktop and mobile apps: `apps/native` (Tauri 2 shell that shows the hosted frontend; see its README)
-- Deprecated backend: `apps/backend`
 - Use `pnpm` for JavaScript and TypeScript workflows.
 - Reuse existing Go code under `apps/backend-go/internal/` instead of introducing parallel packages.
 - `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite, so prefer focused lint, build, or type-check commands and include manual verification when needed.
@@ -25,5 +24,4 @@ This file is the entrypoint for Claude Code when working in this repository.
 - Prefer minimal, local changes.
 - Match existing project structure before creating new helpers, services, or layers.
 - Do not add secrets, credentials, or unnecessary third-party services.
-- Avoid new feature work in `apps/backend` unless the task explicitly targets the legacy backend.
 - Follow Conventional Commits and mention the affected app plus verification steps in change summaries.

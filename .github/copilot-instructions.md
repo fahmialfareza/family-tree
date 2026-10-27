@@ -7,7 +7,7 @@ This file contains GitHub Copilot-specific guidance for working inside this repo
 ## Start Here
 
 - Read `AGENT_CONTEXT.md` before making changes.
-- Apply matching file-scoped conventions from `.github/instructions/*.instructions.md` when editing code under `apps/frontend`, `apps/backend-go`, or `apps/backend`.
+- Apply matching file-scoped conventions from `.github/instructions/*.instructions.md` when editing code under `apps/frontend` or `apps/backend-go`.
 - Reusable prompt starters live in `docs/ai-workflows/`.
 - Keep `AGENT_CONTEXT.md`, `AGENTS.md`, `CLAUDE.md`, and this file aligned when shared guidance changes.
 
@@ -22,7 +22,6 @@ This file contains GitHub Copilot-specific guidance for working inside this repo
 ## Repo Specific Reminders
 
 - `apps/backend-go` and `apps/frontend` are the active apps.
-- `apps/backend` is a deprecated Express service; avoid new feature work there unless explicitly requested.
 - Use `pnpm` for JavaScript and TypeScript dependency changes.
 - `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite; prefer targeted lint, build, or type-check commands and include manual verification steps.
 - Use Conventional Commits; see `.github/skills/commit-standards.skill.md`.

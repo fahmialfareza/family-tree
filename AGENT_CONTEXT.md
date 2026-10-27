@@ -8,9 +8,7 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
 - Active apps:
   - `apps/backend-go`: primary backend service written in Go with Gin. Most backend changes should happen here. Reuse existing code under `internal/`.
   - `apps/frontend`: primary frontend app built with Next.js 16, React 19, and `pnpm`.
-  - `apps/native`: macOS/Windows/Linux/iOS/Android apps (Tauri 2). A native shell that shows the hosted frontend; its native work is in Rust (`src-tauri/src/lib.rs`). App-only frontend code keys off the `ft_client` cookie (`src/lib/app-client.ts`, `src/lib/native.ts`, middleware) and is a no-op on the web.
-- Maintenance-only app:
-  - `apps/backend`: older Express server that is being phased out. Avoid adding new features there unless the user explicitly asks for legacy backend work.
+  - `apps/native`: macOS/Windows/Linux/iOS/Android apps (Tauri 2). A native shell that shows the hosted frontend; its native work is in Rust (`src-tauri/src/lib.rs`). App-only frontend code keys off the `ft_client` cookie (`src/lib/app-client.ts`, `src/lib/native.ts`, middleware) and is a no-op on the web. Store releases: `apps/native/RELEASE.md`.
 
 ## Working Rules
 
@@ -40,12 +38,6 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
 - Respect the current TypeScript and lint configuration instead of introducing alternative tooling.
 - Validate with the narrowest relevant `pnpm` script, usually lint, type-check, or build for the affected surface.
 
-### Legacy backend (`apps/backend`)
-
-- Treat this app as maintenance-only.
-- Keep any changes localized and compatible with the current Express and TypeScript setup.
-- Prefer `pnpm --filter backend lint` or `pnpm --filter backend typecheck` for validation when this app is touched.
-
 ## Tooling and Commands
 
 - Package manager: `pnpm`
@@ -58,7 +50,6 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
   - `pnpm check-types`
   - `pnpm format`
 - Frontend scripts live in `apps/frontend/package.json`.
-- Legacy backend scripts live in `apps/backend/package.json`.
 - `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite. Prefer focused lint, build, or type-check commands and include manual verification steps when automation is not available. Extend the authorization tests in `apps/backend-go/internal/authz_test.go` when adding or changing tree-scoped routes.
 
 ## Commit and PR Guidance

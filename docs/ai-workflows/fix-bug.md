@@ -14,7 +14,7 @@ Bug
 Fix: <short bug summary>
 
 Evidence
-- App: <apps/backend-go | apps/frontend | apps/backend>
+- App: <apps/backend-go | apps/frontend | apps/native>
 - Failing file, route, or component: <path or symbol>
 - Error message or broken behavior: <exact message or observed result>
 - Expected behavior: <what should happen instead>

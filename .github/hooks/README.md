@@ -23,11 +23,11 @@ Automatically formats files after GitHub Copilot edits them, matching your VS Co
 
 **What it does:**
 
-1. **Go files** in `apps/backend/`
+1. **Go files** in `apps/backend-go/`
    - Runs `gofmt -w` on edited `.go` files
    - Ensures consistent Go formatting
 
-2. **TypeScript/JavaScript files** in `apps/frontend/`, `apps/desktop/`, `apps/mobile/`
+2. **TypeScript/JavaScript files** in `apps/frontend/` and `apps/native/`
    - Runs `prettier --write` on `.ts`, `.tsx`, `.js`, `.jsx`, `.json`, `.md` files
    - Ensures consistent formatting across all frontend apps
 
@@ -38,7 +38,7 @@ Automatically formats files after GitHub Copilot edits them, matching your VS Co
 - `create_file` - New file creation
 
 **Example:**
-When Copilot edits `apps/backend/internal/usecase/user.go`, the hook automatically runs `gofmt` to format it according to Go standards.
+When Copilot edits `apps/backend-go/internal/usecase/user.go`, the hook automatically runs `gofmt` to format it according to Go standards.
 
 ## Configuration
 
@@ -79,8 +79,8 @@ GitHub Copilot supports these hook triggers:
 Hooks log to stderr. Look for messages like:
 
 ```
-[Copilot Hook] Formatting Go file: apps/backend/internal/usecase/user.go
-[Copilot Hook] Formatting with Prettier: apps/mobile/src/App.tsx
+[Copilot Hook] Formatting Go file: apps/backend-go/internal/usecase/user.go
+[Copilot Hook] Formatting with Prettier: apps/frontend/src/app/layout.tsx
 ```
 
 ### Test Hook Manually
@@ -94,7 +94,7 @@ cat > test-input.json << 'EOF'
   "timestamp": 1704614700000,
   "cwd": "/Users/fahmialfareza/Code/timsyaapsyaap/catetin.ai",
   "toolName": "create_file",
-  "toolArgs": "{\"filePath\":\"apps/backend/test.go\"}",
+  "toolArgs": "{\"filePath\":\"apps/backend-go/test.go\"}",
   "toolResult": {
     "resultType": "success",
     "textResultForLlm": "File created"
@@ -157,10 +157,10 @@ echo "HOOK TRIGGERED: Tool=$TOOL_NAME Result=$RESULT_TYPE" >> /tmp/copilot-hook.
 
    ```bash
    # Test Go formatting
-   gofmt -w apps/backend/internal/usecase/user.go
+   gofmt -w apps/backend-go/internal/usecase/user.go
 
    # Test Prettier
-   pnpm exec prettier --write apps/mobile/src/App.tsx
+   pnpm exec prettier --write apps/frontend/src/app/layout.tsx
    ```
 
 ### Hook Timing Out

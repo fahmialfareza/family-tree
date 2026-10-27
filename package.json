@@ -21,14 +21,9 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@newrelic/fn-inspect",
-      "@newrelic/native-metrics",
       "@parcel/watcher",
       "@tailwindcss/oxide",
-      "bcrypt",
       "esbuild",
-      "oxc-resolver",
-      "protobufjs",
       "sharp",
       "unrs-resolver"
     ]

@@ -14,7 +14,7 @@ Task
 Implement: <clear feature summary>
 
 Target Area
-- App: <apps/backend-go | apps/frontend | apps/backend>
+- App: <apps/backend-go | apps/frontend | apps/native>
 - Main file or folder: <path>
 - Concrete anchor: <file, symbol, route, component, store, or endpoint>
 - Expected behavior: <what should work when this is done>
@@ -24,7 +24,6 @@ Constraints
 - Reuse existing patterns before creating new abstractions.
 - Do not add new dependencies unless necessary.
 - Preserve API shapes and UI behavior outside this feature.
-- Avoid new feature work in apps/backend unless this task explicitly targets the legacy backend.
 
 Validation
 - Run the narrowest useful validation command for the touched area.

@@ -36,15 +36,15 @@ format_file() {
   # Get absolute path
   ABS_PATH=$(realpath "$FILE_PATH" 2>/dev/null || echo "$FILE_PATH")
   
-  # Format Go files in apps/backend
-  if echo "$ABS_PATH" | grep -q "apps/backend/.*\.go$"; then
+  # Format Go files in apps/backend-go
+  if echo "$ABS_PATH" | grep -q "apps/backend-go/.*\.go$"; then
     echo "[Copilot Hook] Formatting Go file: $FILE_PATH" >&2
     gofmt -w "$FILE_PATH" 2>/dev/null
     return
   fi
   
-  # Format TypeScript/JavaScript files in apps/frontend, apps/desktop, apps/mobile
-  if echo "$ABS_PATH" | grep -qE "apps/(frontend|desktop|mobile)/.*\.(ts|tsx|js|jsx|json|md)$"; then
+  # Format TypeScript/JavaScript files in apps/frontend and apps/native
+  if echo "$ABS_PATH" | grep -qE "apps/(frontend|native)/.*\.(ts|tsx|js|jsx|json|md)$"; then
     echo "[Copilot Hook] Formatting with Prettier: $FILE_PATH" >&2
     pnpm exec prettier --write "$FILE_PATH" 2>/dev/null
     return

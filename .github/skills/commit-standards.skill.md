@@ -103,7 +103,7 @@ Scopes indicate which part of the monorepo is affected:
 
 - `backend` - Go backend service
 - `frontend` - Next.js frontend app
-- `server` - [Deprecated] Express.js server app
+- `native` - Tauri desktop and mobile apps
 
 ### Feature/Domain Scopes
 

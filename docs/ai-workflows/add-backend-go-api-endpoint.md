@@ -24,7 +24,6 @@ Endpoint Details
 Implementation Expectations
 - Keep handlers thin and follow the existing `internal/*_controller.go` patterns.
 - Reuse the current `internal/` packages before adding new helpers.
-- If this endpoint mirrors legacy behavior from `apps/backend`, preserve request and response compatibility unless the task says otherwise.
 - Update routing, controller logic, and shared model or store logic only where needed.
 - Do not introduce a parallel package structure.
 

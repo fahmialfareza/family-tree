@@ -10,7 +10,7 @@ Before reviewing:
 - Read any matching .github/instructions/*.instructions.md files for the touched code.
 
 Review Target
-- App: <apps/backend-go | apps/frontend | apps/backend | mixed>
+- App: <apps/backend-go | apps/frontend | apps/native | mixed>
 - Change surface: <branch, diff summary, PR link, or file list>
 - Focus area: <optional: API compatibility, UI regressions, performance, data integrity, auth, etc.>
 
