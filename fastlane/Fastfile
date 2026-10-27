@@ -99,6 +99,39 @@ lane :apple do |options|
   end
 end
 
+# Attaches a processed build to the App Store version and submits it for App Review (listing unchanged).
+#   fastlane apple_submit build:101 platform:ios|mac|both
+lane :apple_submit do |options|
+  build = options[:build].to_s
+  UI.user_error!("Pass the build number, e.g. build:101") if build.empty?
+  platforms = { "ios" => ["ios"], "mac" => ["osx"], "both" => %w[ios osx] }[options[:platform] || "both"]
+  UI.user_error!("platform must be ios, mac or both") unless platforms
+  api_key = asc_api_key
+  platforms.each do |platform|
+    UI.header("#{platform == 'osx' ? 'macOS' : 'iOS'} #{APP_VERSION} (#{build}): submit for review")
+    deliver(
+      api_key: api_key,
+      platform: platform,
+      app_version: APP_VERSION,
+      build_number: build,
+      metadata_path: File.join(FL, "metadata", "apple"),
+      screenshots_path: File.join(FL, "screenshots", platform == "osx" ? "mac" : "ios"),
+      skip_binary_upload: true,
+      skip_metadata: true,
+      skip_screenshots: true,
+      submit_for_review: true,
+      automatic_release: false,
+      submission_information: {
+        add_id_info_uses_idfa: false,
+        content_rights_contains_third_party_content: false,
+        export_compliance_uses_encryption: false
+      },
+      run_precheck_before_submit: false,
+      force: true
+    )
+  end
+end
+
 # Apple: "Free" (price point 0 in the base territory, USA, applied everywhere). deliver's price_tier uses an API
 # Apple has removed, so this calls App Store Connect directly.
 lane :apple_pricing do

@@ -16,7 +16,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-use tauri::webview::{DownloadEvent, NewWindowResponse};
+use tauri::webview::{DownloadEvent, NewWindowResponse, PageLoadEvent};
 use tauri::{AppHandle, Manager, Url, Webview, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_opener::OpenerExt;
@@ -114,6 +114,12 @@ fn deep_link_path(link: &Url) -> Option<String> {
     DEEP_LINK_PATHS.iter().any(|p| path.starts_with(p)).then_some(path)
 }
 
+/// A deep link waiting for the launcher: when the link starts the app (or arrives while the launcher is still
+/// loading), navigating at once loses to the launcher's own load and its redirect to /app, so the user saw
+/// /welcome until the sign-in finished. The launcher's page-load handler follows it instead.
+#[derive(Default)]
+struct PendingLink(Mutex<Option<Url>>);
+
 /// Loads a deep link in the window: ...://auth/google/complete?code=... -> https://sakdulur.com/auth/google/complete?code=...
 fn open_deep_link(app: &AppHandle, link: &Url) {
     let Some(path) = deep_link_path(link) else {
@@ -124,6 +130,12 @@ fn open_deep_link(app: &AppHandle, link: &Url) {
     target.set_path(&path);
     target.set_query(link.query());
     if let Some(window) = app.get_webview_window("main") {
+        let on_site = window.url().is_ok_and(|url| is_site_page(&url, &site()));
+        if !on_site {
+            // Still on the launcher: follow the link when it has loaded (see on_page_load in run()).
+            *app.state::<PendingLink>().0.lock().unwrap() = Some(target);
+            return;
+        }
         // Cover the current page (often /welcome) while the site completes the sign-in; see signing_in.js.
         let invite = path.starts_with("/invite");
         let _ = window.eval(include_str!("signing_in.js").replace("__INVITE__", if invite { "true" } else { "false" }));
@@ -179,6 +191,7 @@ pub fn run() {
         // Used from Rust only. Its default page script intercepts link clicks and asks the plugin from the page,
         // which the site may not do (no IPC), so external links did nothing; on_navigation handles them instead.
         .plugin(tauri_plugin_opener::Builder::new().open_js_links_on_click(false).build())
+        .manage(PendingLink::default())
         .setup(|app| {
             let site = site();
             // The only IPC the site gets: the plugin's commands, for pages on the site's own address.
@@ -194,6 +207,7 @@ pub fn run() {
             let nav_site = site.clone();
             let popup_handle = handle.clone();
             let popup_site = site.clone();
+            let load_site = site.clone();
             // File names by download URL: macOS does not report the path when a download finishes.
             let downloads: Arc<Mutex<HashMap<String, String>>> = Arc::default();
 
@@ -240,6 +254,16 @@ pub fn run() {
                         open_outside(&popup_handle, &url);
                     }
                     NewWindowResponse::Deny
+                })
+                // The launcher has loaded: follow a deep link that arrived before it (started by the link, or the
+                // link came while the window was still loading), before the launcher redirects to /app.
+                .on_page_load(move |webview, payload| {
+                    if payload.event() == PageLoadEvent::Finished && !is_site_page(payload.url(), &load_site) {
+                        let pending = webview.state::<PendingLink>().0.lock().unwrap().take();
+                        if let Some(target) = pending {
+                            let _ = webview.navigate(target);
+                        }
+                    }
                 })
                 // Keep the default destination: the Downloads folder, without overwriting existing files.
                 .on_download(move |webview, event| {
