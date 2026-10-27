@@ -1,16 +1,18 @@
 // Stamps a store release into the app's version files (run by the release workflows, not committed).
-// Build number 100 → version 1.0.0, 123 → 1.2.3; the build number itself is the store build
-// (Android versionCode, iOS/macOS CFBundleVersion).
+//   node set-release-version.mjs <build-number> [version]
+// Build number 100 → version 1.0.0, 123 → 1.2.3, unless a version is given (e.g. build 101 still as 1.0.0 while
+// 1.0.0 is in review); the build number itself is the store build (Android versionCode, iOS/macOS CFBundleVersion).
 import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const buildNumber = process.argv[2];
+const [buildNumber, versionArg] = process.argv.slice(2);
 if (!/^[1-9]\d*$/.test(buildNumber ?? "")) {
   throw new Error("Build number must be a positive integer, for example 100.");
 }
 
 const build = Number(buildNumber);
-const version = `${Math.floor(build / 100)}.${Math.floor((build % 100) / 10)}.${build % 10}`;
+if (versionArg && !/^\d+\.\d+\.\d+$/.test(versionArg)) throw new Error("Version must look like 1.2.3.");
+const version = versionArg || `${Math.floor(build / 100)}.${Math.floor((build % 100) / 10)}.${build % 10}`;
 
 const repoRoot = resolve(import.meta.dirname, "../../..");
 const nativeDir = resolve(repoRoot, "apps/native");

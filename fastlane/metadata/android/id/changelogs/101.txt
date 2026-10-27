@@ -1,0 +1,2 @@
+• Layar "Sedang masuk…" saat kembali dari login Google atau Apple, dan "Membuka undangan…" untuk tautan undangan
+• Perbaikan kecil dan peningkatan stabilitas

@@ -9,6 +9,10 @@ on:
         description: "Release build number (100 = version 1.0.0, MSIX 1.0.0.0)."
         required: true
         type: string
+      version:
+        description: "Version (default: from the build number, 100 = 1.0.0)."
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -56,7 +60,7 @@ jobs:
         run: pnpm install --frozen-lockfile --filter native
 
       - name: Apply release version
-        run: pnpm --filter native release:version "$env:BUILD_NUMBER"
+        run: pnpm --filter native release:version "$env:BUILD_NUMBER" ${{ inputs.version }}
 
       - name: Build the release executable
         run: pnpm --filter native tauri build --target ${{ matrix.target }} --no-bundle --ci

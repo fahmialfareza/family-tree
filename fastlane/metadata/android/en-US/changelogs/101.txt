@@ -1,0 +1,2 @@
+• A "Signing in…" screen when you come back from Google or Apple sign-in, and "Opening the invitation…" for invite links
+• Small fixes and stability improvements

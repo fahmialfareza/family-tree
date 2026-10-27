@@ -27,11 +27,13 @@ if (!workflow) fail(`Usage: pnpm release <${Object.keys(workflows).join("|")}> <
 if (!/^[1-9]\d*$/.test(buildNumber ?? "")) fail("Build number must be a positive integer, for example: pnpm release android 100");
 
 const build = Number(buildNumber);
-const version = `${Math.floor(build / 100)}.${Math.floor((build % 100) / 10)}.${build % 10}`;
+// SAKDULUR_RELEASE_VERSION keeps a version while only the build goes up (e.g. a new build of 1.0.0 in review).
+const version = env.SAKDULUR_RELEASE_VERSION || `${Math.floor(build / 100)}.${Math.floor((build % 100) / 10)}.${build % 10}`;
+if (!/^\d+\.\d+\.\d+$/.test(version)) fail("SAKDULUR_RELEASE_VERSION must look like 1.2.3");
 const ref = env.SAKDULUR_RELEASE_REF || currentBranch();
 
 run(["auth", "status"], "GitHub CLI is not signed in. Run `gh auth login` first.");
-const args = ["workflow", "run", workflow.file, "--ref", ref, "-f", `build_number=${buildNumber}`];
+const args = ["workflow", "run", workflow.file, "--ref", ref, "-f", `build_number=${buildNumber}`, "-f", `version=${version}`];
 for (const [key, value] of Object.entries(workflow.inputs)) args.push("-f", `${key}=${value}`);
 run(args);
 

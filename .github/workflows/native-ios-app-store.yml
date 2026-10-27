@@ -8,6 +8,10 @@ on:
         description: "CFBundleVersion (100 = version 1.0.0)."
         required: true
         type: string
+      version:
+        description: "Version (default: from the build number, 100 = 1.0.0)."
+        required: false
+        type: string
       export_method:
         description: "Xcode export method."
         required: true
@@ -63,7 +67,7 @@ jobs:
         run: pnpm install --frozen-lockfile --filter native
 
       - name: Apply release version
-        run: pnpm --filter native release:version "$BUILD_NUMBER"
+        run: pnpm --filter native release:version "$BUILD_NUMBER" ${{ inputs.version }}
 
       - name: Check app icons
         run: |
