@@ -11,8 +11,9 @@ import type { Graph, GraphPerson, ParentKind, PartnerStatus } from "@/lib/api/ty
 // then placed inside their block. Children hang below their parents' dot.
 //
 // A child can also have parents of other kinds (adoptive, step, foster, guardian, milk). Only the primary set
-// is laid out: birth parents when recorded, else adoptive, else whatever exists. The other links are returned
-// as hidden edges (the canvas shows them for the person in focus) and as a mark on the child's card.
+// is laid out: birth parents when recorded, else adoptive, else whatever exists. The other links are dashed
+// edges (step ones hidden until someone involved is in focus: the marriage already says it) and a mark on the
+// child's card.
 
 export const PERSON_WIDTH = 208;
 export const PERSON_HEIGHT = 72;
@@ -30,8 +31,8 @@ export type PersonNodeData = {
 export type PersonFlowNode = Node<PersonNodeData, "person">;
 export type UnionFlowNode = Node<{ status?: PartnerStatus }, "union">;
 export type FlowNode = PersonFlowNode | UnionFlowNode;
-/** Data on the dashed edges of non-primary parents; `people` are the ids involved, to decide when to show it. */
-export type LinkEdgeData = { people: string[] };
+/** Data on the dashed edges of non-primary parents; `people` are the ids involved, to highlight (or show) it. */
+export type LinkEdgeData = { people: string[]; kind: Exclude<ParentKind, "birth"> };
 
 const elk = new ELK();
 
@@ -169,13 +170,26 @@ export async function layoutGraph(
   // ELK lays out blocks. Each block has a port under every couple's dot (and every parent) and one above every
   // member, so crossing minimisation puts each child under their own parents, not under a parent's other partner.
   const slot = (i: number) => i * (PERSON_WIDTH + PARTNER_GAP);
-  const elkNodes: ElkNode[] = [...blocks].map(([id, members]) => {
-    const index = new Map(members.map((m, i) => [m, i]));
-    const bottom = members.map((m, i) => ({ id: `pb:${m}`, x: slot(i) + PERSON_WIDTH / 2 }));
-    for (const uid of couples) {
-      const [, a, b] = uid.split(":");
-      if (index.has(a) && index.has(b)) bottom.push({ id: `pb:${uid}`, x: (slot(index.get(a)!) + slot(index.get(b)!) + PERSON_WIDTH) / 2 });
+  // Where each couple's dot sits in its block. Partners side by side: between them. Not side by side (a third
+  // spouse, past the second): lower, in the gap beside the partner with fewer partners, so it isn't read as the
+  // dot of the person standing between them.
+  const dotOf = new Map<string, { dx: number; drop: number }>();
+  for (const uid of couples) {
+    const [, a, b] = uid.split(":");
+    const members = blocks.get(blockOf.get(a)!)!;
+    const ia = members.indexOf(a);
+    const ib = members.indexOf(b);
+    if (Math.abs(ia - ib) <= 1) {
+      dotOf.set(uid, { dx: (slot(ia) + slot(ib) + PERSON_WIDTH) / 2, drop: UNION_DROP });
+    } else {
+      const [near, far] = (adj.get(a)?.size ?? 0) <= (adj.get(b)?.size ?? 0) ? [ia, ib] : [ib, ia];
+      const gap = near < far ? near : near - 1; // the gap after slot `gap`
+      dotOf.set(uid, { dx: slot(gap) + PERSON_WIDTH + PARTNER_GAP / 2, drop: UNION_DROP + 18 });
     }
+  }
+  const elkNodes: ElkNode[] = [...blocks].map(([id, members]) => {
+    const bottom = members.map((m, i) => ({ id: `pb:${m}`, x: slot(i) + PERSON_WIDTH / 2 }));
+    for (const [uid, dot] of dotOf) if (blockOf.get(uid.split(":")[1]) === id) bottom.push({ id: `pb:${uid}`, x: dot.dx });
     return {
       id,
       width: slot(members.length - 1) + PERSON_WIDTH,
@@ -188,16 +202,29 @@ export async function layoutGraph(
     };
   });
   const elkEdges: ElkExtendedEdge[] = [];
+  const tied: [string, string][] = []; // parent block, child block
   const children = [...primaryParents.keys()].sort((a, b) => (orderOf.get(a) ?? 0) - (orderOf.get(b) ?? 0));
   for (const child of children) {
     const parents = primaryParents.get(child)!;
     if (blockOf.get(parents[0]) === blockOf.get(child)) continue;
     const from = parents.length === 2 && couples.has(unionId(parents[0], parents[1])) ? `pb:${unionId(parents[0], parents[1])}` : `pb:${parents[0]}`;
     elkEdges.push({ id: `be:${child}`, sources: [from], targets: [`pt:${child}`] });
+    tied.push([blockOf.get(parents[0])!, blockOf.get(child)!]);
   }
-  // Other parents too, so foster or step parents sit a generation above the child even while their line is hidden.
+  // Other parents (foster, step, ...) only when nothing else ties them to the child's family, so an unrelated
+  // foster couple sits a generation above the child instead of floating off to the side. Relatives who also
+  // fostered keep the place their blood links give them (a sibling who is a guardian stays a sibling).
+  const component = new Map<string, string>();
+  const find = (b: string): string => {
+    const up = component.get(b) ?? b;
+    if (up === b) return b;
+    const root = find(up);
+    component.set(b, root);
+    return root;
+  };
+  for (const [a, b] of tied) component.set(find(a), find(b));
   for (const x of extra) {
-    if (blockOf.get(x.parents[0]) === blockOf.get(x.child)) continue;
+    if (find(blockOf.get(x.parents[0])!) === find(blockOf.get(x.child)!)) continue;
     const from = x.parents.length === 2 && couples.has(unionId(x.parents[0], x.parents[1])) ? `pb:${unionId(x.parents[0], x.parents[1])}` : `pb:${x.parents[0]}`;
     elkEdges.push({ id: `bx:${x.kind}:${x.child}`, sources: [from], targets: [`pt:${x.child}`] });
   }
@@ -255,7 +282,9 @@ export async function layoutGraph(
     const pa = pos.get(a);
     const pb = pos.get(b);
     if (!pa || !pb) continue;
-    const at = { x: (pa.x + pb.x + PERSON_WIDTH - UNION_SIZE) / 2, y: Math.max(pa.y, pb.y) + PERSON_HEIGHT + UNION_DROP };
+    const dot = dotOf.get(uid)!;
+    const left = blocks.get(blockOf.get(a)!)![0];
+    const at = { x: pos.get(left)!.x + dot.dx - UNION_SIZE / 2, y: pa.y + PERSON_HEIGHT + dot.drop };
     unionAt.set(uid, at);
     nodes.push({
       id: uid,
@@ -282,15 +311,15 @@ export async function layoutGraph(
     }
   }
 
-  // Other parents: dashed (the child's card says "asuh", "tiri", ...); hidden until one of these people is in focus.
+  // Other parents: dashed (the child's card says "asuh", "tiri", ...); step links hidden until in focus.
   for (const x of extra) {
     const uid = x.parents.length === 2 ? unionId(x.parents[0], x.parents[1]) : "";
     const sources = uid && unionAt.has(uid) ? [uid] : x.parents;
     for (const source of sources) {
       edges.push({
         ...edge(`x:${x.kind}:${source}:${x.child}`, source, x.child, `child-edge link-edge link-${x.kind}`),
-        hidden: true,
-        data: { people: [...x.parents, x.child] } satisfies LinkEdgeData,
+        hidden: x.kind === "step",
+        data: { people: [...x.parents, x.child], kind: x.kind } satisfies LinkEdgeData,
       });
     }
   }

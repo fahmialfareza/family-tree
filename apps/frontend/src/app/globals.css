@@ -182,6 +182,10 @@
   stroke: color-mix(in oklch, var(--terracotta) 70%, transparent);
   stroke-dasharray: 6 4;
 }
+.react-flow__edge.link-edge.link-active .react-flow__edge-path {
+  stroke: var(--terracotta);
+  stroke-width: 2;
+}
 /* Couples: divorced or separated dashed, engaged or unmarried dotted. */
 .react-flow__edge.partner-divorced .react-flow__edge-path,
 .react-flow__edge.partner-separated .react-flow__edge-path {

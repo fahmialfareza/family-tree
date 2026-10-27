@@ -186,10 +186,12 @@ function Canvas({ treeId }: { treeId: string }) {
   const edges = useMemo(
     () =>
       layout.edges.map((e) => {
-        const people = (e.data as LinkEdgeData | undefined)?.people;
-        if (!people) return e;
-        const shown = (!!focusId && people.includes(focusId)) || (!!openId && people.includes(openId));
-        return shown === !e.hidden ? e : { ...e, hidden: !shown };
+        const link = e.data as LinkEdgeData | undefined;
+        if (!link) return e;
+        // Lines of the person in focus or open stand out; step-parent lines only show then.
+        const active = (!!focusId && link.people.includes(focusId)) || (!!openId && link.people.includes(openId));
+        if (!active) return e;
+        return { ...e, hidden: false, className: `${e.className} link-active` };
       }),
     [layout.edges, focusId, openId],
   );
