@@ -8,7 +8,9 @@
     "desktop": "tauri dev",
     "desktop:local": "SAKDULUR_SITE_URL=http://localhost:3000 tauri dev",
     "desktop:build": "tauri build",
-    "icons": "tauri icon app-icon.png"
+    "icons": "tauri icon app-icon.png",
+    "desktop:build:signed": "tauri build --config src-tauri/tauri.developer-id.conf.json",
+    "desktop:build:dev-signed": "tauri build --bundles app --config src-tauri/tauri.mac-development.conf.json"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.0"

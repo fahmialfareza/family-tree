@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "bundle": {
+    "macOS": {
+      "signingIdentity": "Developer ID Application: Fahmi Alfareza (7FCMB3QMK7)",
+      "entitlements": "Entitlements.macos.plist",
+      "files": {
+        "embedded.provisionprofile": "profiles/sakdulur-developer-id.provisionprofile"
+      }
+    }
+  }
+}

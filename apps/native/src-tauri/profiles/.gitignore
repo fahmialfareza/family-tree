@@ -1,0 +1,3 @@
+# Provisioning profiles: copies of the ones in the maintainer's Credentials folder (see README)
+*.provisionprofile
+*.mobileprovision
