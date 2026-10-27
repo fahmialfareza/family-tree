@@ -38,6 +38,10 @@ pnpm icons                   # regenerate icons from app-icon.png
 (macOS registers the scheme from the bundle): `SAKDULUR_SITE_URL=http://localhost:3000 pnpm tauri build --debug --bundles app`,
 open the `.app`, then `open "com.fahmialfareza.sakdulur:/auth/google/complete?code=x"`.
 
+Linux: GNOME (Wayland) takes the dock icon from an installed `.desktop` file matching the window's app id
+(`sakdulur`), so a bare `target/debug/sakdulur` shows a generic icon. Test the icon with the package:
+`pnpm tauri build --bundles deb`, then `sudo apt install ./src-tauri/target/release/bundle/deb/Sakdulur_*.deb`.
+
 ## Server settings
 
 - API (Railway): `MOBILE_APP_SCHEME=com.fahmialfareza.sakdulur` (Google sign-in in the app);
