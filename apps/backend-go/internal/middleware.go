@@ -52,6 +52,43 @@ func rateLimitAllow(ctx context.Context, key string, max int, per time.Duration)
 	return count.Val() <= int64(max), nil
 }
 
+// quotaScript counts a request in a sliding window only when it is allowed, atomically, so refused requests
+// (and retries after a refusal) don't use up the quota.
+var quotaScript = redis.NewScript(`
+redis.call("ZREMRANGEBYSCORE", KEYS[1], "-inf", ARGV[1])
+if redis.call("ZCARD", KEYS[1]) >= tonumber(ARGV[3]) then return 0 end
+redis.call("ZADD", KEYS[1], ARGV[2], ARGV[4])
+redis.call("PEXPIRE", KEYS[1], ARGV[5])
+return 1`)
+
+// quotaAllow is rateLimitAllow for usage quotas (the AI assistant): only allowed requests count. Login and
+// other abuse limits keep rateLimitAllow, where every attempt counts.
+func quotaAllow(ctx context.Context, key string, max int, per time.Duration) (bool, error) {
+	if RedisClient == nil {
+		return true, nil
+	}
+	defer newrelic.FromContext(ctx).StartSegment("middleware/Quota").End()
+	now := time.Now()
+	member := fmt.Sprintf("%d-%d", now.UnixNano(), rand.Int64())
+	ok, err := quotaScript.Run(ctx, RedisClient, []string{redisKeyPrefix + "quota:" + key},
+		now.Add(-per).UnixMilli(), now.UnixMilli(), max, member, (per + 5*time.Second).Milliseconds()).Int()
+	return ok == 1, err
+}
+
+// limitQuota is limitByKey for usage quotas: it writes the 429 (or 503) and returns false when over.
+func limitQuota(c *gin.Context, key string, max int, per time.Duration) bool {
+	ok, err := quotaAllow(c, key, max, per)
+	if err != nil {
+		responseError(c, "Service temporarily unavailable", http.StatusServiceUnavailable)
+		return false
+	}
+	if !ok {
+		responseError(c, "Too many attempts, please try again later", http.StatusTooManyRequests)
+		return false
+	}
+	return true
+}
+
 // RateLimitMiddleware limits requests per client IP. failClosed rejects requests (503) when Redis errors;
 // general traffic fails open so a Redis outage does not take the whole API down.
 func RateLimitMiddleware(name string, max int, per time.Duration, failClosed bool) gin.HandlerFunc {

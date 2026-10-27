@@ -670,8 +670,9 @@ func askTreeAssistant(c *gin.Context) {
 		responseError(c, "The last message must be the question", 400)
 		return
 	}
-	if !limitByKey(c, "assistant:min:"+access.UserID, 10, time.Minute) ||
-		!limitByKey(c, "assistant:day:"+access.UserID, assistantDailyLimit(), 24*time.Hour) {
+	// Quotas count answered questions only; a refused retry doesn't use one up (the store reviewers share an account).
+	if !limitQuota(c, "assistant:min:"+access.UserID, 10, time.Minute) ||
+		!limitQuota(c, "assistant:day:"+access.UserID, assistantDailyLimit(), 24*time.Hour) {
 		return
 	}
 
