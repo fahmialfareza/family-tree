@@ -57,6 +57,10 @@ android {
         }
         getByName("release") {
             signingConfigs.findByName("release")?.let { signingConfig = it }
+            // Function names for the Rust library in Play's crash reports (the bundle carries a symbol table).
+            ndk {
+                debugSymbolLevel = "SYMBOL_TABLE"
+            }
             optimization {
                enable = true
             }
