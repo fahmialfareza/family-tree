@@ -1,0 +1,12 @@
+Sakdulur is a private family tree app: each tree is visible only to the family members its owner invites (there is no public feed or discovery), and accounts are for ages 13 and up, as in our Terms.
+
+Sign in with the demo account below. It has a sample tree, "Keluarga Wiryo", with four generations of fictional people.
+
+Besides showing the family tree service, the app uses native features:
+- Sign in with Apple through the system sheet (Face ID / Touch ID)
+- Google sign-in in the system browser, returning to the app through its URL scheme
+- Exported tree pictures are saved to Photos (iPhone) or Downloads (Mac); Excel, GEDCOM and account data to Files › Sakdulur
+- The share sheet for invitation links
+- An offline launch screen with Retry, and the app's own start screen instead of the website's landing page
+
+To try: open the tree, tap a person to see their details, use Export to save a picture, and "Ask" for the AI assistant (it only proposes changes; nothing is saved until "Apply").

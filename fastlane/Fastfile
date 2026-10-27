@@ -1,0 +1,193 @@
+# Store listings for App Store Connect (iPhone, iPad, Mac) and Google Play, in Indonesian and English.
+# Text: fastlane/metadata/{apple,android}/<locale>/*.txt. Screenshots: fastlane/screenshots/{ios,mac}/<locale>
+# and fastlane/metadata/android/<locale>/images. Store builds are uploaded by the GitHub release workflows
+# (apps/native/RELEASE.md); these lanes never upload a binary and never submit for review.
+#
+#   fastlane apple                          # iPhone/iPad and Mac: text, screenshots, category, age rating, review info
+#   fastlane apple platform:ios what:text   # platform ios|mac|both, what text|screenshots|both
+#   fastlane apple_pricing                  # make the app free (once)
+#   fastlane play                           # Google Play: listing text, graphics, screenshots, contact details
+#   fastlane play what:text
+#
+# Needs (shell profile, not the repo):
+#   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH   App Store Connect API key
+#   PLAY_JSON_KEY                             Google Play service account JSON (~/.config/play/sakdulur-play.json)
+#   SAKDULUR_DEMO_ACCOUNT                     file with the review demo account ("email: …" / "password: …")
+
+require "json"
+require "net/http"
+require "openssl"
+
+# Homebrew's Ruby may lack a default CA file ("certificate verify failed"); use Homebrew's bundle (as Dzikir App).
+HOMEBREW_CA = "/opt/homebrew/etc/ca-certificates/cert.pem"
+if ENV["SSL_CERT_FILE"].to_s.empty? && !File.exist?(OpenSSL::X509::DEFAULT_CERT_FILE) && File.exist?(HOMEBREW_CA)
+  ENV["SSL_CERT_FILE"] = HOMEBREW_CA
+  OpenSSL::SSL::SSLContext::DEFAULT_CERT_STORE.add_file(HOMEBREW_CA)
+end
+
+ROOT = File.expand_path("..", __dir__)
+FL = File.join(ROOT, "fastlane")
+APP_VERSION = "1.0.0" # App Store version; must match the builds' CFBundleShortVersionString
+SUPPORT_EMAIL = "fahmialfareza97@gmail.com"
+WEBSITE = "https://sakdulur.com"
+
+def env!(name)
+  value = ENV[name].to_s
+  UI.user_error!("Set #{name} (see the top of fastlane/Fastfile)") if value.empty?
+  value
+end
+
+def asc_api_key
+  app_store_connect_api_key(
+    key_id: env!("ASC_KEY_ID"),
+    issuer_id: env!("ASC_ISSUER_ID"),
+    key_filepath: File.expand_path(env!("ASC_KEY_PATH")),
+    in_house: false
+  )
+end
+
+def demo_account
+  text = File.read(File.expand_path(env!("SAKDULUR_DEMO_ACCOUNT")))
+  email = text[/^email:\s*(\S+)/, 1]
+  password = text[/^password:\s*(\S+)/, 1]
+  UI.user_error!("SAKDULUR_DEMO_ACCOUNT needs 'email:' and 'password:' lines") unless email && password
+  [email, password]
+end
+
+lane :apple do |options|
+  platforms = { "ios" => ["ios"], "mac" => ["osx"], "both" => %w[ios osx] }[options[:platform] || "both"]
+  UI.user_error!("platform must be ios, mac or both") unless platforms
+  what = options[:what] || "both"
+  UI.user_error!("what must be text, screenshots or both") unless %w[text screenshots both].include?(what)
+  api_key = asc_api_key
+  email, password = demo_account
+
+  platforms.each do |platform|
+    screenshots = File.join(FL, "screenshots", platform == "osx" ? "mac" : "ios")
+    UI.header("#{platform == 'osx' ? 'macOS' : 'iOS'} #{APP_VERSION}: #{what}")
+    deliver(
+      api_key: api_key,
+      platform: platform,
+      app_version: APP_VERSION,
+      metadata_path: File.join(FL, "metadata", "apple"),
+      screenshots_path: screenshots,
+      skip_metadata: what == "screenshots",
+      skip_screenshots: what == "text" || !Dir.exist?(screenshots),
+      overwrite_screenshots: true,
+      app_rating_config_path: File.join(FL, "app-rating.json"),
+      app_review_information: {
+        first_name: "Fahmi",
+        last_name: "Alfareza",
+        phone_number: "+6285117319725",
+        email_address: SUPPORT_EMAIL,
+        demo_user: email,
+        demo_password: password,
+        notes: File.read(File.join(FL, "review-notes.txt")).strip
+      },
+      skip_binary_upload: true,
+      submit_for_review: false,
+      automatic_release: false,
+      run_precheck_before_submit: false,
+      force: true
+    )
+  end
+end
+
+# Apple: "Free" (price point 0 in the base territory, USA, applied everywhere). deliver's price_tier uses an API
+# Apple has removed, so this calls App Store Connect directly.
+lane :apple_pricing do
+  token = Spaceship::ConnectAPI::Token.create(
+    key_id: env!("ASC_KEY_ID"), issuer_id: env!("ASC_ISSUER_ID"), filepath: File.expand_path(env!("ASC_KEY_PATH"))
+  )
+  Spaceship::ConnectAPI.token = token
+  app = Spaceship::ConnectAPI::App.find(CredentialsManager::AppfileConfig.try_fetch_value(:app_identifier))
+  http = Net::HTTP.new("api.appstoreconnect.apple.com", 443).tap { |h| h.use_ssl = true }
+  headers = { "Authorization" => "Bearer #{token.text}", "Content-Type" => "application/json" }
+
+  points = JSON.parse(http.get("/v1/apps/#{app.id}/appPricePoints?filter[territory]=USA&limit=200", headers).body)
+  free = (points["data"] || []).find { |p| p.dig("attributes", "customerPrice").to_f.zero? }
+  UI.user_error!("No free price point found") unless free
+
+  body = {
+    data: {
+      type: "appPriceSchedules",
+      relationships: {
+        app: { data: { type: "apps", id: app.id } },
+        baseTerritory: { data: { type: "territories", id: "USA" } },
+        manualPrices: { data: [{ type: "appPrices", id: "${price}" }] }
+      }
+    },
+    included: [{
+      type: "appPrices", id: "${price}",
+      attributes: { startDate: nil },
+      relationships: { appPricePoint: { data: { type: "appPricePoints", id: free["id"] } } }
+    }]
+  }
+  res = http.post("/v1/appPriceSchedules", body.to_json, headers)
+  UI.user_error!("Pricing failed: #{res.code} #{res.body}") unless res.code.start_with?("2")
+  UI.success("Sakdulur is free on the App Store")
+
+  # Availability: every territory, and new ones as Apple adds them (only set when the app has none yet).
+  if http.get("/v1/apps/#{app.id}/appAvailabilityV2", headers).code == "404"
+    territories = JSON.parse(http.get("/v1/territories?limit=200", headers).body)["data"].map { |t| t["id"] }
+    refs = territories.map { |t| { type: "territoryAvailabilities", id: "${#{t}}" } }
+    body = {
+      data: {
+        type: "appAvailabilities",
+        attributes: { availableInNewTerritories: true },
+        relationships: { app: { data: { type: "apps", id: app.id } }, territoryAvailabilities: { data: refs } }
+      },
+      included: territories.map do |t|
+        {
+          type: "territoryAvailabilities", id: "${#{t}}", attributes: { available: true },
+          relationships: { territory: { data: { type: "territories", id: t } } }
+        }
+      end
+    }
+    res = http.post("/v2/appAvailabilities", body.to_json, headers)
+    UI.user_error!("Availability failed: #{res.code} #{res.body}") unless res.code.start_with?("2")
+    UI.success("Sakdulur is available in #{territories.size} countries and regions")
+  end
+end
+
+# Google Play's contact details (not covered by supply). Category and the App content forms aren't in Google's
+# API; see apps/native/store/google-play.md.
+def play_contact_details(json_key, package_name)
+  require "googleauth"
+  creds = Google::Auth::ServiceAccountCredentials.make_creds(
+    json_key_io: File.open(json_key), scope: "https://www.googleapis.com/auth/androidpublisher"
+  )
+  headers = { "Authorization" => "Bearer #{creds.fetch_access_token!['access_token']}", "Content-Type" => "application/json" }
+  base = "/androidpublisher/v3/applications/#{package_name}/edits"
+  Net::HTTP.start("androidpublisher.googleapis.com", 443, use_ssl: true) do |http|
+    edit = JSON.parse(http.post(base, "{}", headers).body)
+    UI.user_error!("Google Play: #{edit.dig('error', 'message')}") unless edit["id"]
+    details = { contactEmail: SUPPORT_EMAIL, contactWebsite: WEBSITE }
+    res = http.request(Net::HTTP::Patch.new("#{base}/#{edit['id']}/details", headers).tap { |r| r.body = details.to_json })
+    UI.user_error!("Google Play details: #{res.body}") unless res.code.start_with?("2")
+    res = http.post("#{base}/#{edit['id']}:commit", "", headers)
+    UI.user_error!("Google Play commit: #{res.body}") unless res.code.start_with?("2")
+  end
+  UI.success("Google Play contact details: #{SUPPORT_EMAIL}, #{WEBSITE}")
+end
+
+lane :play do |options|
+  what = options[:what] || "both"
+  UI.user_error!("what must be text, screenshots or both") unless %w[text screenshots both].include?(what)
+  json_key = File.expand_path(env!("PLAY_JSON_KEY"))
+  package_name = CredentialsManager::AppfileConfig.try_fetch_value(:package_name)
+
+  supply(
+    package_name: package_name,
+    json_key: json_key,
+    metadata_path: File.join(FL, "metadata", "android"),
+    skip_upload_apk: true,
+    skip_upload_aab: true,
+    skip_upload_changelogs: true,
+    skip_upload_metadata: what == "screenshots",
+    skip_upload_images: what == "text",
+    skip_upload_screenshots: what == "text",
+    sync_image_upload: true
+  )
+  play_contact_details(json_key, package_name) unless what == "screenshots"
+end

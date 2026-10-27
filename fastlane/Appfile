@@ -1,0 +1,2 @@
+app_identifier("com.fahmialfareza.sakdulur") # App Store Connect (iPhone, iPad, Mac)
+package_name("com.fahmialfareza.sakdulur") # Google Play
