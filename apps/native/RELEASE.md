@@ -41,6 +41,13 @@ Release notes (Play) come from `fastlane/metadata/android/<locale>/changelogs/<b
 Console (nothing rolled out on any track yet), Play only accepts draft releases: use
 `SAKDULUR_ANDROID_STATUS=draft` and roll it out in Play Console.
 
+## When a store approves the app
+
+Set its `live: true` in `apps/frontend/src/lib/stores.ts` and deploy the site. That turns on, for that store: the
+badge on the landing and download pages (until then "Coming soon", never a link to a 404), the download banner for
+its system, `downloadUrl`/`installUrl`/`sameAs` in the structured data, `llms.txt`, the web manifest's
+`related_applications` (Play, App Store), and Safari's Smart App Banner plus App Links tags (App Store, Play).
+
 ## GitHub secrets
 
 `Settings > Secrets and variables > Actions`, or `gh secret set NAME < file`. Base64 a file with

@@ -21,7 +21,7 @@ const INTL_LOCALE_HEADER = "X-NEXT-INTL-LOCALE";
 // Public pages, prerendered per language. Their plain URLs serve either language, so shared caches must not
 // keep those (Next sends s-maxage for prerendered pages); /en/... and /id/... are fixed and stay cacheable.
 // Not no-store, which would keep them out of the back/forward cache.
-const PUBLIC_PAGES = new Set(["/", "/privacy", "/terms"]);
+const PUBLIC_PAGES = new Set(["/", "/download", "/privacy", "/terms"]);
 
 function backendUrl() {
   return (process.env.BACKEND_URL || "http://localhost:4000").replace(/\/+$/, "");

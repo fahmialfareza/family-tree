@@ -7,6 +7,7 @@ import { localePath } from "@/lib/seo";
 // English and the Indonesian version get indexed.
 const PAGES: { path: string; priority: number; changeFrequency: "monthly" | "yearly"; lastModified?: string }[] = [
   { path: "/", priority: 1, changeFrequency: "monthly" },
+  { path: "/download", priority: 0.8, changeFrequency: "monthly" },
   { path: "/privacy", priority: 0.3, changeFrequency: "yearly", lastModified: LEGAL_UPDATED },
   { path: "/terms", priority: 0.3, changeFrequency: "yearly", lastModified: LEGAL_UPDATED },
 ];

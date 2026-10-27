@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/brand";
 
-const allow = ["/", "/privacy", "/terms", "/llms.txt"];
+const allow = ["/", "/download", "/privacy", "/terms", "/llms.txt"];
 // Private areas: the app, auth flows and the API never belong in a search index.
 const disallow = ["/app", "/admin", "/api", "/auth", "/invite", "/uploads", "/welcome"];
 
@@ -16,6 +16,7 @@ const AI_CRAWLERS = [
   "Claude-User",
   "PerplexityBot",
   "Perplexity-User",
+  "YouBot",
   "Google-Extended",
   "Applebot-Extended",
   "meta-externalagent",

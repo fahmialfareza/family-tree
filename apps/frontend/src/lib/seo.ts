@@ -15,6 +15,8 @@ export function languageAlternates(path: string, locale: string): NonNullable<Me
   return {
     canonical: localePath(locale, path),
     languages: { en: localePath("en", path), id: localePath("id", path), "x-default": localePath("en", path) },
+    // <link rel="alternate" type="text/plain"> to the plain summary for AI assistants.
+    types: { "text/plain": "/llms.txt" },
   };
 }
 

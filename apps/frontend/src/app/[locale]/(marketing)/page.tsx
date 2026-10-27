@@ -2,11 +2,13 @@ import { Copy, HeartHandshake, Lock, MessageCircleQuestion, Network, ShieldCheck
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
+import { StoreBadges } from "@/components/marketing/store-badges";
 import { Button } from "@/components/ui/button";
 import { BRAND, SITE_URL } from "@/lib/brand";
 import { contactEmail } from "@/lib/legal-content";
 import { type LocaleParams, pageLocale } from "@/i18n/static";
 import { jsonLd, languageAlternates, localePath, pageSocial } from "@/lib/seo";
+import { APP_VERSION, liveOperatingSystems, liveStores } from "@/lib/stores";
 
 export async function generateMetadata(props: LocaleParams): Promise<Metadata> {
   const locale = await pageLocale(props);
@@ -68,12 +70,22 @@ export default async function LandingPage(props: LocaleParams) {
     { icon: Smartphone, title: t("f4Title"), body: t("f4Body") },
   ];
   const steps = [t("s1"), t("s2"), t("s3")];
-  const faqs = [1, 2, 3, 4, 5, 6, 7].map((n) => ({ q: t(`faq${n}q`), a: t(`faq${n}a`) }));
+  const ts = await getTranslations("stores");
+  const faqs = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => ({ q: t(`faq${n}q`), a: t(`faq${n}a`) }));
   // Structured data for search engines and AI answer engines: who runs it, what it is, and the FAQ.
   const structuredData = {
     "@context": "https://schema.org",
     "@graph": [
-      { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: BRAND, url: SITE_URL, logo: `${SITE_URL}/icons/icon-512.png`, email: contactEmail },
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: BRAND,
+        url: SITE_URL,
+        logo: `${SITE_URL}/icons/icon-512.png`,
+        email: contactEmail,
+        // The app's store pages are the same entity elsewhere (no social profiles yet).
+        ...(liveStores.length ? { sameAs: liveStores.map((s) => s.url) } : {}),
+      },
       {
         "@type": "WebSite",
         "@id": `${SITE_URL}/#website`,
@@ -83,13 +95,18 @@ export default async function LandingPage(props: LocaleParams) {
         publisher: { "@id": `${SITE_URL}/#organization` },
       },
       {
-        "@type": "WebApplication",
+        // One app on the web and in the stores: the store links are where to get it, the site where to use it.
+        "@type": ["SoftwareApplication", "MobileApplication", "WebApplication"],
         "@id": `${SITE_URL}/#app`,
         name: BRAND,
         url: SITE_URL,
         description: tm("description"),
         applicationCategory: "LifestyleApplication",
-        operatingSystem: "Web",
+        operatingSystem: liveOperatingSystems,
+        softwareVersion: APP_VERSION,
+        screenshot: `${SITE_URL}/opengraph-image`,
+        installUrl: [`${SITE_URL}/auth/signup`, ...liveStores.map((s) => s.url)],
+        ...(liveStores.length ? { downloadUrl: liveStores.map((s) => s.url) } : {}),
         inLanguage: ["en", "id"],
         isAccessibleForFree: true,
         offers: { "@type": "Offer", price: "0", priceCurrency: "IDR" },
@@ -151,6 +168,17 @@ export default async function LandingPage(props: LocaleParams) {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="mx-auto max-w-4xl px-4 pb-16 text-center sm:px-6" aria-labelledby="get-the-app">
+        <h2 id="get-the-app" className="mb-3 font-display text-3xl font-semibold">
+          {ts("title")}
+        </h2>
+        <p className="mb-8 text-muted-foreground">{ts("body")}</p>
+        <StoreBadges className="justify-center" />
+        <Link href={localePath(locale, "/download")} className="mt-6 inline-block text-sm font-medium text-primary underline-offset-4 hover:underline">
+          {ts("allDownloads")}
+        </Link>
       </section>
 
       <section className="bg-secondary/50 py-16" aria-labelledby="how">
