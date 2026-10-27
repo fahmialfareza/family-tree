@@ -77,11 +77,15 @@ fn is_public_page(url: &Url) -> bool {
     matches!(path, "" | "/privacy" | "/terms")
 }
 
-/// Public pages open over the app: Safari's sheet on iPhone, the system browser elsewhere.
+/// Public pages open over the app: Safari's sheet on iPhone, the system browser elsewhere. Off the main thread:
+/// the window's handlers run there, and the plugin call waits for Swift code that needs the main thread too.
 fn open_public_page(app: &AppHandle, url: &Url) {
-    if tauri_plugin_sakdulur::open_in_app_browser(app, url.as_str()).is_err() {
-        open_outside(app, url);
-    }
+    let (app, url) = (app.clone(), url.clone());
+    std::thread::spawn(move || {
+        if tauri_plugin_sakdulur::open_in_app_browser(&app, url.as_str()).is_err() {
+            open_outside(&app, &url);
+        }
+    });
 }
 
 /// The site path of a deep link. The API sends com.fahmialfareza.sakdulur://auth/google/complete?code=...
