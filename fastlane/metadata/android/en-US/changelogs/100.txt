@@ -1,0 +1,6 @@
+The first Sakdulur release for Android:
+• Build your family tree across generations, together
+• Invite relatives as editors or viewers
+• Ask about your family, or add relatives, by chatting with the AI assistant
+• Save the tree as a picture to your Gallery, or as Excel and GEDCOM
+• Sign in with Google, Apple or email

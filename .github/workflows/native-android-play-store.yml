@@ -119,6 +119,19 @@ jobs:
           path: ${{ env.AAB_PATH }}
           if-no-files-found: error
 
+      - name: Release notes
+        run: |
+          # fastlane/metadata/android/<locale>/changelogs/<build>.txt, else default.txt, as the action's whatsnew-<locale>.
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/whatsnew"
+          for dir in fastlane/metadata/android/*/changelogs; do
+            locale="$(basename "$(dirname "$dir")")"
+            notes="$dir/$BUILD_NUMBER.txt"
+            [ -f "$notes" ] || notes="$dir/default.txt"
+            cp "$notes" "$RUNNER_TEMP/whatsnew/whatsnew-$locale"
+          done
+          ls "$RUNNER_TEMP/whatsnew"
+
       - name: Upload to Google Play
         uses: r0adkll/upload-google-play@v1
         with:
@@ -127,3 +140,4 @@ jobs:
           releaseFiles: ${{ env.AAB_PATH }}
           track: ${{ inputs.track }}
           status: ${{ inputs.status }}
+          whatsNewDirectory: ${{ runner.temp }}/whatsnew

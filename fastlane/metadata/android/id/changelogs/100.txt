@@ -1,0 +1,6 @@
+Versi pertama Sakdulur di Android:
+• Susun silsilah keluarga lintas generasi, bersama keluarga
+• Undang kerabat sebagai editor atau pembaca
+• Tanya dan tambahkan kerabat lewat obrolan dengan asisten AI
+• Simpan pohon sebagai gambar ke Galeri, atau sebagai Excel dan GEDCOM
+• Masuk dengan Google, Apple, atau email

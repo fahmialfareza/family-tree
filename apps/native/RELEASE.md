@@ -36,7 +36,8 @@ SAKDULUR_IOS_EXPORT_METHOD=release-testing pnpm release ios 101   # IPA artifact
 SAKDULUR_SNAP_CHANNEL=edge pnpm release linux 101
 ```
 
-Android goes to Internal testing and is rolled out to its testers at once. While the app is still a draft in Play
+Release notes (Play) come from `fastlane/metadata/android/<locale>/changelogs/<build>.txt`, falling back to
+`default.txt`; write `<build>.txt` for each release before running it. Android goes to Internal testing and is rolled out to its testers at once. While the app is still a draft in Play
 Console (nothing rolled out on any track yet), Play only accepts draft releases: use
 `SAKDULUR_ANDROID_STATUS=draft` and roll it out in Play Console.
 

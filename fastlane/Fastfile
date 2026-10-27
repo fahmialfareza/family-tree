@@ -7,7 +7,9 @@
 #   fastlane apple platform:ios what:text   # platform ios|mac|both, what text|screenshots|both
 #   fastlane apple_pricing                  # make the app free (once)
 #   fastlane play                           # Google Play: listing text, graphics, screenshots, contact details
-#   fastlane play what:text
+#   fastlane play what:text                 # what text|screenshots|notes|both (both = text + screenshots)
+#   fastlane play what:notes track:alpha    # release notes (metadata/android/<locale>/changelogs) on the newest
+#                                           # build of a track (default internal)
 #
 # Needs (shell profile, not the repo):
 #   ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_PATH   App Store Connect API key
@@ -163,16 +165,16 @@ def play_api(json_key)
   Net::HTTP.start("androidpublisher.googleapis.com", 443, use_ssl: true) { |http| yield http, headers }
 end
 
-# supply always looks up a release, even for listing-only updates; use the newest build on Internal testing.
-def play_internal_version_code(json_key, package_name)
+# supply always looks up a release, even for listing-only updates; use the track's newest build.
+def play_version_code(json_key, package_name, track_name)
   base = "/androidpublisher/v3/applications/#{package_name}/edits"
   play_api(json_key) do |http, headers|
     edit = JSON.parse(http.post(base, "{}", headers).body)
     UI.user_error!("Google Play: #{edit.dig('error', 'message')}") unless edit["id"]
-    track = JSON.parse(http.get("#{base}/#{edit['id']}/tracks/internal", headers).body)
+    track = JSON.parse(http.get("#{base}/#{edit['id']}/tracks/#{track_name}", headers).body)
     http.request(Net::HTTP::Delete.new("#{base}/#{edit['id']}", headers))
     codes = (track["releases"] || []).flat_map { |r| r["versionCodes"] || [] }.map(&:to_i)
-    UI.user_error!("No build on Internal testing yet") if codes.empty?
+    UI.user_error!("No build on the #{track_name} track yet") if codes.empty?
     codes.max
   end
 end
@@ -195,7 +197,8 @@ end
 
 lane :play do |options|
   what = options[:what] || "both"
-  UI.user_error!("what must be text, screenshots or both") unless %w[text screenshots both].include?(what)
+  UI.user_error!("what must be text, screenshots, notes or both") unless %w[text screenshots notes both].include?(what)
+  track = options[:track] || "internal"
   json_key = File.expand_path(env!("PLAY_JSON_KEY"))
   package_name = CredentialsManager::AppfileConfig.try_fetch_value(:package_name)
 
@@ -203,15 +206,15 @@ lane :play do |options|
     package_name: package_name,
     json_key: json_key,
     metadata_path: File.join(FL, "metadata", "android"),
-    track: "internal",
-    version_code: play_internal_version_code(json_key, package_name),
+    track: track,
+    version_code: play_version_code(json_key, package_name, track),
     skip_upload_apk: true,
     skip_upload_aab: true,
-    skip_upload_changelogs: true,
-    skip_upload_metadata: what == "screenshots",
-    skip_upload_images: what == "text",
-    skip_upload_screenshots: what == "text",
+    skip_upload_changelogs: what != "notes",
+    skip_upload_metadata: %w[screenshots notes].include?(what),
+    skip_upload_images: %w[text notes].include?(what),
+    skip_upload_screenshots: %w[text notes].include?(what),
     sync_image_upload: true
   )
-  play_contact_details(json_key, package_name) unless what == "screenshots"
+  play_contact_details(json_key, package_name) if %w[text both].include?(what)
 end
