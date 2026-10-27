@@ -64,7 +64,14 @@ fn is_internal(url: &Url, site: &Url) -> bool {
     }
 }
 
+/// Opens a URL in the system browser or app. Off the main thread: the window's handlers run there, and on Android
+/// the opener waits for Kotlin code that needs that thread too, so calling it inline froze the app ("not responding").
 fn open_outside(app: &AppHandle, url: &Url) {
+    let (app, url) = (app.clone(), url.clone());
+    std::thread::spawn(move || open_outside_now(&app, &url));
+}
+
+fn open_outside_now(app: &AppHandle, url: &Url) {
     if let Err(err) = app.opener().open_url(url.as_str(), None::<&str>) {
         eprintln!("could not open {url}: {err}");
     }
@@ -89,7 +96,7 @@ fn open_public_page(app: &AppHandle, url: &Url) {
     let (app, url) = (app.clone(), url.clone());
     std::thread::spawn(move || {
         if tauri_plugin_sakdulur::open_in_app_browser(&app, url.as_str()).is_err() {
-            open_outside(&app, &url);
+            open_outside_now(&app, &url);
         }
     });
 }
