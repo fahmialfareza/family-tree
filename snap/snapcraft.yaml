@@ -1,7 +1,7 @@
 name: sakdulur
 base: core24
 version: "0.1.0"
-title: Sakdulur
+title: "Sakdulur: Family Tree"
 summary: Private family tree, built together with your family
 description: |
   Sakdulur is a private family tree you build together with your family.

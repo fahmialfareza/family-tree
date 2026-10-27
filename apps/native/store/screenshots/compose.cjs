@@ -34,6 +34,8 @@ const TARGETS = [
   { store: "mac", device: "mac", w: 2880, h: 1800, dir: (l) => path.join(FL, "screenshots/mac", LOCALE[l]), file: (i, s) => `mac-0${i + 1}-${s}.png` },
   // Microsoft Store: the desktop screens in a Windows window (it rejects screenshots showing another platform).
   { store: "windows", device: "windows", w: 2560, h: 1600, dir: (l) => path.join(FL, "screenshots/windows", LOCALE[l]), file: (i, s) => `windows-0${i + 1}-${s}.png` },
+  // Snap Store: a GNOME window, English only (the Snap listing has one language), under its 2 MB image limit.
+  { store: "snap", device: "linux", w: 1920, h: 1200, langs: ["en"], dir: () => path.join(FL, "screenshots/snap"), file: (i, s) => `snap-0${i + 1}-${s}.png` },
   { store: "play", device: "android", w: 1080, h: 2160, dir: (l) => path.join(FL, "metadata/android", LOCALE[l], "images/phoneScreenshots"), file: (i, s) => `0${i + 1}-${s}.png` },
   { store: "play", device: "ipad", w: 2064, h: 2752, dir: (l) => path.join(FL, "metadata/android", LOCALE[l], "images/tenInchScreenshots"), file: (i, s) => `0${i + 1}-${s}.png` },
   { store: "play", device: "ipad", w: 2064, h: 2752, dir: (l) => path.join(FL, "metadata/android", LOCALE[l], "images/sevenInchScreenshots"), file: (i, s) => `0${i + 1}-${s}.png` },
@@ -52,7 +54,7 @@ function slideHtml(t, slide, lang, img) {
   const landscape = t.w > t.h;
   const u = t.w / 100; // 1vw in px, for sizes that follow the image width
   if (landscape) {
-    // Mac: headline left, window right.
+    // Desktop (Mac, Windows, Linux): headline left, the app's window right.
     return `<!doctype html><html><head>${FONTS}<style>${BASE_CSS}
       body{display:flex;align-items:center;gap:${4 * u}px;padding:0 ${5 * u}px}
       .text{flex:0 0 26%}h1{font-size:${3.6 * u}px}p{margin-top:${1.6 * u}px;font-size:${1.45 * u}px;line-height:1.45;color:#75695c}
@@ -63,9 +65,15 @@ function slideHtml(t, slide, lang, img) {
       .win.windows{border-radius:${0.45 * u}px}
       .windows .bar{background:#f3f3f3;gap:${0.6 * u}px;padding:0 0 0 ${0.9 * u}px;font:${0.85 * u}px "Segoe UI",sans-serif;color:#1f1f1f}
       .windows .bar img{width:${1.1 * u}px;height:${1.1 * u}px}.windows .bar span{flex:1}
-      .windows .bar b{width:${3.4 * u}px;height:100%;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:${0.95 * u}px}</style></head><body>
+      .windows .bar b{width:${3.4 * u}px;height:100%;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:${0.95 * u}px}
+      .win.gnome{border-radius:${0.6 * u}px}
+      .gnome .bar{background:#ebebeb;justify-content:center;position:relative;height:${2.4 * u}px;font:600 ${0.9 * u}px Cantarell,"Noto Sans",sans-serif;color:#2e2e2e}
+      .gnome .bar b{position:absolute;right:${0.7 * u}px;width:${1.3 * u}px;height:${1.3 * u}px;border-radius:50%;background:#dcdcdc;display:flex;align-items:center;justify-content:center;font-weight:400;font-size:${0.75 * u}px}
+      </style></head><body>
       <div class="text"><h1>${l1}<br><span class="accent">${l2}</span></h1><p>${sub}</p></div>
-      ${t.store === "windows"
+      ${t.store === "snap"
+        ? `<div class="win gnome"><div class="bar">Sakdulur<b>&#x2715;</b></div><img src="${img}"></div>`
+        : t.store === "windows"
         ? `<div class="win windows"><div class="bar"><img src="data:image/png;base64,${ICON}"><span>Sakdulur</span><b>&#x2500;</b><b>&#x2610;</b><b>&#x2715;</b></div><img src="${img}"></div>`
         : `<div class="win"><div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i></div><img src="${img}"></div>`}
       </body></html>`;
@@ -106,7 +114,7 @@ function featureHtml(lang) {
   };
   let made = 0;
   for (const lang of Object.keys(LOCALE)) {
-    for (const t of TARGETS.filter((t) => !process.env.ONLY || t.store === process.env.ONLY)) {
+    for (const t of TARGETS.filter((t) => (!process.env.ONLY || t.store === process.env.ONLY) && (!t.langs || t.langs.includes(lang)))) {
       for (const [i, slide] of SLIDES.entries()) {
         const raw = path.join(IN, `${lang}-${t.device}-${slide.shot}.png`);
         if (!fs.existsSync(raw)) continue;
@@ -114,6 +122,12 @@ function featureHtml(lang) {
         await render(slideHtml(t, slide, lang, img), t.w, t.h, path.join(t.dir(lang), t.file(i, slide.shot)));
         made++;
       }
+    }
+    if (lang === "en" && (!process.env.ONLY || process.env.ONLY === "snap")) {
+      // Snap Store: featured banner (3:1) and the 512×512 icon.
+      const snap = path.join(FL, "screenshots/snap");
+      await render(featureHtml(lang).replace("<body>", '<body style="padding:0 180px">'), 1920, 640, path.join(snap, "banner.png"));
+      fs.copyFileSync(path.join(ROOT, "apps/native/src-tauri/icons/icon.png"), path.join(snap, "icon.png"));
     }
     if (process.env.ONLY && process.env.ONLY !== "play") continue;
     const images = path.join(FL, "metadata/android", LOCALE[lang], "images");
