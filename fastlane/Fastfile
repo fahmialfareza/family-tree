@@ -251,3 +251,42 @@ lane :play do |options|
   )
   play_contact_details(json_key, package_name) if %w[text both].include?(what)
 end
+
+# What each Google Play track holds (read-only).
+lane :play_tracks do
+  json_key = File.expand_path(env!("PLAY_JSON_KEY"))
+  base = "/androidpublisher/v3/applications/#{CredentialsManager::AppfileConfig.try_fetch_value(:package_name)}/edits"
+  play_api(json_key) do |http, headers|
+    edit = JSON.parse(http.post(base, "{}", headers).body)
+    UI.user_error!("Google Play: #{edit.dig('error', 'message')}") unless edit["id"]
+    tracks = JSON.parse(http.get("#{base}/#{edit['id']}/tracks", headers).body)["tracks"] || []
+    http.request(Net::HTTP::Delete.new("#{base}/#{edit['id']}", headers))
+    tracks.each do |t|
+      (t["releases"] || []).each { |r| UI.message("#{t['track']}: #{r['name']} #{r['versionCodes']&.join(',')} #{r['status']}") }
+    end
+  end
+end
+
+# Gives a build already on one track (internal) to another (alpha = closed testing), with its release notes.
+#   fastlane play_promote build:102 [from:internal] [to:alpha]
+lane :play_promote do |options|
+  build = options[:build].to_s
+  UI.user_error!("build: is required") if build.empty?
+  from = options[:from] || "internal"
+  to = options[:to] || "alpha"
+  json_key = File.expand_path(env!("PLAY_JSON_KEY"))
+  base = "/androidpublisher/v3/applications/#{CredentialsManager::AppfileConfig.try_fetch_value(:package_name)}/edits"
+  play_api(json_key) do |http, headers|
+    edit = JSON.parse(http.post(base, "{}", headers).body)
+    UI.user_error!("Google Play: #{edit.dig('error', 'message')}") unless edit["id"]
+    source = JSON.parse(http.get("#{base}/#{edit['id']}/tracks/#{from}", headers).body)
+    release = (source["releases"] || []).find { |r| (r["versionCodes"] || []).include?(build) }
+    UI.user_error!("Build #{build} is not on the #{from} track") unless release
+    body = { track: to, releases: [release.slice("name", "versionCodes", "releaseNotes").merge("status" => "completed")] }
+    res = http.put("#{base}/#{edit['id']}/tracks/#{to}", body.to_json, headers)
+    UI.user_error!("Google Play #{to}: #{res.body}") unless res.code.start_with?("2")
+    res = http.post("#{base}/#{edit['id']}:commit", "", headers)
+    UI.user_error!("Google Play commit: #{res.body}") unless res.code.start_with?("2")
+  end
+  UI.success("Google Play: build #{build} sent from #{from} to #{to}")
+end
