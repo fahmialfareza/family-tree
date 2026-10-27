@@ -124,6 +124,9 @@ fn open_deep_link(app: &AppHandle, link: &Url) {
     target.set_path(&path);
     target.set_query(link.query());
     if let Some(window) = app.get_webview_window("main") {
+        // Cover the current page (often /welcome) while the site completes the sign-in; see signing_in.js.
+        let invite = path.starts_with("/invite");
+        let _ = window.eval(include_str!("signing_in.js").replace("__INVITE__", if invite { "true" } else { "false" }));
         let _ = window.navigate(target);
         #[cfg(desktop)]
         let _ = window.unminimize();
