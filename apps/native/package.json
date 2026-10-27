@@ -10,7 +10,8 @@
     "desktop:build": "tauri build",
     "icons": "tauri icon app-icon.png",
     "desktop:build:signed": "tauri build --config src-tauri/tauri.developer-id.conf.json",
-    "desktop:build:dev-signed": "tauri build --bundles app --config src-tauri/tauri.mac-development.conf.json"
+    "desktop:build:dev-signed": "tauri build --bundles app --config src-tauri/tauri.mac-development.conf.json",
+    "ios:device": "scripts/ios-device.sh"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.12.0"

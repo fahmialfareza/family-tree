@@ -69,6 +69,21 @@ fn open_outside(app: &AppHandle, url: &Url) {
     }
 }
 
+/// The site's public pages (landing, Privacy, Terms, with or without /en and /id): marketing pages that don't
+/// belong inside the app window.
+fn is_public_page(url: &Url) -> bool {
+    let path = url.path().trim_end_matches('/');
+    let path = path.strip_prefix("/en").or_else(|| path.strip_prefix("/id")).unwrap_or(path);
+    matches!(path, "" | "/privacy" | "/terms")
+}
+
+/// Public pages open over the app: Safari's sheet on iPhone, the system browser elsewhere.
+fn open_public_page(app: &AppHandle, url: &Url) {
+    if tauri_plugin_sakdulur::open_in_app_browser(app, url.as_str()).is_err() {
+        open_outside(app, url);
+    }
+}
+
 /// The site path of a deep link. The API sends com.fahmialfareza.sakdulur://auth/google/complete?code=...
 /// (so "auth" parses as the host); the single-slash form :/auth/google/complete is accepted too.
 fn deep_link_path(link: &Url) -> Option<String> {
@@ -184,9 +199,12 @@ pub fn run() {
                     open_outside(&nav_handle, url);
                     false
                 })
-                // target="_blank" links: the site in this window, everything else outside.
+                // target="_blank" links: the site in this window, its public pages and other sites outside (the site
+                // opens Privacy/Terms links this way in the app, see apps/frontend native-bridge.tsx).
                 .on_new_window(move |url, _features| {
-                    if is_internal(&url, &popup_site) {
+                    if is_internal(&url, &popup_site) && is_public_page(&url) {
+                        open_public_page(&popup_handle, &url);
+                    } else if is_internal(&url, &popup_site) {
                         if let Some(window) = popup_handle.get_webview_window("main") {
                             let _ = window.navigate(url);
                         }
@@ -249,6 +267,17 @@ mod tests {
 
     fn path(raw: &str) -> Option<String> {
         deep_link_path(&Url::parse(raw).unwrap())
+    }
+
+    #[test]
+    fn public_pages() {
+        let public = |raw: &str| is_public_page(&Url::parse(raw).unwrap());
+        for p in ["https://sakdulur.com/", "https://sakdulur.com/privacy", "https://sakdulur.com/id/terms", "https://sakdulur.com/en", "https://sakdulur.com/en/privacy/"] {
+            assert!(public(p), "{p}");
+        }
+        for p in ["https://sakdulur.com/app", "https://sakdulur.com/auth/login", "https://sakdulur.com/welcome", "https://sakdulur.com/entries", "https://sakdulur.com/privacy-old"] {
+            assert!(!public(p), "{p}");
+        }
     }
 
     #[test]

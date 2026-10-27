@@ -1,6 +1,8 @@
 //! Native pieces of the Sakdulur app that the site (apps/frontend) calls. Only these commands are granted to the
 //! site, at runtime and for its own address (see the app's lib.rs).
 //!
+//! The app itself also calls `open_in_app_browser` (Rust API, not a command) for the site's public pages.
+//!
 //! - `apple_authorize { nonce }`: Apple's sign-in sheet (iPhone and Mac). Returns the identity token, the
 //!   authorization code and the name (Apple only shares it the first time); the site sends them to
 //!   POST /api/session/apple. `nonce` is the SHA-256 of the value the site keeps, as Apple's API expects.
@@ -44,6 +46,18 @@ async fn apple_authorize<R: Runtime>(app: AppHandle<R>, nonce: String) -> Result
     {
         let _ = (app, nonce);
         Err("Sign in with Apple is not available in this app".into())
+    }
+}
+
+/// Shows `url` in an in-app browser sheet over the app (iOS: Safari's sheet with a Done button). Called by the app
+/// (not the site) for the site's public pages. Elsewhere returns Err, and the app opens the system browser.
+pub fn open_in_app_browser<R: Runtime>(app: &AppHandle<R>, url: &str) -> Result<(), String> {
+    #[cfg(target_os = "ios")]
+    return ios::open_in_app_browser(app, url);
+    #[cfg(not(target_os = "ios"))]
+    {
+        let _ = (app, url);
+        Err("no in-app browser on this platform".into())
     }
 }
 

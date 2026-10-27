@@ -24,3 +24,15 @@ pub fn authorize<R: Runtime>(app: &AppHandle<R>, nonce: String) -> Result<AppleA
         .run_mobile_plugin("appleAuthorize", Args { nonce })
         .map_err(|e| e.to_string())
 }
+
+#[derive(serde::Serialize)]
+struct UrlArgs<'a> {
+    url: &'a str,
+}
+
+pub fn open_in_app_browser<R: Runtime>(app: &AppHandle<R>, url: &str) -> Result<(), String> {
+    app.state::<Handle<R>>()
+        .0
+        .run_mobile_plugin::<()>("openInAppBrowser", UrlArgs { url })
+        .map_err(|e| e.to_string())
+}

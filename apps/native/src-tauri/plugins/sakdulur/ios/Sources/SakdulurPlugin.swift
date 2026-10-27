@@ -1,4 +1,5 @@
 import AuthenticationServices
+import SafariServices
 import Tauri
 import UIKit
 import WebKit
@@ -7,7 +8,12 @@ struct AppleAuthorizeArgs: Decodable {
   let nonce: String
 }
 
-// Native pieces of the Sakdulur app (see ../src/lib.rs). Sign in with Apple: Apple's sheet over the app.
+struct OpenUrlArgs: Decodable {
+  let url: String
+}
+
+// Native pieces of the Sakdulur app (see ../src/lib.rs): Sign in with Apple (Apple's sheet over the app) and an
+// in-app browser sheet for the site's public pages (Privacy, Terms), called from the app's Rust code.
 class SakdulurPlugin: Plugin, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
   private var pending: Invoke?
   private var controller: ASAuthorizationController?
@@ -24,6 +30,24 @@ class SakdulurPlugin: Plugin, ASAuthorizationControllerDelegate, ASAuthorization
       controller.presentationContextProvider = self
       self.controller = controller
       controller.performRequests()
+    }
+  }
+
+  @objc public func openInAppBrowser(_ invoke: Invoke) throws {
+    let args = try invoke.parseArgs(OpenUrlArgs.self)
+    guard let url = URL(string: args.url), url.scheme == "https" || url.scheme == "http" else {
+      invoke.reject("invalid url")
+      return
+    }
+    DispatchQueue.main.async {
+      guard let presenter = self.manager.viewController else {
+        invoke.reject("no window")
+        return
+      }
+      let browser = SFSafariViewController(url: url)
+      browser.dismissButtonStyle = .done
+      presenter.present(browser, animated: true)
+      invoke.resolve()
     }
   }
 
