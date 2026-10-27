@@ -9,6 +9,7 @@
 //!   system browser or app, never inside the window
 //! - deep links: Google sign-in returns through com.fahmialfareza.sakdulur:/auth/google/complete?...,
 //!   which is loaded in the window so the site finishes the sign-in
+//! - no page zoom (pinch, double-tap, Ctrl+scroll, Ctrl/Cmd +/-), like a native app
 //! - downloads (exports) are saved to the Downloads folder; the page is told when one starts and ends (a
 //!   "sakdulur:download" DOM event, so it can show a toast) without the page calling into the app
 
@@ -196,6 +197,8 @@ pub fn run() {
                     client(),
                     SITE_URL.trim_end_matches('/')
                 ))
+                // No page zoom in the app (pinch, double-tap, Ctrl+scroll); see src/no_zoom.js.
+                .initialization_script(include_str!("no_zoom.js"))
                 .on_navigation(move |url| {
                     // The site's public pages open over the app (the site turns those links into navigations).
                     if is_internal(url, &nav_site) && is_public_page(url) && url.scheme().starts_with("http") {
