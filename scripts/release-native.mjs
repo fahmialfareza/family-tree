@@ -8,7 +8,7 @@ const env = process.env;
 const workflows = {
   android: {
     file: "native-android-play-store.yml",
-    inputs: { track: env.SAKDULUR_ANDROID_TRACK || "alpha", status: env.SAKDULUR_ANDROID_STATUS || "draft" },
+    inputs: { track: env.SAKDULUR_ANDROID_TRACK || "internal", status: env.SAKDULUR_ANDROID_STATUS || "completed" },
   },
   ios: {
     file: "native-ios-app-store.yml",

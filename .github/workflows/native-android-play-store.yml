@@ -9,9 +9,9 @@ on:
         required: true
         type: string
       track:
-        description: "Google Play track (alpha = closed testing)."
+        description: "Google Play track (internal = Internal testing, alpha = Closed testing)."
         required: true
-        default: alpha
+        default: internal
         type: choice
         options:
           - internal
@@ -19,9 +19,9 @@ on:
           - beta
           - production
       status:
-        description: "Release status (draft until the app has passed its first review)."
+        description: "Release status (completed = rolled out to the track's testers)."
         required: true
-        default: draft
+        default: completed
         type: choice
         options:
           - draft
