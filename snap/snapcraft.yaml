@@ -23,6 +23,9 @@ apps:
       - browser-support
       - home
       - network
+      # Without it the desktop portal refuses the proxy lookup, so WebKit drops every HTTPS request
+      # (the hosted app never loads) and navigator.onLine stays false (as found in Malanghub).
+      - network-status
       - opengl
       - wayland
       - x11
