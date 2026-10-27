@@ -9,6 +9,10 @@ on:
         description: "Release build number (100 = version 1.0.0)."
         required: true
         type: string
+      version:
+        description: "Version (default: from the build number, 100 = 1.0.0)."
+        required: false
+        type: string
       channel:
         description: "Snap Store channel."
         required: true
@@ -42,10 +46,19 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Apply release version
+        env:
+          BUILD_NUMBER: ${{ inputs.build_number }}
+          VERSION: ${{ inputs.version }}
         run: |
-          build="${{ inputs.build_number }}"
-          version="$((build / 100)).$(((build % 100) / 10)).$((build % 10))"
+          build="$BUILD_NUMBER"
+          version="${VERSION:-$((build / 100)).$(((build % 100) / 10)).$((build % 10))}"
+          # The app's own version (tauri.conf.json, Cargo.toml), then the snap's.
+          node apps/native/scripts/set-release-version.mjs "$build" "$version"
           sed -i "s/^version: .*/version: \"${version}\"/" snap/snapcraft.yaml
           echo "Sakdulur ${version} (build ${build}) for ${{ matrix.arch }}"
 
