@@ -12,6 +12,7 @@ import { useAskAssistant, useInvalidateTree, useTree } from "@/lib/api/hooks";
 import type { AssistantAnswer, AssistantTurn } from "@/lib/api/types";
 import { applyAssistantAction } from "@/lib/assistant-actions";
 import { contactEmail } from "@/lib/legal-content";
+import { useOffline } from "@/lib/offline";
 import { cn } from "@/lib/utils";
 import { ActionCards, type ActionState, useActionTitle } from "@/components/assistant/action-cards";
 
@@ -69,6 +70,8 @@ export function Assistant({ treeId }: { treeId: string }) {
 
 function Conversation({ treeId }: { treeId: string }) {
   const t = useTranslations("assistant");
+  const to = useTranslations("offline");
+  const { offline } = useOffline();
   const locale = useLocale();
   const ask = useAskAssistant(treeId);
   const invalidate = useInvalidateTree(treeId);
@@ -253,11 +256,12 @@ function Conversation({ treeId }: { treeId: string }) {
 
       {/* Sticks above the phone tab bar; flush with the bottom on larger screens. */}
       <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] -mx-4 border-t bg-background/95 px-4 py-2.5 backdrop-blur sm:-mx-6 sm:px-6 md:bottom-0 md:pb-5">
+        {offline ? <p className="mb-2 text-center text-xs text-muted-foreground">{to("assistant")}</p> : null}
         <form
           className="flex items-end gap-2"
           onSubmit={(e) => {
             e.preventDefault();
-            void send(draft);
+            if (!offline) void send(draft);
           }}
         >
           <Textarea
@@ -266,7 +270,7 @@ function Conversation({ treeId }: { treeId: string }) {
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
-                void send(draft);
+                if (!offline) void send(draft);
               }
             }}
             placeholder={t("placeholder")}
@@ -275,7 +279,7 @@ function Conversation({ treeId }: { treeId: string }) {
             rows={1}
             className="max-h-40 min-h-11 resize-none rounded-xl bg-card"
           />
-          <Button type="submit" size="icon" className="size-11 shrink-0 rounded-xl" disabled={!draft.trim() || ask.isPending} aria-label={t("send")}>
+          <Button type="submit" size="icon" className="size-11 shrink-0 rounded-xl" disabled={!draft.trim() || ask.isPending || offline} aria-label={t("send")}>
             {ask.isPending ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <ArrowUp className="size-5" aria-hidden />}
           </Button>
         </form>

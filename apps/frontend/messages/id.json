@@ -180,7 +180,8 @@
     "centerHere": "Pusatkan pohon di sini",
     "deleteTitle": "Hapus {name}?",
     "deleteBody": "Orang ini hilang dari pohon dan daftar untuk semua anggota. Catatannya tetap disimpan sebagai riwayat, sesuai Kebijakan Privasi.",
-    "deleted": "Orang dihapus."
+    "deleted": "Orang dihapus.",
+    "offlineSummary": "Anda sedang offline: menampilkan data dari pohon. Detail lengkap tampil saat online."
   },
   "person": {
     "name": "Nama lengkap",
@@ -541,7 +542,7 @@
     "mac": "Mac",
     "windows": "Windows",
     "linux": "Linux",
-    "requirements": "Memerlukan koneksi internet. iOS dan iPadOS 15 atau lebih baru, Android 7 atau lebih baru, macOS 13 atau lebih baru, Windows 10 (versi 2004) atau lebih baru, serta distribusi Linux dengan snap."
+    "requirements": "Memerlukan koneksi internet untuk masuk dan membuat perubahan; pohon yang pernah dibuka juga bisa dilihat offline. iOS dan iPadOS 15 atau lebih baru, Android 7 atau lebih baru, macOS 13 atau lebih baru, Windows 10 (versi 2004) atau lebih baru, serta distribusi Linux dengan snap."
   },
   "copy": {
     "title": "Salin dari pohon lain",
@@ -896,5 +897,14 @@
     "endDate": "Tanggal cerai atau pisah",
     "saved": "Tersimpan.",
     "as": "Sebagai"
+  },
+  "offline": {
+    "title": "Anda sedang offline.",
+    "savedAt": "Menampilkan data tersimpan (diperbarui {when}).",
+    "saved": "Menampilkan data tersimpan.",
+    "errorTitle": "Anda sedang offline",
+    "errorBody": "Halaman ini belum pernah dibuka di perangkat ini. Pohon yang pernah Anda buka tetap bisa dilihat.",
+    "assistant": "Asisten memerlukan koneksi internet.",
+    "cannotEdit": "Anda sedang offline. Sambungkan ke internet untuk membuat perubahan."
   }
 }

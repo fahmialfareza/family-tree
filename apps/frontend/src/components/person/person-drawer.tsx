@@ -1,6 +1,6 @@
 "use client";
 
-import { Copy, Crosshair, Heart, Loader2, RefreshCw, MapPin, MessageCircle, Pencil, Phone, Trash2, UserRoundPlus, Users } from "lucide-react";
+import { CloudOff, Copy, Crosshair, Heart, Loader2, RefreshCw, MapPin, MessageCircle, Pencil, Phone, Trash2, UserRoundPlus, Users } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
@@ -12,8 +12,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { errorMessage } from "@/lib/api/client";
 import { useDeletePerson, usePerson, useSyncFromOriginal } from "@/lib/api/hooks";
-import type { Graph, TreeRole } from "@/lib/api/types";
+import type { Graph, Person, TreeRole } from "@/lib/api/types";
 import { formatPartialDate, whatsappLink } from "@/lib/format";
+import { useOffline } from "@/lib/offline";
 import { useMediaQuery } from "@/lib/use-media-query";
 import { PersonForm } from "./person-form";
 import { RelativesPanel } from "./relatives-panel";
@@ -50,9 +51,12 @@ export function PersonDrawer({
   const sync = useSyncFromOriginal(treeId);
   const locale = useLocale();
   const desktop = useMediaQuery("(min-width: 768px)", true);
-  const { data: person, isLoading } = usePerson(treeId, personId);
+  const { data: fetched, isLoading } = usePerson(treeId, personId);
   const del = useDeletePerson(treeId);
   const summary = graph?.people.find((p) => p._id === personId);
+  // Offline, someone not opened before: what the tree knows about them (name, dates, photo, relatives).
+  const { offline } = useOffline();
+  const person: Person | undefined = fetched ?? (offline && summary ? { ...summary, ownedBy: null } : undefined);
   const canEdit = role !== "viewer" && !!summary?.canEdit;
   const showSharing = role === "owner" && !!graph?.tree.branchScoped;
   const q = (x: "exact" | "about" | "before" | "after") => tp(`qualifier.${x}`);
@@ -90,7 +94,7 @@ export function PersonDrawer({
           )}
         </SheetHeader>
 
-        {isLoading || !person ? (
+        {(isLoading && !person) || !person ? (
           <div className="flex justify-center p-10">
             <Loader2 className="size-6 animate-spin text-muted-foreground" aria-label={t("loading")} />
           </div>
@@ -107,6 +111,11 @@ export function PersonDrawer({
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
               <div className="p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
                 <TabsContent value="overview" className="mt-0 space-y-5">
+                  {!fetched ? (
+                    <p className="flex items-center gap-2 rounded-xl border border-dashed p-3 text-sm text-muted-foreground">
+                      <CloudOff className="size-4 shrink-0" aria-hidden /> {t("offlineSummary")}
+                    </p>
+                  ) : null}
                   {canEdit ? (
                     <div className="flex flex-wrap gap-2" role="toolbar" aria-label={tcv("personActions", { name: person.name })}>
                       <Button size="sm" onClick={() => onTabChange("edit")}>

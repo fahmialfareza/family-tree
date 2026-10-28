@@ -18,6 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { errorMessage } from "@/lib/api/client";
 import { useCreateFamily, useDeleteFamily, useFamilies, useGraph } from "@/lib/api/hooks";
 import { relativesOf } from "@/lib/relatives";
+import { useOnlineRole } from "@/lib/offline";
 
 /** A family groups a person with their partner(s) and children; it opens on the canvas centered on them. */
 export function FamiliesList({ treeId }: { treeId: string }) {
@@ -30,7 +31,7 @@ export function FamiliesList({ treeId }: { treeId: string }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [personId, setPersonId] = useState("");
-  const role = graph?.tree.role ?? "viewer";
+  const role = useOnlineRole(graph?.tree.role ?? "viewer");
   const editable = (graph?.people ?? []).filter((p) => p.canEdit).sort((a, b) => a.name.localeCompare(b.name));
 
   async function submit(e: React.FormEvent) {

@@ -75,6 +75,7 @@ import { useDeletePerson, useGraph } from "@/lib/api/hooks";
 import { isBranchScope, selectBranch } from "@/lib/branch";
 import { saveFile } from "@/lib/native";
 import { useMediaQuery } from "@/lib/use-media-query";
+import { useOnlineRole } from "@/lib/offline";
 import {
   type FlowNode,
   type LinkEdgeData,
@@ -184,7 +185,8 @@ function Canvas({ treeId }: { treeId: string }) {
   const deletePerson = useDeletePerson(treeId);
   const deleting = graph?.people.find((p) => p._id === deleteId);
 
-  const role = graph?.tree.role ?? "viewer";
+  // Read-only while offline: the toolbar, card actions and person drawer then offer no changes.
+  const role = useOnlineRole(graph?.tree.role ?? "viewer");
   const effectiveDepth = exportRequested && !branch ? "all" : (depth ?? (graph && graph.people.length > FULL_TREE_LIMIT ? "4" : "all"));
   const branchKey = branch ? `${branch.scope}:${branch.from}:${branch.steps}` : "";
   const layoutKey = `${dataUpdatedAt}|${focusId ?? ""}|${effectiveDepth}|${branchKey}`;

@@ -22,6 +22,8 @@ const csp = [
   `img-src 'self' data: blob: ${imageHosts}`,
   "font-src 'self' data:",
   `connect-src 'self' https://cloudflareinsights.com ${imageHosts}${isDev ? " ws: http://localhost:*" : ""}`,
+  // The offline copy (public/sw.js).
+  "worker-src 'self'",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",

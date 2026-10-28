@@ -19,6 +19,7 @@ import { useCreateInvite, useInvites, useMe, useMembers, useRemoveMember, useRev
 import type { TreeRole } from "@/lib/api/types";
 import { initials } from "@/lib/format";
 import { shareLink, useNativePlatform } from "@/lib/native";
+import { useOnlineRole } from "@/lib/offline";
 import { InviteLinks } from "./invite-links";
 
 const ROLES: TreeRole[] = ["owner", "editor", "viewer"];
@@ -31,7 +32,7 @@ export function Members({ treeId }: { treeId: string }) {
   const format = useFormatter();
   const router = useRouter();
   const { data: me } = useMe();
-  const role = me?.trees.find((x) => x._id === treeId)?.role ?? "viewer";
+  const role = useOnlineRole(me?.trees.find((x) => x._id === treeId)?.role ?? "viewer");
   const isOwner = role === "owner";
   const { data: members, isLoading } = useMembers(treeId);
   const { data: invites } = useInvites(treeId, isOwner);

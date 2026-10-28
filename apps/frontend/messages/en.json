@@ -180,7 +180,8 @@
     "centerHere": "Center tree here",
     "deleteTitle": "Delete {name}?",
     "deleteBody": "They disappear from the tree and lists for everyone. The record is kept as history, as described in the Privacy Policy.",
-    "deleted": "Person deleted."
+    "deleted": "Person deleted.",
+    "offlineSummary": "You're offline: showing what the tree knows. Full details are shown when you're online."
   },
   "person": {
     "name": "Full name",
@@ -541,7 +542,7 @@
     "mac": "Mac",
     "windows": "Windows",
     "linux": "Linux",
-    "requirements": "Needs an internet connection. iOS and iPadOS 15 or later, Android 7 or later, macOS 13 or later, Windows 10 (version 2004) or later, and Linux distributions with snap."
+    "requirements": "Needs an internet connection to sign in and make changes; trees you've opened can also be viewed offline. iOS and iPadOS 15 or later, Android 7 or later, macOS 13 or later, Windows 10 (version 2004) or later, and Linux distributions with snap."
   },
   "copy": {
     "title": "Copy from another tree",
@@ -896,5 +897,14 @@
     "endDate": "Divorce or separation date",
     "saved": "Saved.",
     "as": "As"
+  },
+  "offline": {
+    "title": "You're offline.",
+    "savedAt": "Showing saved data (updated {when}).",
+    "saved": "Showing saved data.",
+    "errorTitle": "You're offline",
+    "errorBody": "This page hasn't been opened on this device yet. Trees you've opened before can still be viewed.",
+    "assistant": "The assistant needs an internet connection.",
+    "cannotEdit": "You're offline. Connect to the internet to make changes."
   }
 }

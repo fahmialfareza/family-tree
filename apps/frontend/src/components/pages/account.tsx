@@ -27,6 +27,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { ApiError, api, errorMessage } from "@/lib/api/client";
 import { useMe, useSessions, useUpdateMe } from "@/lib/api/hooks";
+import { clearOfflineData } from "@/lib/offline";
 import { useQueryClient } from "@tanstack/react-query";
 
 export function Account() {
@@ -291,6 +292,7 @@ export function Account() {
             run("all", async () => {
               await api.post("/api/auth/logout-all");
               await fetch("/api/session/logout", { method: "POST" });
+              await clearOfflineData();
               window.location.assign("/auth/login");
             })
           }
@@ -380,6 +382,7 @@ export function Account() {
                       throw err;
                     }
                     await fetch("/api/session/logout", { method: "POST" });
+                    await clearOfflineData();
                     window.location.assign("/");
                   })
                 }

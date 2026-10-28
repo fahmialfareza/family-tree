@@ -4,13 +4,15 @@ import { Ellipsis, Lightbulb, Network, Settings, Sparkles, UserRound, Users, Use
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LogoMark } from "@/components/common/logo";
 import { ThemeToggle } from "@/components/common/preferences";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useMe } from "@/lib/api/hooks";
 import type { Me } from "@/lib/api/types";
+import { claimOfflineData } from "@/lib/offline";
 import { cn } from "@/lib/utils";
+import { OfflineBanner } from "./offline-banner";
 import { PersonSearch } from "./search";
 import { useSuggestLink } from "./suggest-feature";
 import { TreeSwitcher } from "./tree-switcher";
@@ -28,6 +30,8 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
   const params = useParams<{ treeId?: string }>();
   const pathname = usePathname();
   const { data: me = initialMe } = useMe(initialMe);
+  // The offline copy belongs to this account; another account signing in on this device starts it over.
+  useEffect(() => claimOfflineData(me.user._id), [me.user._id]);
   const treeId = params.treeId;
   const tree = me.trees.find((x) => x._id === treeId);
   // Members see the assistant once an owner turned it on; owners also see it while off, to find the switch.
@@ -105,6 +109,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
           <UserMenu user={me.user} compact className="p-1" />
         </header>
 
+        <OfflineBanner />
         <main id="main" className={cn("flex min-h-0 flex-1 flex-col", treeId && "pb-16 md:pb-0")}>
           {children}
         </main>

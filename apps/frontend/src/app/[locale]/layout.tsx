@@ -23,7 +23,7 @@ type Props = { params: Promise<{ locale: string }> };
 
 // Messages every page's client components may need; the app, sign-in and admin sections get all of them
 // (components/providers/app-scope.tsx). Keeps the marketing pages' HTML and JavaScript small.
-const SHARED_MESSAGES = ["marketing", "stores", "prefs", "errors"];
+const SHARED_MESSAGES = ["marketing", "stores", "prefs", "errors", "offline"];
 
 function pick(messages: Record<string, unknown>, keys: string[]) {
   return Object.fromEntries(keys.filter((k) => k in messages).map((k) => [k, messages[k]]));

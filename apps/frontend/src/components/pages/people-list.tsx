@@ -23,8 +23,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMe, usePeoplePage } from "@/lib/api/hooks";
+import { useGraph, useMe, usePeoplePage } from "@/lib/api/hooks";
+import type { GraphPerson } from "@/lib/api/types";
 import { lifeSpan } from "@/lib/format";
+import { useOffline, useOnlineRole } from "@/lib/offline";
+
+// Offline the server search isn't there (only searches typed online were saved): search the tree's saved data instead.
+function searchLocally(people: GraphPerson[], q: string) {
+  const needle = q.toLocaleLowerCase();
+  return people
+    .filter((p) => !needle || `${p.name} ${p.nickname ?? ""}`.toLocaleLowerCase().includes(needle))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((p) => ({ ...p, birthPlace: undefined as string | undefined }));
+}
 
 export function PeopleList({ treeId }: { treeId: string }) {
   const t = useTranslations("people");
@@ -32,13 +43,16 @@ export function PeopleList({ treeId }: { treeId: string }) {
   const [query, setQuery] = useState("");
   const q = useDeferredValue(query.trim());
   const { data, isLoading } = usePeoplePage(treeId, q);
+  const { offline } = useOffline();
+  const { data: graph } = useGraph(treeId);
+  const local = offline && !data && graph ? searchLocally(graph.people, q) : null;
   const { data: me } = useMe();
-  const role = me?.trees.find((x) => x._id === treeId)?.role ?? "viewer";
+  const role = useOnlineRole(me?.trees.find((x) => x._id === treeId)?.role ?? "viewer");
   const [adding, setAdding] = useState(false);
   const [copying, setCopying] = useState(false);
   const copySources = useCopySources(treeId);
   const tcv = useTranslations("canvas");
-  const people = data?.items ?? [];
+  const people = data?.items ?? local ?? [];
 
   return (
     <PageContainer>
@@ -81,7 +95,7 @@ export function PeopleList({ treeId }: { treeId: string }) {
         />
       </div>
 
-      {isLoading ? (
+      {isLoading && !local ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 6 }, (_, i) => (
             <Skeleton key={i} className="h-20 rounded-xl" />

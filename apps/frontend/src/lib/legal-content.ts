@@ -7,7 +7,7 @@ import { BRAND } from "./brand";
 export type LegalSection = { h: string; p?: string[]; list?: string[] };
 export type LegalDoc = { title: string; updated: string; intro: string; sections: LegalSection[] };
 
-export const LEGAL_UPDATED = "2026-10-27";
+export const LEGAL_UPDATED = "2026-10-28";
 export const MIN_AGE = 13;
 
 const operator = process.env.NEXT_PUBLIC_OPERATOR_NAME || "Fahmi Alfareza";
@@ -62,6 +62,7 @@ export function privacyPolicy(locale: string): LegalDoc {
           list: [
             "Aplikasi Sakdulur untuk iPhone, Android, Mac, Windows, dan Linux membuka layanan yang sama ini di jendela aplikasi. Aplikasi tidak mengumpulkan data selain yang dijelaskan dalam kebijakan ini dan tidak menambahkan iklan atau analitik sendiri.",
             "File yang Anda ekspor atau unduh di aplikasi disimpan di perangkat Anda. Untuk masuk dengan Apple atau Google, aplikasi menggunakan lembar masuk Apple atau browser Anda.",
+            "Agar tetap bisa dilihat tanpa internet, pohon, data orang, dan foto yang Anda buka disimpan di perangkat Anda (di aplikasi maupun di browser). Salinan ini hanya untuk akun Anda dan dihapus saat Anda keluar.",
             "Toko aplikasi tempat Anda memasang aplikasi (seperti App Store atau Google Play) memproses data unduhan dan pemasangan sesuai kebijakan privasinya sendiri.",
           ],
         },
@@ -218,6 +219,7 @@ export function privacyPolicy(locale: string): LegalDoc {
         list: [
           "The Sakdulur apps for iPhone, Android, Mac, Windows and Linux open this same service in an app window. They collect nothing beyond what this policy describes and add no advertising or analytics of their own.",
           "Files you export or download in an app are saved on your device. The app uses Apple's sign-in sheet, or your browser, to sign you in with Apple or Google.",
+          "So they can be viewed without internet, the trees, people and photos you open are kept on your device (in the apps and in the browser). This copy is only for your account and is deleted when you sign out.",
           "The app store you install from (such as the App Store or Google Play) processes download and installation data under its own privacy policy.",
         ],
       },
