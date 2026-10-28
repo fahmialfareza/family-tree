@@ -10,7 +10,7 @@ import { ThemeToggle } from "@/components/common/preferences";
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { useMe } from "@/lib/api/hooks";
 import type { Me } from "@/lib/api/types";
-import { claimOfflineData } from "@/lib/offline";
+import { claimOfflineData, savePagesForOffline, useOfflineLinks } from "@/lib/offline";
 import { cn } from "@/lib/utils";
 import { OfflineBanner } from "./offline-banner";
 import { PersonSearch } from "./search";
@@ -34,6 +34,12 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
   useEffect(() => claimOfflineData(me.user._id), [me.user._id]);
   const treeId = params.treeId;
   const tree = me.trees.find((x) => x._id === treeId);
+  useOfflineLinks();
+  // Keep this page, and the tree's tabs, readable offline.
+  useEffect(() => {
+    const tabs = treeId ? ["", "/people", "/families", "/members"].map((p) => `/app/t/${treeId}${p}`) : [];
+    savePagesForOffline([pathname, ...tabs.filter((u) => u !== pathname)]);
+  }, [pathname, treeId]);
   // Members see the assistant once an owner turned it on; owners also see it while off, to find the switch.
   const showAssistant = !!tree?.assistantAvailable && (!!tree.assistantEnabled || tree.role === "owner");
 

@@ -3,7 +3,7 @@
 // updated); offline, the last copy answers. Editing needs the network (see src/lib/api/client.ts).
 //
 // Bump VERSION when the caching rules change: older caches are then deleted.
-const VERSION = "1";
+const VERSION = "4";
 const STATIC = `sakdulur-static-v${VERSION}`;
 const PAGES = `sakdulur-pages-v${VERSION}`;
 const DATA = `sakdulur-data-v${VERSION}`;
@@ -16,6 +16,7 @@ const MAX_PHOTOS = 600;
 const PHOTO_HOSTS = ["res.cloudinary.com"];
 const SAVED_AT = "X-Sakdulur-Saved-At";
 const LAST_PAGE = "/__sakdulur/last-tree-page";
+const WARM_EVERY_MS = 10 * 60_000;
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -31,7 +32,12 @@ self.addEventListener("activate", (event) => {
 });
 
 // {type: "clear"}: signed out (or another account signed in), so nothing of this account stays on the device.
+// {type: "warm", urls}: app pages the user is on (and the tree's other tabs). Moving between tabs fetches only
+// parts of a page, never the whole page, so without this a tab visited that way had no copy for offline use.
 self.addEventListener("message", (event) => {
+  if (event.data && event.data.type === "warm" && Array.isArray(event.data.urls)) {
+    event.waitUntil(warm(event.data.urls));
+  }
   if (event.data && event.data.type === "clear") {
     event.waitUntil(
       Promise.all(CACHES.map((name) => caches.delete(name))).then(() => event.source && event.source.postMessage({ type: "cleared" })),
@@ -55,8 +61,12 @@ self.addEventListener("fetch", (event) => {
   }
   if (!sameOrigin) return;
   if (url.pathname.startsWith("/api/proxy/")) return event.respondWith(networkFirst(req, DATA, req.url));
-  // Page loads of the app. Client-side navigations (RSC requests) stay on the network: when they fail, Next.js
-  // falls back to a full page load, which is answered here.
+  // Moving between pages fetches only page parts (RSC). Offline, answer with a plain error: Next.js then loads the
+  // whole page instead (it waits forever on a failed fetch), and that page load is answered from the copy below.
+  if (req.headers.get("RSC") === "1" || url.searchParams.has("_rsc")) {
+    return event.respondWith(fetch(req).catch(() => new Response("", { status: 503, headers: { "X-Sakdulur-Offline": "" } })));
+  }
+  // Page loads of the app.
   if (req.mode === "navigate" && (url.pathname === "/app" || url.pathname.startsWith("/app/"))) {
     return event.respondWith(page(req, url));
   }
@@ -100,6 +110,46 @@ async function page(req, url) {
     }
     return offlinePage();
   }
+}
+
+async function warm(urls) {
+  const cache = await caches.open(PAGES);
+  for (const [i, raw] of urls.entries()) {
+    const url = new URL(raw, self.location.origin);
+    if (url.origin !== self.location.origin || !(url.pathname === "/app" || url.pathname.startsWith("/app/"))) continue;
+    const key = url.origin + url.pathname;
+    const hit = await cache.match(key);
+    if (hit && Date.now() - Date.parse(hit.headers.get(SAVED_AT) || "0") < WARM_EVERY_MS) continue;
+    try {
+      const res = await fetch(key, { credentials: "same-origin", headers: { Accept: "text/html" } });
+      const html = (res.headers.get("Content-Type") || "").includes("text/html");
+      if (res.ok && res.type === "basic" && !res.redirected && html) {
+        // The page's own code too: a page saved this way was never shown, so its scripts aren't saved yet.
+        await saveAssets(await res.clone().text());
+        await cache.put(key, await stamped(res));
+        if (i === 0 && url.pathname.startsWith("/app/t/")) await cache.put(LAST_PAGE, new Response(url.pathname));
+      }
+    } catch {
+      return; // offline: nothing to warm
+    }
+  }
+}
+
+/** Saves the /_next/static files a page refers to (scripts, styles, fonts) that aren't saved yet. */
+async function saveAssets(html) {
+  const cache = await caches.open(STATIC);
+  const paths = new Set(html.match(/\/_next\/static\/[^"'\s\\)]+/g) || []);
+  for (const path of paths) {
+    const url = new URL(path, self.location.origin).href;
+    if (await cache.match(url)) continue;
+    try {
+      const res = await fetch(url);
+      if (res.ok) await cache.put(url, res);
+    } catch {
+      return;
+    }
+  }
+  trim(cache, MAX_STATIC);
 }
 
 async function cacheFirst(req, cacheName, max) {

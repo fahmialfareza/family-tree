@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useGraph } from "@/lib/api/hooks";
 import { lifeSpan } from "@/lib/format";
+import { openAppPage } from "@/lib/offline";
 
 // The shortcut as the keyboard shows it: ⌘K on Apple devices, Ctrl K elsewhere (decided after hydration).
 const noSubscribe = () => () => {};
@@ -57,7 +58,7 @@ export function PersonSearch({ treeId, compact }: { treeId: string; compact?: bo
                 value={`${p.name} ${p.nickname ?? ""} ${p._id}`}
                 onSelect={() => {
                   setOpen(false);
-                  router.push(`/app/t/${treeId}?focus=${p._id}`);
+                  openAppPage(router, `/app/t/${treeId}?focus=${p._id}`);
                 }}
               >
                 <PersonAvatar name={p.name} photoUrl={p.photoUrl} gender={p.gender} deceased={p.status === "deceased"} className="size-7 ring-1 ring-offset-1" />

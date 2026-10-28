@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 // Read-only offline mode (public/sw.js keeps the last copy of what was opened). This module tracks whether the app
 // is offline — no network, or the data on screen came from that copy — and clears the copy on sign-out.
@@ -63,6 +63,15 @@ export function registerServiceWorker() {
   navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch((err) => console.warn("offline copy unavailable", err));
 }
 
+/**
+ * Asks the service worker to keep a copy of these app pages (the current one first). Tab switches fetch only parts
+ * of a page, so pages reached that way would otherwise have no offline copy.
+ */
+export function savePagesForOffline(urls: string[]) {
+  if (typeof navigator === "undefined" || !navigator.onLine) return;
+  navigator.serviceWorker?.controller?.postMessage({ type: "warm", urls });
+}
+
 const USER_KEY = "ft-offline-user";
 
 /** Deletes everything kept for offline use on this device (sign-out, or another account signed in). */
@@ -92,4 +101,34 @@ export function claimOfflineData(userId: string) {
 /** The tree role for what the UI offers: read-only ("viewer") while offline, since changes need the network. */
 export function useOnlineRole<R extends string>(role: R): R | "viewer" {
   return useOffline().offline ? "viewer" : role;
+}
+
+const isAppPath = (url: URL) => url.origin === window.location.origin && (url.pathname === "/app" || url.pathname.startsWith("/app/"));
+
+/**
+ * Moving between app pages normally fetches only page parts from the server; offline that request can't succeed and
+ * Next.js keeps waiting. Offline, app links therefore load the whole page, which the service worker answers from its
+ * copy.
+ */
+export function useOfflineLinks() {
+  useEffect(() => {
+    // Capture phase: before next/link, which leaves a click alone once it is defaultPrevented.
+    const onClick = (e: MouseEvent) => {
+      if (!isOffline() || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+      const url = new URL(a.href, window.location.href);
+      if (!isAppPath(url)) return;
+      e.preventDefault();
+      window.location.assign(url.href);
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
+}
+
+/** router.push, or a whole page load while offline (see useOfflineLinks). */
+export function openAppPage(router: { push: (href: string) => void }, href: string) {
+  if (isOffline()) window.location.assign(href);
+  else router.push(href);
 }

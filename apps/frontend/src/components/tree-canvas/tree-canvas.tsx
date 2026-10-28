@@ -38,7 +38,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -130,7 +130,6 @@ function printImage(url: string, title: string, landscape: boolean) {
 function Canvas({ treeId }: { treeId: string }) {
   const t = useTranslations("canvas");
   const te = useTranslations("export");
-  const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
   const wide = useMediaQuery("(min-width: 1024px)", true);
@@ -214,9 +213,11 @@ function Canvas({ treeId }: { treeId: string }) {
         if (v === null) next.delete(k);
         else next.set(k, v);
       }
-      router.replace(`${pathname}?${next.toString()}`, { scroll: false });
+      // The browser's own history (Next.js keeps useSearchParams in step): the tree page's server part doesn't use
+      // these, so there's nothing to ask the server, which also keeps people opening while offline.
+      window.history.replaceState(null, "", `${pathname}?${next.toString()}`);
     },
-    [params, pathname, router],
+    [params, pathname],
   );
 
   useEffect(() => {
