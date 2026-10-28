@@ -96,7 +96,9 @@ const MIN_READABLE_ZOOM = 0.5;
 
 /** Prints one image on its own, via a hidden frame: no sidebar or toolbar, scaled to the paper. */
 function printImage(url: string, title: string, landscape: boolean) {
+  document.querySelectorAll("iframe[data-print-frame]").forEach((old) => old.remove());
   const frame = document.createElement("iframe");
+  frame.dataset.printFrame = "";
   frame.setAttribute("aria-hidden", "true");
   frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;";
   document.body.appendChild(frame);
@@ -109,10 +111,16 @@ function printImage(url: string, title: string, landscape: boolean) {
   const img = doc.createElement("img");
   img.alt = title;
   img.onload = () => {
-    frame.contentWindow?.focus();
-    frame.contentWindow?.print();
-    // Most browsers block until the dialog closes; remove the frame afterwards either way.
-    setTimeout(() => frame.remove(), 1000);
+    const win = frame.contentWindow;
+    if (!win) return frame.remove();
+    // Chrome and Brave don't wait for the print dialog: print() returns while the preview is still open, and
+    // removing the frame then empties it (Print and Save as PDF did nothing). Remove it once printing is done;
+    // the next print, or a long timeout, cleans up where afterprint never comes.
+    const done = () => setTimeout(() => frame.remove(), 0);
+    win.addEventListener("afterprint", done, { once: true });
+    setTimeout(done, 10 * 60_000);
+    win.focus();
+    win.print();
   };
   img.src = url;
   doc.body.appendChild(img);
