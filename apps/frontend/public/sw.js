@@ -3,7 +3,7 @@
 // updated); offline, the last copy answers. Editing needs the network (see src/lib/api/client.ts).
 //
 // Bump VERSION when the caching rules change: older caches are then deleted.
-const VERSION = "7";
+const VERSION = "8";
 const STATIC = `sakdulur-static-v${VERSION}`;
 const PAGES = `sakdulur-pages-v${VERSION}`;
 const DATA = `sakdulur-data-v${VERSION}`;
@@ -17,6 +17,9 @@ const PHOTO_HOSTS = ["res.cloudinary.com"];
 const SAVED_AT = "X-Sakdulur-Saved-At";
 const LAST_PAGE = "/__sakdulur/last-tree-page";
 const WARM_EVERY_MS = 10 * 60_000;
+// Never kept: who is signed in (it must come from the network, see claimOfflineData in src/lib/offline.ts) and the
+// auth endpoints (some answer with tokens).
+const NEVER_SAVED = (pathname) => pathname === "/api/proxy/api/me" || pathname.startsWith("/api/proxy/api/auth");
 
 self.addEventListener("install", () => self.skipWaiting());
 
@@ -67,6 +70,7 @@ self.addEventListener("fetch", (event) => {
     return event.respondWith(photo(req));
   }
   if (!sameOrigin) return;
+  if (NEVER_SAVED(url.pathname)) return;
   if (url.pathname.startsWith("/api/proxy/")) return event.respondWith(networkFirst(req, DATA, req.url));
   // Moving between pages fetches only page parts (RSC). Offline, answer with a plain error: Next.js then loads the
   // whole page instead (it waits forever on a failed fetch), and that page load is answered from the copy below.
@@ -79,8 +83,11 @@ self.addEventListener("fetch", (event) => {
   }
 });
 
-/** The network, but at most NETWORK_WAIT_MS when a copy exists; keeps the copy up to date. */
-async function networkFirst(req, cacheName, key) {
+/**
+ * The network, but at most NETWORK_WAIT_MS when a copy exists (race = false: as long as the network takes); keeps the
+ * copy up to date.
+ */
+async function networkFirst(req, cacheName, key, race = true) {
   const cache = await caches.open(cacheName);
   const network = fetch(req).then(async (res) => {
     if (res.ok && res.type === "basic" && !res.redirected) await cache.put(key, await stamped(res.clone()));
@@ -89,7 +96,7 @@ async function networkFirst(req, cacheName, key) {
   network.catch(() => {}); // when the copy answered first, a later network failure is expected
   const copy = await cache.match(key);
   try {
-    if (!copy) return await network;
+    if (!copy || !race) return await network;
     return await Promise.race([network, wait(NETWORK_WAIT_MS).then(() => fromCopy(copy))]);
   } catch {
     if (copy) return fromCopy(copy);
@@ -100,7 +107,9 @@ async function networkFirst(req, cacheName, key) {
 async function page(req, url) {
   const key = url.origin + url.pathname; // ?client=... from the apps' launcher doesn't make another page
   try {
-    const res = await networkFirst(req, PAGES, key);
+    // No race: a slow answer may be the sign-in page (session ended), and the saved page must not stand in for it.
+    // The copy answers only when the network can't be reached.
+    const res = await networkFirst(req, PAGES, key, false);
     if (url.pathname.startsWith("/app/t/") && !res.headers.has("X-Sakdulur-Offline")) {
       const cache = await caches.open(PAGES);
       await cache.put(LAST_PAGE, new Response(url.pathname));
@@ -131,7 +140,7 @@ async function warm(urls, maxAge, current) {
   const data = await caches.open(DATA);
   for (const [i, raw] of urls.entries()) {
     const url = new URL(raw, self.location.origin);
-    if (url.origin !== self.location.origin) continue;
+    if (url.origin !== self.location.origin || NEVER_SAVED(url.pathname)) continue;
     if (url.pathname.startsWith("/api/proxy/")) {
       const hit = await data.match(url.href);
       if (hit && Date.now() - Date.parse(hit.headers.get(SAVED_AT) || "0") < maxAge) continue;

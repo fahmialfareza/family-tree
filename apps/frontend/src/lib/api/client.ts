@@ -4,7 +4,7 @@
 // Offline (see lib/offline.ts and public/sw.js) reads come from the saved copy; changes need the network, so they
 // fail at once with status 0 and an "offline" message instead of a bare network error.
 
-import { isOffline, noteNetworkFailure, noteResponse } from "@/lib/offline";
+import { clearOfflineData, isOffline, noteNetworkFailure, noteResponse } from "@/lib/offline";
 
 export class ApiError extends Error {
   constructor(
@@ -46,7 +46,8 @@ async function request<T>(method: string, path: string, body?: Body): Promise<T>
   if (!res.ok) {
     if (res.status === 401 && typeof window !== "undefined" && !path.startsWith("/api/auth/")) {
       const next = window.location.pathname + window.location.search;
-      window.location.assign(`/auth/login?next=${encodeURIComponent(next)}`);
+      // The session is gone: so is this account's offline copy.
+      void clearOfflineData().finally(() => window.location.assign(`/auth/login?next=${encodeURIComponent(next)}`));
     }
     throw new ApiError(res.status, json?.message ?? res.statusText, json);
   }
@@ -61,7 +62,7 @@ export const api = {
   delete: <T>(path: string, body?: Body) => request<T>("DELETE", path, body),
 };
 
-/** Session endpoints handled by this app (they set/clear the cookies). */
+/** Session endpoints handled by this app (they set/clear the cookies). Signing in starts the offline copy over. */
 export async function sessionRequest<T>(path: string, body?: Record<string, unknown>): Promise<T> {
   const res = await fetch(`/api/session/${path}`, {
     method: "POST",
@@ -73,6 +74,7 @@ export async function sessionRequest<T>(path: string, body?: Record<string, unkn
   if (!res.ok) {
     throw new ApiError(res.status, json?.message ?? res.statusText, json);
   }
+  await clearOfflineData();
   return json?.data as T;
 }
 

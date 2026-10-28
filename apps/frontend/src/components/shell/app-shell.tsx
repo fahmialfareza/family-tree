@@ -31,7 +31,7 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
   const pathname = usePathname();
   const { data: me = initialMe } = useMe(initialMe);
   // The offline copy belongs to this account; another account signing in on this device starts it over.
-  useEffect(() => claimOfflineData(me.user._id), [me.user._id]);
+  useEffect(() => void claimOfflineData(), []);
   const treeId = params.treeId;
   const tree = me.trees.find((x) => x._id === treeId);
   useOfflineLinks();

@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { type AppClient, CLIENT_COOKIE, isAppClient } from "@/lib/app-client";
+import { clearOfflineData } from "@/lib/offline";
 
 /*
  * The desktop and mobile apps (apps/native, Tauri) show this same website in a native window. The app marks
@@ -73,6 +74,7 @@ export async function signInWithAppleNative() {
     const body = (await res.json().catch(() => null)) as { message?: string } | null;
     throw new Error(body?.message || "Sign in with Apple failed");
   }
+  await clearOfflineData(); // a new session: nothing of a previous account stays on the device
 }
 
 /** The user closed Apple's sheet: not an error worth showing. */

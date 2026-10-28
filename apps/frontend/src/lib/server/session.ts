@@ -17,6 +17,10 @@ export const OAUTH_BINDING_COOKIE = "ft_oauth_binding";
 
 const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 
+// Clear-Site-Data when the account on this device changes: drops the offline copy (public/sw.js caches and its
+// worker, localStorage). Not "cookies": that would also drop the app-client and language cookies.
+export const CLEAR_OFFLINE_DATA = '"cache", "storage"';
+
 type CookieJar = Pick<NextResponse["cookies"], "set" | "delete">;
 
 function baseCookie() {

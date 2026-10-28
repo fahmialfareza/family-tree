@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clientIpHeaders, serverEnv } from "@/lib/server/env";
-import { ACCESS_COOKIE, clearSessionCookies, isSameOrigin } from "@/lib/server/session";
+import { ACCESS_COOKIE, CLEAR_OFFLINE_DATA, clearSessionCookies, isSameOrigin } from "@/lib/server/session";
 
-// Revokes the session on the API (best effort) and clears the cookies.
+// Revokes the session on the API (best effort), clears the cookies and the device's offline copy.
 export async function POST(req: NextRequest) {
   if (!isSameOrigin(req)) {
     return NextResponse.json({ status: 403, message: "Cross-site request blocked" }, { status: 403 });
@@ -17,5 +17,6 @@ export async function POST(req: NextRequest) {
   }
   const out = NextResponse.json({ status: 200, data: true });
   clearSessionCookies(out.cookies);
+  out.headers.set("Clear-Site-Data", CLEAR_OFFLINE_DATA);
   return out;
 }

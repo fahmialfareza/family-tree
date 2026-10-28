@@ -16,6 +16,9 @@ import type { TokenPair } from "@/lib/api/types";
 
 const FORWARDED_REQUEST_HEADERS = ["content-type", "accept", "accept-language", "user-agent"];
 const FORWARDED_RESPONSE_HEADERS = ["content-type", "content-disposition", "cache-control", "x-request-id"];
+// The /api/auth endpoints page code may use. The others answer with tokens (login, refresh, legacy GET /api/auth,
+// ...): those go through /api/session/*, which keeps them in httpOnly cookies.
+const AUTH_PATHS = new Set(["resend-verification", "forgot-password", "reset-password", "change-password", "sessions", "logout-all"]);
 
 async function forward(req: NextRequest, path: string[], body: ArrayBuffer | undefined, token?: string) {
   const url = new URL(`${serverEnv.backendUrl}/${path.map(encodeURIComponent).join("/")}`);
@@ -35,7 +38,9 @@ async function handle(req: NextRequest, { params }: { params: Promise<{ path: st
     return NextResponse.json({ status: 403, message: "Cross-site request blocked" }, { status: 403 });
   }
   const { path } = await params;
-  if (path[0] !== "api") {
+  // "." and ".." would be resolved by new URL() in forward(), stepping around these checks.
+  const dotSegment = path.some((s) => s === "." || s === "..");
+  if (path[0] !== "api" || dotSegment || (path[1] === "auth" && !AUTH_PATHS.has(path[2] ?? ""))) {
     return NextResponse.json({ status: 404, message: "Not found" }, { status: 404 });
   }
   const body = ["GET", "HEAD"].includes(req.method) ? undefined : await req.arrayBuffer();

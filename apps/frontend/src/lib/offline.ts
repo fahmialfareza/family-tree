@@ -110,9 +110,16 @@ export async function clearOfflineData() {
   }
 }
 
-/** The offline copy belongs to one account: when a different one signs in, start over. */
-export function claimOfflineData(userId: string) {
+/**
+ * The offline copy belongs to one account: when a different one signs in, start over. The account is asked of the
+ * server (public/sw.js never keeps /api/me), not taken from the page, which may itself be a saved copy.
+ */
+export async function claimOfflineData() {
+  if (isOffline()) return;
   try {
+    const res = await fetch("/api/proxy/api/me", { credentials: "same-origin", cache: "no-store" });
+    const userId = res.ok && !res.headers.has("X-Sakdulur-Offline") ? (await res.json())?.data?.user?._id : null;
+    if (typeof userId !== "string" || !userId) return;
     const previous = localStorage.getItem(USER_KEY);
     if (previous && previous !== userId) void clearOfflineData();
     localStorage.setItem(USER_KEY, userId);
