@@ -1,0 +1,5 @@
+• Google and Apple sign-in work again: the app no longer closes after you pick an account
+• Works offline: trees, people and photos you've opened stay viewable without internet
+• Switch between your trees and their tabs offline too
+• Invite links and links that leave the app open more safely
+• Report button on AI answers; printing and Save as PDF fixed

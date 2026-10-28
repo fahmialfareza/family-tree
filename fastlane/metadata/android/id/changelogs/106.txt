@@ -1,0 +1,5 @@
+• Masuk dengan Google dan Apple berfungsi lagi: aplikasi tidak lagi tertutup setelah memilih akun
+• Bisa offline: pohon, orang, dan foto yang pernah dibuka tetap bisa dilihat tanpa internet
+• Pindah pohon dan tab juga bisa saat offline
+• Tautan undangan dan tautan ke luar aplikasi dibuka dengan lebih aman
+• Tombol Laporkan pada jawaban AI; cetak dan Simpan PDF diperbaiki
