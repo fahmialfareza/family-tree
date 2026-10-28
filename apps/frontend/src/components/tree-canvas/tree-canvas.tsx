@@ -85,11 +85,14 @@ import {
   PERSON_WIDTH,
 } from "./layout";
 import { CanvasActions, nodeTypes, type RelativeKind } from "./nodes";
+import { useMacTrackpadZoom } from "./trackpad-zoom";
 
 const TRANSPARENT_PIXEL =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
 
 const DEPTHS = ["2", "4", "6", "all"] as const;
+const MIN_ZOOM = 0.1;
+const MAX_ZOOM = 2;
 // Above this size the canvas starts with a neighbourhood around the focus person instead of everyone.
 const FULL_TREE_LIMIT = 250;
 // Below this zoom person cards are too small to read, so the initial view doesn't fit everything.
@@ -135,6 +138,7 @@ function Canvas({ treeId }: { treeId: string }) {
   const wide = useMediaQuery("(min-width: 1024px)", true);
   const { data: graph, isLoading, error, dataUpdatedAt } = useGraph(treeId);
   const { fitView, setCenter, getNodes } = useReactFlow();
+  useMacTrackpadZoom(MIN_ZOOM, MAX_ZOOM);
   const store = useStoreApi();
   // Clicking the empty canvas (or Esc) closes a card's toolbar: unselect it and drop its keyboard focus.
   const dismissToolbar = useCallback(() => {
@@ -468,8 +472,8 @@ function Canvas({ treeId }: { treeId: string }) {
             nodesConnectable={false}
             edgesFocusable={false}
             elementsSelectable
-            minZoom={0.1}
-            maxZoom={2}
+            minZoom={MIN_ZOOM}
+            maxZoom={MAX_ZOOM}
             proOptions={{ hideAttribution: true }}
             onNodeClick={(_, node) => node.type === "person" && undefined}
             onPaneClick={dismissToolbar}
