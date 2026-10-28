@@ -14,6 +14,7 @@
 //!   "sakdulur:download" DOM event, so it can show a toast) without the page calling into the app
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use tauri::webview::{DownloadEvent, NewWindowResponse, PageLoadEvent};
@@ -129,6 +130,12 @@ fn deep_link_path(link: &Url) -> Option<String> {
 #[derive(Default)]
 struct PendingLink(Mutex<Option<Url>>);
 
+/// Whether the window shows the site (not the launcher), kept by on_page_load. open_deep_link reads this instead
+/// of window.url(): on Android the deep link arrives on the main thread, which window.url() then blocks until it
+/// times out (10 s), and wry panics answering it late, closing the app.
+#[derive(Default)]
+struct OnSite(AtomicBool);
+
 /// Loads a deep link in the window: ...://auth/google/complete?code=... -> https://sakdulur.com/auth/google/complete?code=...
 fn open_deep_link(app: &AppHandle, link: &Url) {
     let Some(path) = deep_link_path(link) else {
@@ -139,7 +146,7 @@ fn open_deep_link(app: &AppHandle, link: &Url) {
     target.set_path(&path);
     target.set_query(link.query());
     if let Some(window) = app.get_webview_window("main") {
-        let on_site = window.url().is_ok_and(|url| is_site_page(&url, &site()));
+        let on_site = app.state::<OnSite>().0.load(Ordering::SeqCst);
         if !on_site {
             // Still on the launcher: follow the link when it has loaded (see on_page_load in run()).
             *app.state::<PendingLink>().0.lock().unwrap() = Some(target);
@@ -201,6 +208,7 @@ pub fn run() {
         // which the site may not do (no IPC), so external links did nothing; on_navigation handles them instead.
         .plugin(tauri_plugin_opener::Builder::new().open_js_links_on_click(false).build())
         .manage(PendingLink::default())
+        .manage(OnSite::default())
         .setup(|app| {
             let site = site();
             // The only IPC the site gets: the plugin's commands, for pages on the site's own address.
@@ -271,10 +279,16 @@ pub fn run() {
                 // The launcher has loaded: follow a deep link that arrived before it (started by the link, or the
                 // link came while the window was still loading), before the launcher redirects to /app.
                 .on_page_load(move |webview, payload| {
-                    if payload.event() == PageLoadEvent::Finished && !is_site_page(payload.url(), &load_site) {
+                    let on_site = is_site_page(payload.url(), &load_site);
+                    webview.state::<OnSite>().0.store(on_site, Ordering::SeqCst);
+                    if payload.event() == PageLoadEvent::Finished && !on_site {
                         let pending = webview.state::<PendingLink>().0.lock().unwrap().take();
                         if let Some(target) = pending {
-                            let _ = webview.navigate(target);
+                            // Leave from the launcher's own script, marking it as leaving first: the navigation
+                            // cancels the launcher's ping, and its failure handler must not redirect to /app over
+                            // the sign-in (see launcher/index.html, openSite).
+                            let target = serde_json::to_string(target.as_str()).unwrap_or_default();
+                            let _ = webview.eval(format!("window.__SAKDULUR_LEAVING__ = true; location.replace({target});"));
                         }
                     }
                 })

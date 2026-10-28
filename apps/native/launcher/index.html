@@ -62,6 +62,9 @@
       try { return localStorage.getItem(OPENED) === "1"; } catch (e) { return false; }
     }
     function openSite() {
+      // The app is following a deep link (a sign-in coming back): leaving for it cancels the ping below, whose
+      // failure would otherwise send the window to /app instead and drop the sign-in (set by src/lib.rs).
+      if (window.__SAKDULUR_LEAVING__) return;
       location.replace(app.site + "/app?client=" + encodeURIComponent(app.client));
     }
 
