@@ -1,0 +1,5 @@
+• Works offline: trees, people and photos you've opened stay viewable without internet
+• Switch between your trees and their tabs offline too
+• Relationship kinds: birth, adoptive, step, foster, guardian and milk parents
+• Partner status with marriage and divorce dates; siblings grouped as full, half and step
+• Report button on AI answers; printing and Save as PDF fixed

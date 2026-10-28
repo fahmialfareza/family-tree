@@ -1,0 +1,5 @@
+• Bisa offline: pohon, orang, dan foto yang pernah dibuka tetap bisa dilihat tanpa internet
+• Pindah pohon dan tab juga bisa saat offline
+• Jenis hubungan: orang tua kandung, angkat, tiri, asuh, wali, dan susuan
+• Status pasangan dengan tanggal nikah dan cerai; saudara kandung, seayah/seibu, dan tiri
+• Tombol Laporkan pada jawaban AI; cetak dan Simpan PDF diperbaiki
