@@ -67,7 +67,9 @@ jobs:
         run: pnpm install --frozen-lockfile --filter native
 
       - name: Apply release version
-        run: pnpm --filter native release:version "$BUILD_NUMBER" ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: pnpm --filter native release:version "$BUILD_NUMBER" "$VERSION"
 
       - name: Check app icons
         run: |

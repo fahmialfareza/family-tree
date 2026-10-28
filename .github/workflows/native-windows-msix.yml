@@ -60,7 +60,9 @@ jobs:
         run: pnpm install --frozen-lockfile --filter native
 
       - name: Apply release version
-        run: pnpm --filter native release:version "$env:BUILD_NUMBER" ${{ inputs.version }}
+        env:
+          VERSION: ${{ inputs.version }}
+        run: pnpm --filter native release:version "$env:BUILD_NUMBER" "$env:VERSION"
 
       - name: Build the release executable
         run: pnpm --filter native tauri build --target ${{ matrix.target }} --no-bundle --ci
