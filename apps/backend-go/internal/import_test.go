@@ -152,3 +152,64 @@ func TestCopyPermissions(t *testing.T) {
 	}
 	expectStatus(t, bob, 403, []routeCase{{"POST", fmt.Sprintf("/api/trees/%s/people/%s/sync", bobsTree, copyID), nil}})
 }
+
+// A branch-scoped editor of the destination cannot refresh, or link new relatives to, an earlier copy that
+// someone else owns there (the same rule as PUT /people/:id and /sync).
+func TestCopyIntoBranchScopedDestination(t *testing.T) {
+	resetDB(t)
+	exec := func(sql string, args ...any) {
+		if err := DB.Exec(sql, args...).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Bob's tree S holds a parent and child that alice can also edit.
+	src := newTreeFor(t, bob, "Bob's source")
+	exec("INSERT INTO tree_members (tree_id, user_id, role) VALUES (?, ?, 'editor')", src, alice)
+	exec(`INSERT INTO people (id, tree_id, name, status, gender) VALUES
+	      ('p-s1', ?, 'S One', 'alive', 'male'), ('p-s2', ?, 'S Two', 'alive', 'female')`, src, src)
+	exec("INSERT INTO person_owners (person_id, user_id) VALUES ('p-s1', ?), ('p-s2', ?)", bob, bob)
+	exec(`INSERT INTO relationships (id, tree_id, from_id, to_id, type, sort_order) VALUES
+	      ('rs1', ?, 'p-s1', 'p-s2', 'parent', 0), ('rs2', ?, 'p-s2', 'p-s1', 'child', 0)`, src, src)
+
+	// Alice copies S One into tree A (branch-scoped); the copy is hers, outside bob's branch.
+	res := call(t, alice, "POST", "/api/trees/"+treeA+"/import", importBody(src, "p-s1", "ancestors", nil))
+	if res.Status != 201 || dataMap(res)["created"].(float64) != 1 {
+		t.Fatalf("alice import: %d %v", res.Status, res.Body)
+	}
+	aliceCopy := str(dataMap(res), "rootId")
+	exec("UPDATE people SET name = 'S One Renamed' WHERE id = 'p-s1'")
+
+	// Bob's preview and import agree: alice's copy is skipped, the child is new, and no link touches the copy.
+	body := importBody(src, "p-s1", "descendants", map[string]any{"updateExisting": true})
+	previewBody := importBody(src, "p-s1", "descendants", map[string]any{"updateExisting": true, "dryRun": true})
+	preview := dataMap(call(t, bob, "POST", "/api/trees/"+treeA+"/import", previewBody))
+	if preview["created"].(float64) != 1 || preview["reused"].(float64) != 0 || preview["skipped"].(float64) != 1 {
+		t.Errorf("bob preview: %v", preview)
+	}
+	res = call(t, bob, "POST", "/api/trees/"+treeA+"/import", body)
+	d := dataMap(res)
+	if res.Status != 201 || d["created"].(float64) != 1 || d["updated"].(float64) != 0 || d["skipped"].(float64) != 1 || d["links"].(float64) != 0 {
+		t.Fatalf("bob import: %d %v", res.Status, res.Body)
+	}
+	// Without updateExisting the copy is reused but still not linked to.
+	d = dataMap(call(t, bob, "POST", "/api/trees/"+treeA+"/import", importBody(src, "p-s1", "descendants", nil)))
+	if d["reused"].(float64) != 2 || d["links"].(float64) != 0 {
+		t.Errorf("bob re-import: %v", d)
+	}
+	var copied personRow
+	DB.Where("id = ?", aliceCopy).First(&copied)
+	if copied.Name != "S One" {
+		t.Errorf("branch-scoped editor refreshed a copy outside their branch: %s", copied.Name)
+	}
+	var links int64
+	DB.Table("relationships").Where("tree_id = ? AND (from_id = ? OR to_id = ?)", treeA, aliceCopy, aliceCopy).Count(&links)
+	if links != 0 {
+		t.Errorf("branch-scoped editor linked %d relationships to a copy outside their branch", links)
+	}
+
+	// The owner sees the whole tree, so the same import refreshes and links both copies.
+	d = dataMap(call(t, alice, "POST", "/api/trees/"+treeA+"/import", body))
+	if d["updated"].(float64) != 2 || d["skipped"].(float64) != 0 || d["links"].(float64) != 2 {
+		t.Errorf("owner import: %v", d)
+	}
+}

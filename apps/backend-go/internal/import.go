@@ -63,7 +63,7 @@ type importResult struct {
 	Links    int                   `json:"links"`
 	RootID   string                `json:"rootId,omitempty"` // the root's id in the destination tree
 	DryRun   bool                  `json:"dryRun"`
-	Skipped  int                   `json:"skipped"` // people in scope the caller may not copy (branch-scoped source)
+	Skipped  int                   `json:"skipped"` // people in scope the caller may not copy or update (branch-scoped trees)
 	Selected int                   `json:"selected"`
 }
 
@@ -272,13 +272,31 @@ func runImport(ctx context.Context, source, dest *treeAccess, body importRequest
 		copyOf[e.SourcePersonID] = e.ID
 	}
 
+	// In a branch-scoped destination an editor may only change copies they own: an earlier copy outside
+	// their branch is neither refreshed nor linked to. Copies made by this import are theirs.
+	destAll, destWritable, err := dest.writablePeople(ctx)
+	if err != nil {
+		return nil, err
+	}
+	canWriteCopy := func(copyID string) bool {
+		if destAll {
+			return true
+		}
+		_, ok := destWritable[copyID]
+		return ok
+	}
+
 	if body.DryRun {
 		for _, id := range ids {
 			r, ok := byID[id]
 			if !ok {
 				continue
 			}
-			_, already := copyOf[id]
+			copyID, already := copyOf[id]
+			if already && body.UpdateExisting && !canWriteCopy(copyID) {
+				res.Skipped++
+				continue
+			}
 			res.People = append(res.People, importPreviewPerson{ID: id, Name: r.Name, BirthDate: r.BirthDate, DeathDate: r.DeathDate, AlreadyInTree: already})
 			if already {
 				res.Reused++
@@ -301,6 +319,10 @@ func runImport(ctx context.Context, source, dest *treeAccess, body importRequest
 				continue
 			}
 			if existingID, done := copyOf[id]; done {
+				if body.UpdateExisting && !canWriteCopy(existingID) {
+					res.Skipped++
+					continue
+				}
 				res.Reused++
 				if body.UpdateExisting {
 					if err := refreshCopy(tx, dest.TreeID, existingID, src); err != nil {
@@ -335,13 +357,16 @@ func runImport(ctx context.Context, source, dest *treeAccess, body importRequest
 				return err
 			}
 			copyOf[id] = row.ID
+			if !destAll {
+				destWritable[row.ID] = struct{}{}
+			}
 			res.Created++
 		}
 		links := make([]relationshipRow, 0, len(rels))
 		for _, r := range rels {
 			from, okFrom := copyOf[r.FromID]
 			to, okTo := copyOf[r.ToID]
-			if okFrom && okTo {
+			if okFrom && okTo && canWriteCopy(from) && canWriteCopy(to) {
 				link := relationshipRow{TreeID: dest.TreeID, FromID: from, ToID: to, Type: r.Type, SortOrder: r.SortOrder}
 				link.setDetails(r.details()) // kind, partner status, marriage and end dates travel with the link
 				links = append(links, link)
