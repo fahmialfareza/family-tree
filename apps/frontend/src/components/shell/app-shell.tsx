@@ -37,12 +37,21 @@ export function AppShell({ initialMe, children }: { initialMe: Me; children: Rea
   useOfflineLinks();
   // Keep this page and the tree's tabs readable offline, and the user's other trees (to switch trees offline).
   useEffect(() => {
-    const tabs = treeId ? treeOfflineUrls(treeId, false) : [];
-    savePagesForOffline([pathname, ...tabs.filter((u) => u !== pathname)]);
+    // The tree's tabs and its data (data fetched before the service worker took over was never saved).
+    const tabs = treeId ? treeOfflineUrls(treeId, true) : [];
+    const save = () => savePagesForOffline([pathname, ...tabs.filter((u) => u !== pathname)]);
+    save();
+    // First visit: the service worker takes over only after the page started; ask again once it does.
+    navigator.serviceWorker?.addEventListener("controllerchange", save);
+    return () => navigator.serviceWorker?.removeEventListener("controllerchange", save);
   }, [pathname, treeId]);
   const otherTrees = me.trees.map((x) => x._id).filter((id) => id !== treeId).join(",");
   useEffect(() => {
-    if (otherTrees) saveOtherTreesForOffline(otherTrees.split(","));
+    if (!otherTrees) return;
+    const save = () => saveOtherTreesForOffline(otherTrees.split(","));
+    save();
+    navigator.serviceWorker?.addEventListener("controllerchange", save);
+    return () => navigator.serviceWorker?.removeEventListener("controllerchange", save);
   }, [otherTrees]);
   // Members see the assistant once an owner turned it on; owners also see it while off, to find the switch.
   const showAssistant = !!tree?.assistantAvailable && (!!tree.assistantEnabled || tree.role === "owner");

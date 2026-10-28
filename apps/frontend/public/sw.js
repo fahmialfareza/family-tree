@@ -3,7 +3,7 @@
 // updated); offline, the last copy answers. Editing needs the network (see src/lib/api/client.ts).
 //
 // Bump VERSION when the caching rules change: older caches are then deleted.
-const VERSION = "5";
+const VERSION = "6";
 const STATIC = `sakdulur-static-v${VERSION}`;
 const PAGES = `sakdulur-pages-v${VERSION}`;
 const DATA = `sakdulur-data-v${VERSION}`;
@@ -37,7 +37,13 @@ self.addEventListener("activate", (event) => {
 // a tab visited that way had no copy for offline use; other trees had none unless opened on this device.
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "warm" && Array.isArray(event.data.urls)) {
-    event.waitUntil(warm(event.data.urls, Number(event.data.maxAge) || WARM_EVERY_MS, !!event.data.current));
+    event.waitUntil(
+      Promise.all([
+        warm(event.data.urls, Number(event.data.maxAge) || WARM_EVERY_MS, !!event.data.current),
+        // Code the page already loaded (some of it before this worker took over, so never saved).
+        Array.isArray(event.data.assets) ? saveAssetList(event.data.assets) : null,
+      ]),
+    );
   }
   if (event.data && event.data.type === "clear") {
     event.waitUntil(
@@ -153,8 +159,12 @@ async function warm(urls, maxAge, current) {
 
 /** Saves the /_next/static files a page refers to (scripts, styles, fonts) that aren't saved yet. */
 async function saveAssets(html) {
+  await saveAssetList(html.match(/\/_next\/static\/[^"'\s\\)]+/g) || []);
+}
+
+async function saveAssetList(list) {
   const cache = await caches.open(STATIC);
-  const paths = new Set(html.match(/\/_next\/static\/[^"'\s\\)]+/g) || []);
+  const paths = new Set(list.filter((p) => typeof p === "string" && new URL(p, self.location.origin).pathname.startsWith("/_next/static/")));
   for (const path of paths) {
     const url = new URL(path, self.location.origin).href;
     if (await cache.match(url)) continue;

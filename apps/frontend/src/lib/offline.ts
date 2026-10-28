@@ -69,7 +69,14 @@ export function registerServiceWorker() {
  */
 export function savePagesForOffline(urls: string[], maxAgeMs = 10 * 60_000, current = true) {
   if (typeof navigator === "undefined" || !navigator.onLine || urls.length === 0) return;
-  navigator.serviceWorker?.controller?.postMessage({ type: "warm", urls, maxAge: maxAgeMs, current });
+  // The code this page has loaded, including parts loaded on demand (not named in its HTML), so it can run offline.
+  const assets = current
+    ? performance
+        .getEntriesByType("resource")
+        .map((e) => e.name)
+        .filter((u) => u.includes("/_next/static/"))
+    : undefined;
+  navigator.serviceWorker?.controller?.postMessage({ type: "warm", urls, maxAge: maxAgeMs, current, assets });
 }
 
 const TREE_TABS = ["", "/people", "/families", "/members"];
