@@ -28,8 +28,10 @@ const SITE_URL: &str = match option_env!("SAKDULUR_SITE_URL") {
 };
 /// Custom URL scheme (also the app identifier); the API's MOBILE_APP_SCHEME must match.
 const SCHEME: &str = "com.fahmialfareza.sakdulur";
-/// Paths a deep link may open on the site.
+/// Paths a deep link may open on the site: one ending in "/" covers the paths under it, the others match exactly.
 const DEEP_LINK_PATHS: [&str; 2] = ["/auth/", "/invite"];
+/// Links handed to the system browser or app; any other scheme (file:, other apps' schemes) is ignored.
+const OUTSIDE_SCHEMES: [&str; 5] = ["http", "https", "mailto", "tel", "whatsapp"];
 
 fn client() -> &'static str {
     if cfg!(target_os = "ios") {
@@ -67,6 +69,10 @@ fn is_internal(url: &Url, site: &Url) -> bool {
 /// Opens a URL in the system browser or app. Off the main thread: the window's handlers run there, and on Android
 /// the opener waits for Kotlin code that needs that thread too, so calling it inline froze the app ("not responding").
 fn open_outside(app: &AppHandle, url: &Url) {
+    if !OUTSIDE_SCHEMES.contains(&url.scheme()) {
+        eprintln!("ignored link: {url}");
+        return;
+    }
     let (app, url) = (app.clone(), url.clone());
     std::thread::spawn(move || open_outside_now(&app, &url));
 }
@@ -111,7 +117,10 @@ fn deep_link_path(link: &Url) -> Option<String> {
         Some(host) if !host.is_empty() => format!("/{host}{}", link.path()),
         _ => link.path().to_string(),
     };
-    DEEP_LINK_PATHS.iter().any(|p| path.starts_with(p)).then_some(path)
+    DEEP_LINK_PATHS
+        .iter()
+        .any(|p| if p.ends_with('/') { path.starts_with(p) } else { path == *p })
+        .then_some(path)
 }
 
 /// A deep link waiting for the launcher: when the link starts the app (or arrives while the launcher is still
@@ -353,6 +362,8 @@ mod tests {
         assert_eq!(path("com.fahmialfareza.sakdulur:/auth/google/complete?code=x").as_deref(), Some("/auth/google/complete"));
         assert_eq!(path("com.fahmialfareza.sakdulur://invite?token=t").as_deref(), Some("/invite"));
         assert_eq!(path("com.fahmialfareza.sakdulur://admin/evil"), None);
+        assert_eq!(path("com.fahmialfareza.sakdulur://invite/../app/t/x"), None);
+        assert_eq!(path("com.fahmialfareza.sakdulur://invitee"), None);
         assert_eq!(path("https://evil.example/auth/google/complete"), None);
     }
 }
