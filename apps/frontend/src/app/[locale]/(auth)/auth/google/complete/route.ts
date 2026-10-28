@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clientIpHeaders, serverEnv } from "@/lib/server/env";
-import { CLEAR_OFFLINE_DATA, OAUTH_BINDING_COOKIE, setSessionCookies } from "@/lib/server/session";
+import { OAUTH_BINDING_COOKIE, setSessionCookies } from "@/lib/server/session";
 import { safeNext } from "@/lib/safe-next";
 import type { TokenPair } from "@/lib/api/types";
 
@@ -29,6 +29,7 @@ export async function GET(req: NextRequest) {
   const res = NextResponse.redirect(new URL(next === "/" ? "/app" : next, serverEnv.appUrl));
   res.cookies.delete(OAUTH_BINDING_COOKIE);
   setSessionCookies(res.cookies, json.data);
-  res.headers.set("Clear-Site-Data", CLEAR_OFFLINE_DATA); // a new session: nothing of a previous account stays
+  // No Clear-Site-Data here: on this navigation it leaves the Android app's web view on a blank page. The
+  // app shell's claimOfflineData() drops a previous account's offline copy once the new session loads.
   return res;
 }
