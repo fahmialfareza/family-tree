@@ -79,7 +79,8 @@ export function savePagesForOffline(urls: string[], maxAgeMs = 10 * 60_000, curr
   navigator.serviceWorker?.controller?.postMessage({ type: "warm", urls, maxAge: maxAgeMs, current, assets });
 }
 
-const TREE_TABS = ["", "/people", "/families", "/members"];
+// The tree's tabs, and its offline page (shown, with the app around it, for pages that weren't saved).
+const TREE_TABS = ["", "/people", "/families", "/members", "/offline"];
 const MAX_OTHER_TREES = 10;
 
 /** A tree's pages, and the data its pages need offline (the tree, families, members). */

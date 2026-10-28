@@ -905,6 +905,10 @@
     "errorTitle": "Anda sedang offline",
     "errorBody": "Halaman ini belum pernah dibuka di perangkat ini. Pohon yang pernah Anda buka tetap bisa dilihat.",
     "assistant": "Asisten memerlukan koneksi internet.",
-    "cannotEdit": "Anda sedang offline. Sambungkan ke internet untuk membuat perubahan."
+    "cannotEdit": "Anda sedang offline. Sambungkan ke internet untuk membuat perubahan.",
+    "pageTitle": "Halaman ini belum tersimpan untuk offline",
+    "pageBody": "Anda sedang offline, dan halaman ini belum pernah dibuka di perangkat ini. Pohon, orang, dan keluarga Anda tetap bisa dilihat.",
+    "retry": "Coba lagi",
+    "toTree": "Ke pohon saya"
   }
 }

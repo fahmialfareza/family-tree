@@ -905,6 +905,10 @@
     "errorTitle": "You're offline",
     "errorBody": "This page hasn't been opened on this device yet. Trees you've opened before can still be viewed.",
     "assistant": "The assistant needs an internet connection.",
-    "cannotEdit": "You're offline. Connect to the internet to make changes."
+    "cannotEdit": "You're offline. Connect to the internet to make changes.",
+    "pageTitle": "This page isn't saved for offline use",
+    "pageBody": "You're offline, and this page hasn't been opened on this device yet. Your trees, people and families are still here.",
+    "retry": "Try again",
+    "toTree": "Go to my tree"
   }
 }

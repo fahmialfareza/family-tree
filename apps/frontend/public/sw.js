@@ -3,7 +3,7 @@
 // updated); offline, the last copy answers. Editing needs the network (see src/lib/api/client.ts).
 //
 // Bump VERSION when the caching rules change: older caches are then deleted.
-const VERSION = "6";
+const VERSION = "7";
 const STATIC = `sakdulur-static-v${VERSION}`;
 const PAGES = `sakdulur-pages-v${VERSION}`;
 const DATA = `sakdulur-data-v${VERSION}`;
@@ -107,13 +107,19 @@ async function page(req, url) {
     }
     return res;
   } catch {
-    // Not opened before: /app (the apps' start page) goes to the tree that was open last; anything else gets the
-    // offline page.
+    // Not opened before: /app (the apps' start page) goes to the tree that was open last; another app page goes to
+    // that tree's offline page, which keeps the app's header and tabs ("Try again" returns here). The plain offline
+    // page only when no tree was saved on this device.
     const cache = await caches.open(PAGES);
-    const last = url.pathname.replace(/\/$/, "") === "/app" ? await cache.match(LAST_PAGE) : undefined;
-    if (last) {
-      const path = await last.text();
-      if (path !== url.pathname && (await cache.match(url.origin + path))) return Response.redirect(path, 302);
+    const lastSaved = await cache.match(LAST_PAGE);
+    const last = lastSaved ? await lastSaved.text() : null;
+    if (url.pathname.replace(/\/$/, "") === "/app" && last && last !== url.pathname && (await cache.match(url.origin + last))) {
+      return Response.redirect(last, 302);
+    }
+    const tree = (url.pathname.match(/^\/app\/t\/([^/]+)/) || (last || "").match(/^\/app\/t\/([^/]+)/) || [])[1];
+    const offline = tree && `/app/t/${tree}/offline`;
+    if (offline && url.pathname !== offline && (await cache.match(url.origin + offline))) {
+      return Response.redirect(`${offline}?from=${encodeURIComponent(url.pathname + url.search)}`, 302);
     }
     return offlinePage();
   }
