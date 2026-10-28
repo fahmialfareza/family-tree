@@ -214,6 +214,10 @@ pub fn run() {
             let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()));
             // Window size is desktop-only: on phones the window is the screen (a fixed size there made the
             // page render its desktop layout, cut off, above a black strip).
+            // iPhone/iPad: WKWebView runs the site's service worker (its offline copy) only for App-Bound Domains
+            // (WKAppBoundDomains in Info.plist). Other sites already open outside the app.
+            #[cfg(target_os = "ios")]
+            let builder = builder.limit_navigations_to_app_bound_domains(site.host_str() == Some("sakdulur.com"));
             #[cfg(desktop)]
             let builder = builder
                 .title("Sakdulur")

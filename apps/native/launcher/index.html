@@ -55,14 +55,31 @@
       document.getElementById("retry").textContent = "Coba lagi";
     }
 
+    // Once the site has opened here, its service worker keeps a copy of the trees that were viewed (read-only
+    // offline mode), so without internet the app goes to the site anyway and that copy answers.
+    var OPENED = "sakdulur-site-opened";
+    function opened() {
+      try { return localStorage.getItem(OPENED) === "1"; } catch (e) { return false; }
+    }
+    function openSite() {
+      location.replace(app.site + "/app?client=" + encodeURIComponent(app.client));
+    }
+
     function start() {
       document.body.classList.remove("offline");
-      var timeout = new Promise(function (_, reject) { setTimeout(function () { reject(new Error("timeout")); }, 10000); });
+      var wait = opened() ? 4000 : 10000;
+      var timeout = new Promise(function (_, reject) { setTimeout(function () { reject(new Error("timeout")); }, wait); });
       // An opaque response is enough: it proves the site answers.
       var ping = fetch(app.site + "/api/healthz", { mode: "no-cors", cache: "no-store" });
       Promise.race([ping, timeout]).then(
-        function () { location.replace(app.site + "/app?client=" + encodeURIComponent(app.client)); },
-        function () { document.body.classList.add("offline"); }
+        function () {
+          try { localStorage.setItem(OPENED, "1"); } catch (e) {}
+          openSite();
+        },
+        function () {
+          if (opened()) openSite();
+          else document.body.classList.add("offline");
+        }
       );
     }
 
