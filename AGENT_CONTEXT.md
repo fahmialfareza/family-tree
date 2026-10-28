@@ -67,3 +67,10 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
   - `.github/tasks/features/*.feature.md`
   - `.github/tasks/fixes/*.fix.md`
   - `.github/tasks/chores/*.chore.md`
+
+## Agent Skills
+
+- Shared agent skills live in `.agents/skills/` (used by Codex) and are symlinked into `.claude/skills/` for Claude Code. `skills-lock.json` pins each skill's source and hash.
+- Installed: `cloudflare`, `karpathy-guidelines`, `nextjs-on-cloudflare`, `security-audit`, `use-railway`, `vercel-react-best-practices`, `web-perf`, `workers-best-practices`, `wrangler`, and `graphify`.
+- Restore after clone: `npx skills experimental_install`. Update: `npx skills update -p`. Add: `npx skills add <owner/repo> --skill <name> -a claude-code -a codex`.
+- `graphify` is managed by its own installer, not `skills-lock.json`: install the CLI with `uv tool install graphifyy`, then refresh the skill with `graphify install --project --platform agents`.
