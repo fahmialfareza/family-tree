@@ -67,9 +67,24 @@ export function registerServiceWorker() {
  * Asks the service worker to keep a copy of these app pages (the current one first). Tab switches fetch only parts
  * of a page, so pages reached that way would otherwise have no offline copy.
  */
-export function savePagesForOffline(urls: string[]) {
-  if (typeof navigator === "undefined" || !navigator.onLine) return;
-  navigator.serviceWorker?.controller?.postMessage({ type: "warm", urls });
+export function savePagesForOffline(urls: string[], maxAgeMs = 10 * 60_000, current = true) {
+  if (typeof navigator === "undefined" || !navigator.onLine || urls.length === 0) return;
+  navigator.serviceWorker?.controller?.postMessage({ type: "warm", urls, maxAge: maxAgeMs, current });
+}
+
+const TREE_TABS = ["", "/people", "/families", "/members"];
+const MAX_OTHER_TREES = 10;
+
+/** A tree's pages, and the data its pages need offline (the tree, families, members). */
+export function treeOfflineUrls(treeId: string, withData: boolean) {
+  const pages = TREE_TABS.map((p) => `/app/t/${treeId}${p}`);
+  const api = `/api/proxy/api/trees/${encodeURIComponent(treeId)}`;
+  return withData ? [...pages, `${api}/graph`, `${api}/families`, `${api}/members`] : pages;
+}
+
+/** The user's other trees (switching trees offline), refreshed every 6 hours. */
+export function saveOtherTreesForOffline(treeIds: string[]) {
+  savePagesForOffline(treeIds.slice(0, MAX_OTHER_TREES).flatMap((id) => treeOfflineUrls(id, true)), 6 * 60 * 60_000, false);
 }
 
 const USER_KEY = "ft-offline-user";

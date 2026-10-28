@@ -3,7 +3,7 @@
 // updated); offline, the last copy answers. Editing needs the network (see src/lib/api/client.ts).
 //
 // Bump VERSION when the caching rules change: older caches are then deleted.
-const VERSION = "4";
+const VERSION = "5";
 const STATIC = `sakdulur-static-v${VERSION}`;
 const PAGES = `sakdulur-pages-v${VERSION}`;
 const DATA = `sakdulur-data-v${VERSION}`;
@@ -32,11 +32,12 @@ self.addEventListener("activate", (event) => {
 });
 
 // {type: "clear"}: signed out (or another account signed in), so nothing of this account stays on the device.
-// {type: "warm", urls}: app pages the user is on (and the tree's other tabs). Moving between tabs fetches only
-// parts of a page, never the whole page, so without this a tab visited that way had no copy for offline use.
+// {type: "warm", urls, maxAge}: app pages and API data to keep (the page the user is on, its tree's other tabs, and
+// the user's other trees). Moving between tabs fetches only parts of a page, never the whole page, so without this
+// a tab visited that way had no copy for offline use; other trees had none unless opened on this device.
 self.addEventListener("message", (event) => {
   if (event.data && event.data.type === "warm" && Array.isArray(event.data.urls)) {
-    event.waitUntil(warm(event.data.urls));
+    event.waitUntil(warm(event.data.urls, Number(event.data.maxAge) || WARM_EVERY_MS, !!event.data.current));
   }
   if (event.data && event.data.type === "clear") {
     event.waitUntil(
@@ -112,14 +113,29 @@ async function page(req, url) {
   }
 }
 
-async function warm(urls) {
-  const cache = await caches.open(PAGES);
+// current: urls[0] is the page on screen (it becomes the tree that /app opens offline).
+async function warm(urls, maxAge, current) {
+  const pages = await caches.open(PAGES);
+  const data = await caches.open(DATA);
   for (const [i, raw] of urls.entries()) {
     const url = new URL(raw, self.location.origin);
-    if (url.origin !== self.location.origin || !(url.pathname === "/app" || url.pathname.startsWith("/app/"))) continue;
+    if (url.origin !== self.location.origin) continue;
+    if (url.pathname.startsWith("/api/proxy/")) {
+      const hit = await data.match(url.href);
+      if (hit && Date.now() - Date.parse(hit.headers.get(SAVED_AT) || "0") < maxAge) continue;
+      try {
+        const res = await fetch(url.href, { credentials: "same-origin" });
+        if (res.ok && res.type === "basic") await data.put(url.href, await stamped(res));
+      } catch {
+        return; // offline: nothing to warm
+      }
+      continue;
+    }
+    if (!(url.pathname === "/app" || url.pathname.startsWith("/app/"))) continue;
     const key = url.origin + url.pathname;
+    const cache = pages;
     const hit = await cache.match(key);
-    if (hit && Date.now() - Date.parse(hit.headers.get(SAVED_AT) || "0") < WARM_EVERY_MS) continue;
+    if (hit && Date.now() - Date.parse(hit.headers.get(SAVED_AT) || "0") < maxAge) continue;
     try {
       const res = await fetch(key, { credentials: "same-origin", headers: { Accept: "text/html" } });
       const html = (res.headers.get("Content-Type") || "").includes("text/html");
@@ -127,7 +143,7 @@ async function warm(urls) {
         // The page's own code too: a page saved this way was never shown, so its scripts aren't saved yet.
         await saveAssets(await res.clone().text());
         await cache.put(key, await stamped(res));
-        if (i === 0 && url.pathname.startsWith("/app/t/")) await cache.put(LAST_PAGE, new Response(url.pathname));
+        if (current && i === 0 && url.pathname.startsWith("/app/t/")) await cache.put(LAST_PAGE, new Response(url.pathname));
       }
     } catch {
       return; // offline: nothing to warm
