@@ -16,7 +16,7 @@ export const STORES: Store[] = [
   { id: "appStore", url: `https://apps.apple.com/app/id${APP_STORE_ID}`, os: "iOS, iPadOS", live: false },
   { id: "macAppStore", url: `https://apps.apple.com/app/id${APP_STORE_ID}?platform=mac`, os: "macOS", live: false },
   { id: "googlePlay", url: `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}`, os: "Android", live: true },
-  { id: "microsoftStore", url: "https://apps.microsoft.com/detail/9N7B6TSCXZ00", os: "Windows", live: false },
+  { id: "microsoftStore", url: "https://apps.microsoft.com/detail/9N7B6TSCXZ00", os: "Windows", live: true },
   { id: "snapStore", url: "https://snapcraft.io/sakdulur", os: "Linux", live: true },
 ];
 
