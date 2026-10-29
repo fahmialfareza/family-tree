@@ -240,7 +240,7 @@ func signup(c *gin.Context) {
 		abortServerError(c, err)
 		return
 	}
-	sendVerificationEmail(email, token)
+	sendVerificationEmail(email, mailLang(c, user.Locale), token)
 	responseSuccess(c, gin.H{"user": user, "verificationRequired": true}, 201)
 }
 
@@ -420,7 +420,7 @@ func resendVerification(c *gin.Context) {
 	}
 	if row, err := findUserByEmail(c, email); err == nil && row.toModel().Pending {
 		if token, err := issueAuthToken(c, row.ID, "verify_email", email, verifyEmailTTL); err == nil {
-			sendVerificationEmail(email, token)
+			sendVerificationEmail(email, mailLang(c, row.toModel().Locale), token)
 		}
 	}
 	responseSuccess(c, gin.H{"message": "If a signup is waiting for this email, a new link is on its way."}, 200)
@@ -446,7 +446,7 @@ func forgotPassword(c *gin.Context) {
 	}
 	if row, err := findUserByEmail(c, email); err == nil {
 		if token, err := issueAuthToken(c, row.ID, "reset_password", email, resetPasswordTTL); err == nil {
-			sendPasswordResetEmail(email, token)
+			sendPasswordResetEmail(email, mailLang(c, row.toModel().Locale), token)
 		}
 	}
 	responseSuccess(c, gin.H{"message": "If an account exists for this email, a reset link is on its way."}, 200)

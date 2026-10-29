@@ -115,7 +115,7 @@ func changeEmail(c *gin.Context) {
 		abortServerError(c, err)
 		return
 	}
-	sendVerificationEmail(email, token)
+	sendVerificationEmail(email, mailLang(c, user.Locale), token)
 	responseSuccess(c, gin.H{"pendingEmail": email}, 200)
 }
 

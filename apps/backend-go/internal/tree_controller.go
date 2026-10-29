@@ -212,7 +212,12 @@ func createInvite(c *gin.Context) {
 		return
 	}
 	if tree, err := getTreeRepo(c, access.TreeID); err == nil {
-		sendInviteEmail(invite.Email, currentUser(c).Name, tree.Name, token)
+		// The invitee's own language when they already have an account, else the inviter's current one.
+		saved := ""
+		if row, err := findUserByEmail(c, invite.Email); err == nil {
+			saved = row.toModel().Locale
+		}
+		sendInviteEmail(invite.Email, mailLang(c, saved), currentUser(c).Name, tree.Name, token)
 	}
 	responseSuccess(c, gin.H{"invite": invite, "token": token}, 201)
 }

@@ -1,5 +1,7 @@
 import "server-only";
 
+import { LOCALE_COOKIE, pickLocale } from "@/i18n/config";
+
 // Server-side configuration. The browser never talks to the Go API directly: every call goes through
 // this app's route handlers (BFF), which hold the session in httpOnly cookies.
 
@@ -19,6 +21,16 @@ export function clientIpHeaders(req?: { headers: Headers }): Record<string, stri
   const secret = process.env.BFF_SHARED_SECRET;
   const ip = req?.headers.get("cf-connecting-ip") ?? req?.headers.get("x-real-ip") ?? req?.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
   return secret && ip ? { "X-BFF-Secret": secret, "X-Client-IP": ip } : {};
+}
+
+/** The site language this visitor is using (same rules as the pages), so the API can email them in it. */
+export function localeHeaders(req: { headers: Headers; cookies: { get(name: string): { value: string } | undefined } }): Record<string, string> {
+  const locale = pickLocale({
+    cookie: req.cookies.get(LOCALE_COOKIE)?.value,
+    country: req.headers.get("cf-ipcountry") ?? req.headers.get("x-vercel-ip-country"),
+    acceptLanguage: req.headers.get("accept-language"),
+  });
+  return { "X-Locale": locale };
 }
 
 export const serverEnv = {

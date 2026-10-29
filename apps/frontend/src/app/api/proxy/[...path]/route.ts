@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { clientIpHeaders, serverEnv } from "@/lib/server/env";
+import { clientIpHeaders, localeHeaders, serverEnv } from "@/lib/server/env";
 import {
   ACCESS_COOKIE,
   REFRESH_COOKIE,
@@ -28,7 +28,7 @@ async function forward(req: NextRequest, path: string[], body: ArrayBuffer | und
     const value = req.headers.get(name);
     if (value) headers.set(name, value);
   }
-  for (const [name, value] of Object.entries(clientIpHeaders(req))) headers.set(name, value);
+  for (const [name, value] of Object.entries({ ...clientIpHeaders(req), ...localeHeaders(req) })) headers.set(name, value);
   if (token) headers.set("Authorization", `Bearer ${token}`);
   return fetch(url, { method: req.method, headers, body, cache: "no-store", redirect: "manual" });
 }
