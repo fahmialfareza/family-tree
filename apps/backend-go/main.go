@@ -73,6 +73,13 @@ func main() {
 		slog.Info("newrelic enabled")
 	}
 
+	// Langfuse tracing of the AI assistant is optional too.
+	if enabled, err := app.InitLangfuse(); err != nil {
+		slog.Warn("langfuse init error", "error", err)
+	} else if enabled {
+		slog.Info("langfuse enabled")
+	}
+
 	router, err := app.NewRouter(nrApp)
 	if err != nil {
 		fatal("router config", err)
@@ -115,6 +122,9 @@ func main() {
 	defer cancelShutdown()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("graceful shutdown incomplete", "error", err)
+	}
+	if err := app.ShutdownLangfuse(shutdownCtx); err != nil {
+		slog.Warn("langfuse shutdown error", "error", err)
 	}
 	if nrApp != nil {
 		nrApp.Shutdown(5 * time.Second)

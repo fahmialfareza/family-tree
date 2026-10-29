@@ -580,7 +580,9 @@ func askAssistant(ctx context.Context, a aiAttempt, ix *aiIndex, access *treeAcc
 		if round == assistantMaxRounds {
 			req.ToolChoice = "none" // last round: answer with what was found
 		}
+		generation := startAIGeneration(ctx, a, round, req)
 		res, err := chatComplete(ctx, a, req)
+		generation.end(res, err)
 		if err != nil {
 			return nil, err
 		}
@@ -598,7 +600,9 @@ func askAssistant(ctx context.Context, a aiAttempt, ix *aiIndex, access *treeAcc
 			if err := json.Unmarshal(raw, &tc); err != nil || tc.ID == "" {
 				return nil, fmt.Errorf("malformed tool call from %s", a)
 			}
+			endTool := startAITool(ctx, tc.Function.Name)
 			result := runner.run(tc.Function.Name, tc.Function.Arguments)
+			endTool()
 			msgs = append(msgs, chatMessage{Role: "tool", ToolCallID: tc.ID, Content: &result})
 		}
 	}
@@ -690,10 +694,20 @@ func askTreeAssistant(c *gin.Context) {
 
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 90*time.Second)
 	defer cancel()
+	ctx, span, endTrace := startAITrace(ctx, "tree-assistant", access.UserID, map[string]any{
+		"tree_id":   access.TreeID,
+		"messages":  len(body.Messages),
+		"can_write": access.atLeast(TreeRoleEditor),
+		"locale":    body.Locale,
+	})
 	start := time.Now()
 	res, attempt, err := runWithFallback(ctx, func(ctx context.Context, a aiAttempt) (*assistantResult, error) {
 		return askAssistant(ctx, a, ix, access, system, body.Messages)
 	})
+	if err == nil {
+		lfSetOutput(span, map[string]any{"model": attempt.String(), "rounds": res.Rounds, "actions": len(res.Actions)})
+	}
+	endTrace(err)
 	if err != nil {
 		slog.WarnContext(c, "assistant failed", "request_id", requestID(c), "tree", access.TreeID, "error", err)
 		responseError(c, "The assistant is busy right now. Please try again in a minute.", 503)

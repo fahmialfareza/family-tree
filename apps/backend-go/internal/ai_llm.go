@@ -154,6 +154,7 @@ type chatResponse struct {
 	Usage struct {
 		PromptTokens     int `json:"prompt_tokens"`
 		CompletionTokens int `json:"completion_tokens"`
+		TotalTokens      int `json:"total_tokens"`
 	} `json:"usage"`
 }
 
@@ -269,7 +270,14 @@ var errAIUnavailable = errors.New("no AI provider could answer")
 // from one provider are never sent to another.
 func runWithFallback[T any](ctx context.Context, fn func(ctx context.Context, a aiAttempt) (T, error)) (T, aiAttempt, error) {
 	var zero T
+	if _, ok := ctx.Value(lfTraceKey{}).(lfTraceAttributes); !ok {
+		// Every model call belongs to a named trace, even when the caller did not open one.
+		var endTrace func(error)
+		ctx, _, endTrace = startAITrace(ctx, "ai-assistant", "", nil)
+		defer func() { endTrace(nil) }()
+	}
 	attempts := aiAttempts()
+	tried := 0
 	for _, a := range attempts {
 		if ctx.Err() != nil {
 			break
@@ -277,9 +285,12 @@ func runWithFallback[T any](ctx context.Context, fn func(ctx context.Context, a 
 		if aiCoolingDown(ctx, a) {
 			continue
 		}
+		tried++
 		attemptCtx, cancel := context.WithTimeout(ctx, aiAttemptTimeout())
+		attemptCtx, endAttempt := startAIAttempt(attemptCtx, a, tried)
 		start := time.Now()
 		out, err := fn(attemptCtx, a)
+		endAttempt(err)
 		cancel()
 		if err == nil {
 			return out, a, nil

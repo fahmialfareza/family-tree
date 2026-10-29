@@ -98,6 +98,7 @@ export function privacyPolicy(locale: string): LegalDoc {
             "Google — hanya jika Anda memilih masuk dengan Google.",
             "Apple — hanya jika Anda memilih masuk dengan Apple.",
             "Google (Gemini) dan Groq — hanya untuk pohon yang asisten AI-nya diaktifkan oleh pemilik. Saat anggota bertanya atau meminta perubahan, pesan mereka beserta nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke salah satu penyedia ini untuk menyusun jawaban atau usulan perubahan, yang baru tersimpan setelah anggota menekan Terapkan. Nomor telepon dan foto tidak dikirim, dan percakapan tidak kami simpan.",
+            "Langfuse — pemantauan penggunaan asisten AI (model, jumlah token, waktu, dan id akun penanya). Isi percakapan tidak dikirim.",
           ],
         },
         {
@@ -255,6 +256,7 @@ export function privacyPolicy(locale: string): LegalDoc {
           "Google — only if you choose Sign in with Google.",
           "Apple — only if you choose Sign in with Apple.",
           "Google (Gemini) and Groq — only for trees whose owner turned on the AI assistant. When a member asks a question or asks for a change, their message and the names, dates, places, addresses and notes of the people involved are sent to one of these providers to write the answer or propose the change, which is saved only when the member presses Apply. Phone numbers and photos are not sent, and we do not store the conversation.",
+          "Langfuse — monitoring of AI assistant usage (model, token counts, timing and the asking account's id). Conversation content is not sent.",
         ],
       },
       {
