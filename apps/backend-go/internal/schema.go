@@ -14,7 +14,7 @@ type RowBase struct {
 	ID        string `gorm:"primaryKey;type:text"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt gorm.DeletedAt `gorm:"index"`
+	DeletedAt gorm.DeletedAt
 }
 
 func (b *RowBase) BeforeCreate(tx *gorm.DB) error {
