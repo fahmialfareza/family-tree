@@ -692,7 +692,8 @@ func askTreeAssistant(c *gin.Context) {
 	ix := buildAIIndex(data)
 	system := assistantSystemPrompt(tree.Name, body.Locale, access.atLeast(TreeRoleEditor))
 
-	ctx, cancel := context.WithTimeout(c.Request.Context(), 90*time.Second)
+	// Stay under the server's 60s WriteTimeout (main.go): a later answer would be dropped with the connection.
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 55*time.Second)
 	defer cancel()
 	ctx, span, endTrace := startAITrace(ctx, "tree-assistant", access.UserID, map[string]any{
 		"tree_id":   access.TreeID,

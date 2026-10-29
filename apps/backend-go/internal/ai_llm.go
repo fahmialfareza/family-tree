@@ -99,7 +99,9 @@ func aiAttempts() []aiAttempt {
 	return out
 }
 
-func aiAttemptTimeout() time.Duration {
+// aiCallTimeout caps one Chat Completions call. It is per call, not per model: a tool loop makes several
+// calls, and a model that is slow overall but answering each round should not lose its work.
+func aiCallTimeout() time.Duration {
 	if d, err := time.ParseDuration(os.Getenv("AI_PROVIDER_TIMEOUT")); err == nil && d > 0 {
 		return d
 	}
@@ -176,6 +178,8 @@ var (
 )
 
 func chatComplete(ctx context.Context, a aiAttempt, req chatRequest) (*chatResponse, error) {
+	ctx, cancel := context.WithTimeout(ctx, aiCallTimeout())
+	defer cancel()
 	req.Model = a.Model
 	body, err := json.Marshal(req)
 	if err != nil {
@@ -265,8 +269,8 @@ func aiFailureCooldown(err error) time.Duration {
 
 var errAIUnavailable = errors.New("no AI provider could answer")
 
-// runWithFallback runs fn with each available model in order until one succeeds. fn gets a context with
-// the per-attempt timeout. The whole conversation is retried on the next model, so tool-call messages
+// runWithFallback runs fn with each available model in order until one succeeds. Each call inside fn is
+// capped by aiCallTimeout; ctx bounds the whole question. The whole conversation is retried on the next model, so tool-call messages
 // from one provider are never sent to another.
 func runWithFallback[T any](ctx context.Context, fn func(ctx context.Context, a aiAttempt) (T, error)) (T, aiAttempt, error) {
 	var zero T
@@ -286,12 +290,10 @@ func runWithFallback[T any](ctx context.Context, fn func(ctx context.Context, a 
 			continue
 		}
 		tried++
-		attemptCtx, cancel := context.WithTimeout(ctx, aiAttemptTimeout())
-		attemptCtx, endAttempt := startAIAttempt(attemptCtx, a, tried)
+		attemptCtx, endAttempt := startAIAttempt(ctx, a, tried)
 		start := time.Now()
 		out, err := fn(attemptCtx, a)
 		endAttempt(err)
-		cancel()
 		if err == nil {
 			return out, a, nil
 		}

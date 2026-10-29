@@ -35,7 +35,7 @@ browser ──► frontend (Cloudflare)  ──BACKEND_URL──►  Go API (Rai
 | `GEMINI_API_KEY`, `GROQ_API_KEY` | optional | AI assistant; tried in this order, each on when its key is set. Use a **paid** Gemini key for real family data (the free tier may use prompts to improve Google's products) |
 | `AI_GEMINI_MODELS`, `AI_GROQ_MODELS` | optional | Comma-separated models per provider, tried in order (defaults in `.env.example`) |
 | `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY` | optional | Langfuse v4 tracing of assistant calls (models, tokens, latency, fallbacks, tool names; no message text). Off when empty. `LANGFUSE_BASE_URL` defaults to `https://cloud.langfuse.com`; `LANGFUSE_TRACING_ENVIRONMENT` defaults to `APP_ENV` |
-| `AI_PROVIDER_TIMEOUT`, `AI_DAILY_LIMIT` | optional | Per-model timeout (default `25s`) and questions per user per day (default `100`) |
+| `AI_PROVIDER_TIMEOUT`, `AI_DAILY_LIMIT` | optional | Timeout per model call (default `25s`; a question may make several, within 55s overall) and questions per user per day (default `100`) |
 | `NEW_RELIC_ENABLED`, `NEW_RELIC_APP_NAME`, `NEW_RELIC_LICENSE_KEY` | optional | APM / error tracking |
 | `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS` | optional | Pool size (defaults 20 / 10) |
 | `TREE_DEBUG` | no | `1` for debug logs on tree endpoints |
