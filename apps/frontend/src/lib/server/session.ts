@@ -18,8 +18,11 @@ export const OAUTH_BINDING_COOKIE = "ft_oauth_binding";
 const REFRESH_MAX_AGE = 30 * 24 * 60 * 60;
 
 // Clear-Site-Data when the account on this device changes: drops the offline copy (public/sw.js caches and its
-// worker, localStorage). Not "cookies": that would also drop the app-client and language cookies.
-export const CLEAR_OFFLINE_DATA = '"cache", "storage"';
+// worker, localStorage). Not "cookies": that would also drop the app-client and language cookies. Not "cache":
+// Chromium can take many seconds to empty the HTTP cache, holding back this response and its cookie deletions;
+// a reload meanwhile kept a revoked access cookie, and /app <-> /auth/login then redirected forever. API answers
+// are not HTTP-cached anyway.
+export const CLEAR_OFFLINE_DATA = '"storage"';
 
 type CookieJar = Pick<NextResponse["cookies"], "set" | "delete">;
 

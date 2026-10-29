@@ -13,6 +13,8 @@ export async function POST(req: NextRequest) {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, ...clientIpHeaders(req) },
       cache: "no-store",
+      // Best effort: a slow API must not hold up signing out on this device.
+      signal: AbortSignal.timeout(4000),
     }).catch(() => undefined);
   }
   const out = NextResponse.json({ status: 200, data: true });

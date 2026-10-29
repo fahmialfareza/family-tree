@@ -26,7 +26,7 @@ export default async function AdminLayout({
     me = await backendGet<Me>("/api/me");
   } catch (err) {
     if (err instanceof BackendError && err.status === 401)
-      redirect("/auth/login?next=/admin");
+      redirect("/api/session/expired?next=/admin");
     throw err;
   }
   if (me.user.role !== "admin") notFound();

@@ -12,7 +12,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   try {
     me = await backendGet<Me>("/api/me");
   } catch (err) {
-    if (err instanceof BackendError && err.status === 401) redirect("/auth/login?next=/app");
+    if (err instanceof BackendError && err.status === 401) redirect("/api/session/expired?next=/app");
     throw err;
   }
   return (
