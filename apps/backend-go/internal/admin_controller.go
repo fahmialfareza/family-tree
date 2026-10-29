@@ -130,12 +130,13 @@ func bucketCounts(ctx context.Context, table, bucket string, start time.Time) ([
 }
 
 // countInPeriod counts rows of table created in [start, now) and, unless allTime, in the prior period.
+// Both counts start at priorStart, so the WHERE bound lets the created_at index skip older rows.
 func countInPeriod(ctx context.Context, table string, start, priorStart time.Time, allTime bool) (periodCount, error) {
 	var r struct{ Count, Prior int64 }
 	err := DB.WithContext(ctx).Raw(`SELECT
 		count(*) FILTER (WHERE created_at >= ?) AS count,
-		count(*) FILTER (WHERE created_at >= ? AND created_at < ?) AS prior
-		FROM `+table+` WHERE deleted_at IS NULL`, start, priorStart, start).Scan(&r).Error
+		count(*) FILTER (WHERE created_at < ?) AS prior
+		FROM `+table+` WHERE deleted_at IS NULL AND created_at >= ?`, start, start, priorStart).Scan(&r).Error
 	out := periodCount{Count: r.Count}
 	if !allTime {
 		out.Prior = &r.Prior
