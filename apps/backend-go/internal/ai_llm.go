@@ -138,6 +138,9 @@ type chatRequest struct {
 	Tools       []chatTool    `json:"tools,omitempty"`
 	ToolChoice  string        `json:"tool_choice,omitempty"`
 	Temperature *float64      `json:"temperature,omitempty"`
+	// Set per model in chatComplete.
+	ReasoningEffort string `json:"reasoning_effort,omitempty"`
+	ReasoningFormat string `json:"reasoning_format,omitempty"`
 }
 
 type toolCall struct {
@@ -181,6 +184,11 @@ func chatComplete(ctx context.Context, a aiAttempt, req chatRequest) (*chatRespo
 	ctx, cancel := context.WithTimeout(ctx, aiCallTimeout())
 	defer cancel()
 	req.Model = a.Model
+	req.ReasoningEffort = aiReasoningEffort(a)
+	// Groq's other reasoning models (e.g. Qwen) otherwise put their thinking in the content.
+	if a.Provider.Name == "groq" && !strings.Contains(strings.ToLower(a.Model), "gpt-oss") {
+		req.ReasoningFormat = "hidden"
+	}
 	body, err := json.Marshal(req)
 	if err != nil {
 		return nil, err
@@ -218,6 +226,21 @@ func chatComplete(ctx context.Context, a aiAttempt, req chatRequest) (*chatRespo
 		return nil, errAIEmpty
 	}
 	return &out, nil
+}
+
+// aiReasoningEffort keeps thinking short: the tool loop makes several calls per question, and each round's
+// thinking is most of its latency. Values are what each model accepts (same mapping as catetin.ai).
+func aiReasoningEffort(a aiAttempt) string {
+	model := strings.ToLower(a.Model)
+	switch {
+	case a.Provider.Name == "gemini" && (strings.HasPrefix(model, "gemini-") || strings.HasPrefix(model, "gemma-")):
+		return "minimal" // Gemma rejects "none"
+	case a.Provider.Name == "groq" && strings.Contains(model, "gpt-oss"):
+		return "low"
+	case a.Provider.Name == "groq" && strings.HasPrefix(model, "qwen/"):
+		return "none"
+	}
+	return ""
 }
 
 // ---- Cooldowns: Redis when available (shared across instances), memory otherwise ----

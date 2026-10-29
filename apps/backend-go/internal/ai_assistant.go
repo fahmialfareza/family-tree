@@ -332,6 +332,46 @@ func (ix *aiIndex) getPerson(id string) (map[string]any, bool) {
 	}, true
 }
 
+type relativeRef struct {
+	personRef
+	Via string `json:"via"` // id of the person in the previous generation this one is the parent / child of
+}
+
+const maxRelativeGenerations = 4
+
+// relatives walks parents ("ancestors") or children ("descendants") up to n generations in one call, so
+// "kakek dan nenek saya" or "semua cucu Budi" is one tool round instead of one get_person per person.
+func (ix *aiIndex) relatives(id, direction string, n int) [][]relativeRef {
+	next, kindOf := ix.parents, func(from, to string) string { return ix.linkKind[[2]string{to, from}] }
+	if direction == "descendants" {
+		next, kindOf = ix.children, func(from, to string) string { return ix.linkKind[[2]string{from, to}] }
+	}
+	seen := map[string]bool{id: true}
+	frontier := []string{id}
+	var out [][]relativeRef
+	for gen := 1; gen <= n && len(frontier) > 0; gen++ {
+		var level []relativeRef
+		var nextFrontier []string
+		for _, from := range frontier {
+			for _, to := range next[from] {
+				p := ix.byID[to]
+				if p == nil || seen[to] {
+					continue
+				}
+				seen[to] = true
+				level = append(level, relativeRef{personRef{ID: p.ID, Name: p.Name, Kind: kindOf(from, to)}, from})
+				nextFrontier = append(nextFrontier, to)
+			}
+		}
+		if len(level) == 0 {
+			break
+		}
+		out = append(out, level)
+		frontier = nextFrontier
+	}
+	return out
+}
+
 type pathStep struct {
 	ID       string `json:"id"`
 	Name     string `json:"name"`
@@ -410,9 +450,18 @@ var assistantTools = []chatTool{
 	}},
 	{Type: "function", Function: chatFunction{
 		Name:        "get_person",
-		Description: "Details of one person by id: nickname, gender, status, birth and death date and place, address, notes, plus their parents, partners (spouses), children and siblings with ids. Follow ids to go further (e.g. a parent's parents are grandparents).",
+		Description: "Details of one person by id: nickname, gender, status, birth and death date and place, address, notes, plus their parents, partners (spouses), children and siblings with ids. For grandparents, grandchildren and further, use get_relatives instead.",
 		Parameters: map[string]any{"type": "object", "required": []string{"id"}, "properties": map[string]any{
 			"id": map[string]any{"type": "string"},
+		}},
+	}},
+	{Type: "function", Function: chatFunction{
+		Name:        "get_relatives",
+		Description: "Ancestors (parents, grandparents, great-grandparents...) or descendants (children, grandchildren...) of one person, several generations in one call. Each generation is a list; \"via\" is the id of the person in the previous generation they are the parent or child of (so a grandparent's via tells whether they are on the father's or the mother's side).",
+		Parameters: map[string]any{"type": "object", "required": []string{"id", "direction"}, "properties": map[string]any{
+			"id":          map[string]any{"type": "string"},
+			"direction":   map[string]any{"type": "string", "enum": []string{"ancestors", "descendants"}},
+			"generations": map[string]any{"type": "integer", "description": "How many generations (default 2, max 4)"},
 		}},
 	}},
 	{Type: "function", Function: chatFunction{
@@ -462,6 +511,37 @@ func (ix *aiIndex) runTool(name, args string, seen map[string]bool) string {
 			}
 		}
 		out = res
+	case "get_relatives":
+		var a struct {
+			ID          string `json:"id"`
+			Direction   string `json:"direction"`
+			Generations int    `json:"generations"`
+		}
+		_ = json.Unmarshal([]byte(orEmptyObject(args)), &a)
+		if ix.byID[a.ID] == nil {
+			out = map[string]string{"error": "no person with that id in this tree; use search_people to find ids"}
+			break
+		}
+		if a.Direction != "descendants" {
+			a.Direction = "ancestors"
+		}
+		if a.Generations <= 0 {
+			a.Generations = 2
+		}
+		levels := ix.relatives(a.ID, a.Direction, min(a.Generations, maxRelativeGenerations))
+		type generationOut struct {
+			Generation int           `json:"generation"`
+			People     []relativeRef `json:"people"`
+		}
+		gens := make([]generationOut, 0, len(levels))
+		for i, level := range levels {
+			for _, r := range level {
+				seen[r.ID] = true
+			}
+			gens = append(gens, generationOut{Generation: i + 1, People: level})
+		}
+		seen[a.ID] = true
+		out = map[string]any{"person": personRef{ID: a.ID, Name: ix.byID[a.ID].Name}, a.Direction: gens}
 	case "list_families":
 		type familyOut struct {
 			ID     string     `json:"id"`
@@ -511,7 +591,7 @@ func orEmptyObject(s string) string {
 
 const assistantMaxRounds = 6
 
-func assistantSystemPrompt(treeName, locale string, canWrite bool) string {
+func assistantSystemPrompt(treeName, askerName, locale string, canWrite bool) string {
 	lang := "English"
 	if locale == "id" {
 		lang = "Indonesian"
@@ -521,6 +601,8 @@ func assistantSystemPrompt(treeName, locale string, canWrite bool) string {
 Rules:
 - Reply in the language of the user's last message (default: %s). Be brief and warm, plain text, no markdown tables.
 - Look things up with the tools before answering; never guess names, dates, places or relationships. If the tree does not have the information, say so.
+- Be quick: call tools that do not depend on each other together in one turn (e.g. get_person for both parents at once), and use get_relatives for grandparents, great-grandparents, grandchildren and further instead of following get_person one person at a time.
+- The person asking is signed in as %q. When they say I, me, my, saya, aku or -ku, search for that name; if it matches nobody or several people, ask which person in the tree they are.
 - If a name matches several people, either use the context to pick one or briefly ask which one (mention what tells them apart, e.g. their parents or birth year).
 - Mention people by their full name as written in the tree.
 - "address" is where the person lives (or lived). "status" is alive or deceased. Dates may be partial ("1950") or approximate ("about 1950").
@@ -531,7 +613,7 @@ Rules:
 Kinship words (Indonesian / Javanese): bapak, ayah, papa, rama = father; ibu, mama, biyung = mother; orang tua = parents; anak = child; suami = husband; istri = wife; kakak = older sibling; adik = younger sibling; kakek, mbah kakung, eyang kakung = grandfather; nenek, mbah putri, eyang putri = grandmother; cucu = grandchild; cicit = great-grandchild; paman, om, pakde (older than the parent), paklik/pak lik (younger) = uncle; bibi, tante, bude (older), bulik/bu lik (younger) = aunt; sepupu = cousin; keponakan, ponakan = nephew or niece; mertua = parent-in-law; menantu = child-in-law; ipar = sibling-in-law; besan = co-parent-in-law. "Bapaknya Ayu" means Ayu's father.
 
 Link kinds: a parent or child may have a "kind": adopted = angkat, step = tiri, foster = asuh (raised the child without adopting), guardian = wali, milk = susuan; no kind = kandung (birth). A partner may have a "kind": divorced = cerai, separated = pisah, engaged = tunangan, partner = pasangan (not married); no kind = married (menikah; if the partner has died, the other is widowed: janda/duda). Someone can have birth parents and other parents at the same time, and the same person can be both a blood relative and, e.g., a foster parent; say both. "Orang tua asuh Nenek" means Nenek's foster parents.`,
-		treeName, time.Now().UTC().Format("2 January 2006"), lang, writeRules(canWrite))
+		treeName, time.Now().UTC().Format("2 January 2006"), lang, askerName, writeRules(canWrite))
 }
 
 func writeRules(canWrite bool) string {
@@ -690,7 +772,7 @@ func askTreeAssistant(c *gin.Context) {
 		return
 	}
 	ix := buildAIIndex(data)
-	system := assistantSystemPrompt(tree.Name, body.Locale, access.atLeast(TreeRoleEditor))
+	system := assistantSystemPrompt(tree.Name, currentUser(c).Name, body.Locale, access.atLeast(TreeRoleEditor))
 
 	// Stay under the server's 60s WriteTimeout (main.go): a later answer would be dropped with the connection.
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 55*time.Second)

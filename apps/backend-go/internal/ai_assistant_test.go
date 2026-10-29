@@ -100,6 +100,32 @@ func TestAssistantTools(t *testing.T) {
 	if out := ix.runTool("get_person", `not json`, seen); !strings.Contains(out, "error") {
 		t.Errorf("bad arguments should come back as an error result: %s", out)
 	}
+	// get_relatives: cinta's grandparents in one call, each with the parent they come through.
+	seen = map[string]bool{}
+	out = ix.runTool("get_relatives", `{"id":"cinta","direction":"ancestors"}`, seen)
+	var rel struct {
+		Ancestors []struct {
+			Generation int
+			People     []struct{ ID, Via string }
+		}
+	}
+	if err := json.Unmarshal([]byte(out), &rel); err != nil || len(rel.Ancestors) != 2 {
+		t.Fatalf("get_relatives ancestors: %s", out)
+	}
+	var grand []string
+	for _, r := range rel.Ancestors[1].People {
+		grand = append(grand, r.ID+"<"+r.Via)
+	}
+	if strings.Join(grand, ",") != "budi<ayu,siti<ayu" || !seen["budi"] || !seen["siti"] {
+		t.Errorf("cinta's grandparents: %v", grand)
+	}
+	out = ix.runTool("get_relatives", `{"id":"budi","direction":"descendants","generations":9}`, seen)
+	if !strings.Contains(out, `"descendants"`) || !strings.Contains(out, `"cinta"`) || strings.Contains(out, `"generation":3`) {
+		t.Errorf("budi's descendants (two generations exist): %s", out)
+	}
+	if out := ix.runTool("get_relatives", `{"id":"nobody"}`, seen); !strings.Contains(out, "error") {
+		t.Errorf("unknown id: %s", out)
+	}
 	if got := mentionedPeople(ix, map[string]bool{"budi": true, "ayu": true, "andi": true}, "Bapaknya Ayu Putri adalah Budi Santoso."); len(got) != 2 {
 		t.Errorf("mentioned people: %+v", got)
 	}
