@@ -7,6 +7,8 @@ type DataCollection = NonNullable<NonNullable<Parameters<typeof init>[0]>["dataC
 export const SENTRY_DSN = process.env.NEXT_PUBLIC_SENTRY_DSN || undefined;
 export const SENTRY_ENVIRONMENT = process.env.NEXT_PUBLIC_SENTRY_ENVIRONMENT || process.env.NODE_ENV;
 export const SENTRY_TRACES_SAMPLE_RATE = process.env.NODE_ENV === "production" ? 0.1 : 1;
+// The website and the apps share one Sentry project: app:web here, app:native in apps/native (src/sentry.ts).
+export const SENTRY_INITIAL_SCOPE = { tags: { app: "web" } };
 // Browser events go through this site (app/api/monitoring/route.ts): no CSP entry, and ad blockers let it through.
 export const SENTRY_TUNNEL = "/api/monitoring";
 // Family trees are private: no user details, cookies, bodies or local variables, and only harmless headers.
