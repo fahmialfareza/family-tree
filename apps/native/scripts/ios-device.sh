@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the iOS app signed with the development profile and installs it on a connected iPhone.
 #   scripts/ios-device.sh [device-udid]        (default: the first paired physical iPhone)
-# SAKDULUR_SITE_URL picks the site (default https://sakdulur.com). Needs the "iOS App Development" profile
+# The app's build settings come from .env or the environment (VITE_API_URL is required; see .env.example). Needs the "iOS App Development" profile
 # for com.fahmialfareza.sakdulur installed in Xcode's profiles folder (see README) and the device unlocked.
 # Uses `tauri ios build --open` only to host the CLI session Xcode's Rust build step talks to, then builds
 # with xcodebuild and manual signing (no Xcode account needed).
