@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "main": ".open-next/worker.js",
+  "main": "worker.ts",
   "name": "sakdulur",
   "compatibility_date": "2026-01-08",
   "compatibility_flags": ["nodejs_compat"],
@@ -8,7 +8,7 @@
   // (next-themes' no-flash theme script threw "__name is not defined").
   "keep_names": false,
   // Runtime variables are managed in the dashboard (Worker > Settings > Variables and Secrets):
-  // BACKEND_URL, BACKEND_PUBLIC_URL, plus the BFF_SHARED_SECRET secret. keep_vars stops `wrangler deploy`
+  // BACKEND_URL, BACKEND_PUBLIC_URL, SENTRY_DSN (optional), plus the BFF_SHARED_SECRET secret. keep_vars stops `wrangler deploy`
   // from deleting those plain-text vars. NEXT_PUBLIC_* values are build-time: set them where the build runs.
   // See docs/production-setup.md.
   "keep_vars": true,
