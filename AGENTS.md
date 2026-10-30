@@ -13,7 +13,7 @@ This file is the entrypoint for Codex and other OpenAI agents working in this re
 
 - Active backend: `apps/backend-go`
 - Active frontend: `apps/frontend`
-- Desktop and mobile apps: `apps/native` (Tauri 2 shell that shows the hosted frontend; see its README)
+- Desktop and mobile apps: `apps/native` (Tauri 2 with `apps/frontend`'s screens bundled by Vite, calling the API directly; see its README)
 - JavaScript and TypeScript work should use `pnpm` from the repo root.
 - Go backend work should follow existing `internal/` package patterns and stay `gofmt` compatible.
 - `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite, so use targeted lint, build, or type-check commands and provide manual verification when needed.

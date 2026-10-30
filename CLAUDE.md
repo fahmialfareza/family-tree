@@ -14,7 +14,7 @@ This file is the entrypoint for Claude Code when working in this repository.
 
 - Active backend: `apps/backend-go`
 - Active frontend: `apps/frontend`
-- Desktop and mobile apps: `apps/native` (Tauri 2 shell that shows the hosted frontend; see its README)
+- Desktop and mobile apps: `apps/native` (Tauri 2 with `apps/frontend`'s screens bundled by Vite, calling the API directly; see its README)
 - Use `pnpm` for JavaScript and TypeScript workflows.
 - Reuse existing Go code under `apps/backend-go/internal/` instead of introducing parallel packages.
 - `apps/backend-go` has database-backed authorization tests (`go test ./...` with `TEST_DATABASE_URL`, optionally `TEST_REDIS_URL`; they skip when unset). Elsewhere there is no automated test suite, so prefer focused lint, build, or type-check commands and include manual verification when needed.

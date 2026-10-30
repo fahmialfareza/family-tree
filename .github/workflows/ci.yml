@@ -37,6 +37,31 @@ jobs:
       - name: Build
         run: pnpm --filter frontend build
 
+  # The bundled app's screens (apps/native, Vite): apps/frontend's components through shims, so a frontend change
+  # can break it too. The Tauri shell itself is built by the release workflows.
+  native:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.11.0
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type-check
+        run: pnpm --filter native check-types
+
+      - name: Build
+        run: pnpm --filter native build
+        env:
+          VITE_API_URL: https://api.sakdulur.com
+
   backend-go:
     runs-on: ubuntu-latest
     defaults:

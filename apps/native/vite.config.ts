@@ -34,8 +34,10 @@ function appOverrides(): Plugin {
   };
 }
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   const env = loadEnv(mode, here("."), "");
+  // Without it the app would talk to http://localhost:4000 (src/env.ts): fail the build instead.
+  if (command === "build" && !env.VITE_API_URL) throw new Error("Set VITE_API_URL (the Go API) to build the app; see .env.example");
   const siteUrl = (env.VITE_SITE_URL || "https://sakdulur.com").replace(/\/+$/, "");
   const release = `sakdulur-app@${pkg.version}`;
   const uploadSourceMaps = !!env.SENTRY_AUTH_TOKEN;
