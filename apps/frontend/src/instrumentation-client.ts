@@ -1,6 +1,6 @@
 import * as Sentry from "@sentry/nextjs";
 import { CLIENT_COOKIE, isAppClient } from "@/lib/app-client";
-import { SENTRY_DATA_COLLECTION, SENTRY_DSN, SENTRY_ENVIRONMENT, SENTRY_TRACES_SAMPLE_RATE, SENTRY_TUNNEL } from "@/lib/sentry";
+import { SENTRY_DATA_COLLECTION, SENTRY_DSN, SENTRY_INITIAL_SCOPE, SENTRY_ENVIRONMENT, SENTRY_TRACES_SAMPLE_RATE, SENTRY_TUNNEL } from "@/lib/sentry";
 
 // Runs on every page, so it stays small: Session Replay is added only in the app section (app-providers.tsx).
 if (SENTRY_DSN) {
@@ -9,6 +9,7 @@ if (SENTRY_DSN) {
     environment: SENTRY_ENVIRONMENT,
     tunnel: SENTRY_TUNNEL,
     dataCollection: SENTRY_DATA_COLLECTION,
+    initialScope: SENTRY_INITIAL_SCOPE,
     tracesSampleRate: SENTRY_TRACES_SAMPLE_RATE,
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 1,

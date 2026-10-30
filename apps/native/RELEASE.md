@@ -59,8 +59,8 @@ Every store (the app's own build, `.env.example`; all optional, the defaults are
 | --- | --- | --- |
 | `SAKDULUR_API_URL` | variable | The Go API, default `https://api.sakdulur.com` (its `ALLOWED_ORIGINS` must list `tauri://localhost` and `http://tauri.localhost`) |
 | `SAKDULUR_SITE_URL` | variable | The website, default `https://sakdulur.com` (invite links, Privacy/Terms) |
-| `SENTRY_NATIVE_DSN` | secret | Sentry DSN of the app's project; unset = no reports |
-| `SENTRY_ORG`, `SENTRY_NATIVE_PROJECT` | variables | Sentry organization and the app's project, for source maps |
+| `SENTRY_NATIVE_DSN` | secret | Sentry DSN; the website's project works (events are tagged `app:native` vs `app:web`); unset = no reports |
+| `SENTRY_ORG`, `SENTRY_NATIVE_PROJECT` | variables | Sentry organization and project slug (the same as the website's, if shared), for source maps |
 | `SENTRY_AUTH_TOKEN` | secret | Uploads source maps (release `sakdulur-app@<version>`); unset = no upload |
 
 Android (Google Play):
