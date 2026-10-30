@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { errorMessage } from "@/lib/api/client";
 import { useCreateInviteLink, useInviteLinks, useRevokeInviteLink } from "@/lib/api/hooks";
+import { SITE_URL } from "@/lib/brand";
 import { shareLink, useNativePlatform } from "@/lib/native";
 
 const DAYS = [1, 7, 30];
@@ -44,7 +45,7 @@ export function InviteLinks({ treeId }: { treeId: string }) {
           e.preventDefault();
           try {
             const res = await create.mutateAsync({ role, days: Number(days) });
-            setFresh(`${window.location.origin}/invite?token=${encodeURIComponent(res.token)}`);
+            setFresh(`${SITE_URL}/invite?token=${encodeURIComponent(res.token)}`);
             toast.success(t("linkCreated"));
           } catch (err) {
             toast.error(errorMessage(err));

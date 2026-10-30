@@ -1,0 +1,4 @@
+# Vite env files (VITE_API_URL, VITE_SENTRY_DSN, SENTRY_AUTH_TOKEN): see .env.example
+.env
+.env.*
+!.env.example

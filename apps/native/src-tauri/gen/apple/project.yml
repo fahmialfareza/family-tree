@@ -45,8 +45,6 @@ targets:
       path: sakdulur_iOS/Info.plist
       properties:
         LSRequiresIPhoneOS: true
-        # Service workers (read-only offline mode) only run in WKWebView for App-Bound Domains; see src/lib.rs.
-        WKAppBoundDomains: [sakdulur.com]
         UILaunchStoryboardName: LaunchScreen
         UIRequiredDeviceCapabilities: [arm64, metal]
         UISupportedInterfaceOrientations:

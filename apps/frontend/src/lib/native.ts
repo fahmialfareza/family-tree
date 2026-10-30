@@ -16,6 +16,9 @@ export type Platform = "web" | AppClient;
 
 export function nativePlatform(): Platform {
   if (typeof document === "undefined") return "web";
+  // Set by the app on every page it shows (src-tauri/src/lib.rs); the bundled app has no cookie.
+  const app = (window as unknown as { __SAKDULUR_APP__?: { client?: string } }).__SAKDULUR_APP__?.client;
+  if (isAppClient(app)) return app;
   const match = document.cookie.match(new RegExp(`(?:^|;\\s*)${CLIENT_COOKIE}=([^;]+)`));
   return match && isAppClient(match[1]) ? match[1] : "web";
 }

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { apiFetch } from "@/lib/api/client";
 import { useGraph } from "@/lib/api/hooks";
 import type { ImportScope } from "@/lib/api/types";
 import { selectBranch } from "@/lib/branch";
@@ -109,7 +110,7 @@ export function ExportDialog({
         q.set("person", branch.from);
         if (branch.steps) q.set("steps", branch.steps);
       }
-      const res = await fetch(`/api/proxy/api/trees/${treeId}/export?${q.toString()}`, { credentials: "same-origin" });
+      const res = await apiFetch(`/api/trees/${treeId}/export?${q.toString()}`);
       if (!res.ok) throw new Error(res.statusText);
       const ext = FORMATS.find((f) => f.value === format)!.ext;
       const name = `${graph.tree.name}${person && !whole ? ` - ${person.name}` : ""}`.replace(/[\\/:*?"<>|]+/g, "");

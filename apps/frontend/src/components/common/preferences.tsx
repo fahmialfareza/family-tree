@@ -15,13 +15,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { isLocale } from "@/i18n/config";
+import { saveLocale } from "@/lib/api/client";
 
 export function useSetLocale() {
   const router = useRouter();
   const [pending, start] = useTransition();
   const set = (locale: string) =>
     start(async () => {
-      await fetch("/api/locale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale }) });
+      await saveLocale(locale);
       const url = new URL(window.location.href);
       // Public pages have a URL per language (/en/privacy -> /id/privacy).
       const prefix = url.pathname.split("/")[1];

@@ -13,6 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { endSession } from "@/lib/api/client";
 import type { User } from "@/lib/api/types";
 import { initials } from "@/lib/format";
 import { clearOfflineData } from "@/lib/offline";
@@ -20,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { useSuggestLink } from "./suggest-feature";
 
 export async function signOut() {
-  await fetch("/api/session/logout", { method: "POST" });
+  await endSession();
   await clearOfflineData(); // nothing of this account stays on the device
   window.location.assign("/auth/login");
 }

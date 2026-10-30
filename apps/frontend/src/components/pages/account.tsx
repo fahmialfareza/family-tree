@@ -25,8 +25,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ApiError, api, errorMessage } from "@/lib/api/client";
+import { ApiError, api, apiFetch, endSession, errorMessage } from "@/lib/api/client";
 import { useMe, useSessions, useUpdateMe } from "@/lib/api/hooks";
+import { saveFile } from "@/lib/native";
 import { clearOfflineData } from "@/lib/offline";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -291,7 +292,7 @@ export function Account() {
           onClick={() =>
             run("all", async () => {
               await api.post("/api/auth/logout-all");
-              await fetch("/api/session/logout", { method: "POST" });
+              await endSession();
               await clearOfflineData();
               window.location.assign("/auth/login");
             })
@@ -302,10 +303,18 @@ export function Account() {
       </Section>
 
       <Section title={t("yourData")} description={t("yourDataHelp")}>
-        <Button asChild variant="outline">
-          <a href="/api/proxy/api/me/export" download="sakdulur-account.json">
-            <Download className="size-4" aria-hidden /> {t("downloadData")}
-          </a>
+        <Button
+          variant="outline"
+          disabled={busy === "export"}
+          onClick={() =>
+            run("export", async () => {
+              const res = await apiFetch("/api/me/export");
+              if (!res.ok) throw new Error(res.statusText);
+              await saveFile("sakdulur-account.json", await res.blob());
+            })
+          }
+        >
+          <Download className="size-4" aria-hidden /> {t("downloadData")}
         </Button>
       </Section>
 
@@ -381,7 +390,7 @@ export function Account() {
                       }
                       throw err;
                     }
-                    await fetch("/api/session/logout", { method: "POST" });
+                    await endSession();
                     await clearOfflineData();
                     window.location.assign("/");
                   })
