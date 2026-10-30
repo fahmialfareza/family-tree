@@ -2,7 +2,7 @@ import { fileURLToPath } from "node:url";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import { defineConfig, loadEnv, type Plugin } from "vite";
+import { defineConfig, loadEnv, normalizePath, type Plugin } from "vite";
 import pkg from "./package.json" with { type: "json" };
 
 // The app's screens are apps/frontend's components (imported through "@/"). Next.js-only modules are swapped for
@@ -14,10 +14,11 @@ const host = process.env.TAURI_DEV_HOST;
 
 // apps/frontend modules the app replaces, however they are imported ("@/lib/...", or "./client" from hooks.ts).
 // A replacement still reaches its own original (imported as "@frontend/lib/...").
+// Paths in forward-slash form, as Vite reports them (also on Windows).
 const overrides: Record<string, string> = {
-  [`${frontend}/lib/api/client.ts`]: here("src/native/api-client.ts"),
-  [`${frontend}/lib/native.ts`]: here("src/native/native.ts"),
-  [`${frontend}/lib/offline.ts`]: here("src/native/offline.ts"),
+  [normalizePath(`${frontend}/lib/api/client.ts`)]: normalizePath(here("src/native/api-client.ts")),
+  [normalizePath(`${frontend}/lib/native.ts`)]: normalizePath(here("src/native/native.ts")),
+  [normalizePath(`${frontend}/lib/offline.ts`)]: normalizePath(here("src/native/offline.ts")),
 };
 
 function appOverrides(): Plugin {
@@ -27,9 +28,9 @@ function appOverrides(): Plugin {
     async resolveId(source, importer, options) {
       if (!importer) return null;
       const resolved = await this.resolve(source, importer, { ...options, skipSelf: true });
-      const target = resolved && overrides[resolved.id];
+      const target = resolved && overrides[normalizePath(resolved.id)];
       // A replacement importing its own original gets the original.
-      return target && target !== importer ? target : null;
+      return target && target !== normalizePath(importer) ? target : null;
     },
   };
 }
