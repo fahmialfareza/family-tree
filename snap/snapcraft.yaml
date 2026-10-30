@@ -90,7 +90,8 @@ parts:
       # The Node snap has no corepack, so install pnpm locally.
       npm install --prefix "$SNAPCRAFT_PART_BUILD/.pnpm" pnpm@10.20.0
       export PATH="$SNAPCRAFT_PART_BUILD/.pnpm/node_modules/.bin:$PATH"
-      pnpm install --frozen-lockfile --filter native
+      # The app compiles apps/frontend's screens, so it needs that app's packages too.
+      pnpm install --frozen-lockfile --filter native --filter frontend
       pnpm --filter native tauri build --bundles deb --ci
 
       deb="$(find apps/native/src-tauri/target -path '*/bundle/deb/*.deb' -type f | head -n 1)"

@@ -38,6 +38,13 @@ jobs:
       SAKDULUR_WINDOWS_IDENTITY_NAME: ${{ secrets.SAKDULUR_WINDOWS_IDENTITY_NAME }}
       SAKDULUR_WINDOWS_PUBLISHER: ${{ secrets.SAKDULUR_WINDOWS_PUBLISHER }}
       SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME: ${{ secrets.SAKDULUR_WINDOWS_PUBLISHER_DISPLAY_NAME }}
+      # The bundled app (apps/native/.env.example): baked in by its Vite build (tauri's beforeBuildCommand).
+      VITE_API_URL: ${{ vars.SAKDULUR_API_URL || 'https://api.sakdulur.com' }}
+      VITE_SITE_URL: ${{ vars.SAKDULUR_SITE_URL || 'https://sakdulur.com' }}
+      VITE_SENTRY_DSN: ${{ secrets.SENTRY_NATIVE_DSN }}
+      SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+      SENTRY_NATIVE_PROJECT: ${{ vars.SENTRY_NATIVE_PROJECT }}
+      SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
 
@@ -57,7 +64,7 @@ jobs:
           workspaces: apps/native/src-tauri -> target
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile --filter native
+        run: pnpm install --frozen-lockfile --filter native --filter frontend
 
       - name: Apply release version
         env:

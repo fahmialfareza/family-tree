@@ -53,6 +53,16 @@ its system, `downloadUrl`/`installUrl`/`sameAs` in the structured data, `llms.tx
 `Settings > Secrets and variables > Actions`, or `gh secret set NAME < file`. Base64 a file with
 `base64 < file | tr -d '\n'`.
 
+Every store (the app's own build, `.env.example`; all optional, the defaults are production):
+
+| Name | Kind | Value |
+| --- | --- | --- |
+| `SAKDULUR_API_URL` | variable | The Go API, default `https://api.sakdulur.com` (its `ALLOWED_ORIGINS` must list `tauri://localhost` and `http://tauri.localhost`) |
+| `SAKDULUR_SITE_URL` | variable | The website, default `https://sakdulur.com` (invite links, Privacy/Terms) |
+| `SENTRY_NATIVE_DSN` | secret | Sentry DSN of the app's project; unset = no reports |
+| `SENTRY_ORG`, `SENTRY_NATIVE_PROJECT` | variables | Sentry organization and the app's project, for source maps |
+| `SENTRY_AUTH_TOKEN` | secret | Uploads source maps (release `sakdulur-app@<version>`); unset = no upload |
+
 Android (Google Play):
 
 | Name | Value |
@@ -124,11 +134,11 @@ for macOS 13.
 
 ## App review notes (Apple guideline 4.2)
 
-> Sakdulur is a private family tree app. Besides showing the family tree service, the app uses native features:
-> Sign in with Apple through the system sheet (Face ID / Touch ID), Google sign-in in the system browser with the
-> result returned to the app through its URL scheme, exports (PNG, Excel, GEDCOM, account data) saved to Files /
-> Downloads with native progress notices, the share sheet for invitation links, an offline launch screen with retry,
-> and its own start screen instead of the website's landing page.
+> Sakdulur is a private family tree app. Its screens are part of the app (not a website shown in a window) and work
+> offline with the trees seen before. It uses native features: Sign in with Apple through the system sheet (Face ID /
+> Touch ID), Google sign-in in the system browser with the result returned to the app through its URL scheme,
+> exports (PNG, Excel, GEDCOM, account data) saved to Files / Downloads with native progress notices, the share
+> sheet for invitation links, and its own start screen.
 >
 > Demo account: `<email>` / `<password>` (has a sample tree with several generations).
 
@@ -144,7 +154,8 @@ App Store "App Privacy", all **linked to the user**, used for **App Functionalit
 - Contact info: name, email address; phone number and physical address (entered for relatives).
 - User content: photos, other user content (family tree details, notes).
 - Identifiers: user ID.
-- Diagnostics: crash data, performance data (server monitoring).
+- Diagnostics: crash data, performance data, other diagnostic data (Sentry in the app, with screen recordings of
+  an error masked; server monitoring).
 
 Plus, **not linked**: usage data (product interaction), from Cloudflare's cookieless visit statistics.
 
@@ -153,7 +164,7 @@ Google Play "Data safety", collected (none shared), required for the app to work
 - Personal info: name, email address, user IDs, address, phone number.
 - Photos and videos: photos.
 - App activity: other user-generated content; app interactions (anonymous visit statistics).
-- App info and performance: crash logs, diagnostics.
+- App info and performance: crash logs, diagnostics (Sentry in the app; server monitoring).
 
 ## Icons
 

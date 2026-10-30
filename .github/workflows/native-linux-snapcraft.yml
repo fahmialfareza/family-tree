@@ -62,6 +62,21 @@ jobs:
           sed -i "s/^version: .*/version: \"${version}\"/" snap/snapcraft.yaml
           echo "Sakdulur ${version} (build ${build}) for ${{ matrix.arch }}"
 
+      # snapcraft builds in its own environment: hand the bundled app's settings over in apps/native/.env
+      # (read by its Vite build; see apps/native/.env.example).
+      - name: Write the app's build settings
+        env:
+          VITE_API_URL: ${{ vars.SAKDULUR_API_URL || 'https://api.sakdulur.com' }}
+          VITE_SITE_URL: ${{ vars.SAKDULUR_SITE_URL || 'https://sakdulur.com' }}
+          VITE_SENTRY_DSN: ${{ secrets.SENTRY_NATIVE_DSN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_NATIVE_PROJECT: ${{ vars.SENTRY_NATIVE_PROJECT }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+        run: |
+          for k in VITE_API_URL VITE_SITE_URL VITE_SENTRY_DSN SENTRY_ORG SENTRY_NATIVE_PROJECT SENTRY_AUTH_TOKEN; do
+            printf '%s=%s\n' "$k" "${!k}"
+          done > apps/native/.env
+
       - name: Build the snap
         id: snapcraft
         uses: canonical/action-build@v1

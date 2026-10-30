@@ -8,7 +8,8 @@ This file is the shared project guide for GitHub Copilot, Codex, and Claude Code
 - Active apps:
   - `apps/backend-go`: primary backend service written in Go with Gin. Most backend changes should happen here. Reuse existing code under `internal/`.
   - `apps/frontend`: primary frontend app built with Next.js 16, React 19, and `pnpm`.
-  - `apps/native`: macOS/Windows/Linux/iOS/Android apps (Tauri 2). A native shell that shows the hosted frontend; its native work is in Rust (`src-tauri/src/lib.rs`). App-only frontend code keys off the `ft_client` cookie (`src/lib/app-client.ts`, `src/lib/native.ts`, middleware) and is a no-op on the web. Store releases: `apps/native/RELEASE.md`.
+  - `apps/native`: macOS/Windows/Linux/iOS/Android apps (Tauri 2). A Vite SPA that bundles `apps/frontend/src`'s components (imported as `@/…`, with `next/*` and `next-intl` shimmed) and calls the Go API directly with bearer tokens; `src/native/*` replaces the frontend's `lib/api/client.ts`, `lib/native.ts` and `lib/offline.ts`, so keep their exports in step. A frontend component change can break the app: run `pnpm --filter native check-types` and `build` too. Native work is in Rust (`src-tauri/src/lib.rs`). Store releases: `apps/native/RELEASE.md`.
+  - Sentry: `apps/frontend` (`instrumentation*.ts`, `worker.ts`, `src/lib/sentry.ts`) and `apps/native` (`src/sentry.ts`); off without a DSN. Family data is private: keep `dataCollection` strict and replays masked.
 
 ## Working Rules
 
