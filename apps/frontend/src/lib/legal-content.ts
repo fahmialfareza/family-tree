@@ -7,7 +7,7 @@ import { BRAND } from "./brand";
 export type LegalSection = { h: string; p?: string[]; list?: string[] };
 export type LegalDoc = { title: string; updated: string; intro: string; sections: LegalSection[] };
 
-export const LEGAL_UPDATED = "2026-10-28";
+export const LEGAL_UPDATED = "2026-10-30";
 export const MIN_AGE = 13;
 
 const operator = process.env.NEXT_PUBLIC_OPERATOR_NAME || "Fahmi Alfareza";
@@ -95,6 +95,7 @@ export function privacyPolicy(locale: string): LegalDoc {
             "Cloudinary — penyimpanan dan pengolahan foto.",
             "Resend — pengiriman email transaksional.",
             "New Relic — pemantauan kesalahan dan kinerja.",
+            "Sentry — laporan kesalahan, kinerja, dan rekaman sesi saat terjadi kesalahan (teks, isian, dan foto disamarkan) dari situs web dan aplikasi.",
             "Google — hanya jika Anda memilih masuk dengan Google.",
             "Apple — hanya jika Anda memilih masuk dengan Apple.",
             "Google (Gemini) dan Groq — hanya untuk pohon yang asisten AI-nya diaktifkan oleh pemilik. Saat anggota bertanya atau meminta perubahan, pesan mereka beserta nama, tanggal, tempat, alamat, dan catatan orang yang terkait dikirim ke salah satu penyedia ini untuk menyusun jawaban atau usulan perubahan, yang baru tersimpan setelah anggota menekan Terapkan. Nomor telepon dan foto tidak dikirim, dan percakapan tidak kami simpan.",
@@ -253,6 +254,7 @@ export function privacyPolicy(locale: string): LegalDoc {
           "Cloudinary — photo storage and processing.",
           "Resend — transactional email delivery.",
           "New Relic — error and performance monitoring.",
+          "Sentry — error, performance and, when an error happens, session recordings (with text, inputs and photos masked) from the website and apps.",
           "Google — only if you choose Sign in with Google.",
           "Apple — only if you choose Sign in with Apple.",
           "Google (Gemini) and Groq — only for trees whose owner turned on the AI assistant. When a member asks a question or asks for a change, their message and the names, dates, places, addresses and notes of the people involved are sent to one of these providers to write the answer or propose the change, which is saved only when the member presses Apply. Phone numbers and photos are not sent, and we do not store the conversation.",

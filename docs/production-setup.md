@@ -56,6 +56,10 @@ The others are read at runtime: set them in the Worker (`wrangler secret put` fo
 | `NEXT_PUBLIC_OPERATOR_NAME` | build | Named in the Privacy Policy and Terms (default `Fahmi Alfareza`) |
 | `NEXT_PUBLIC_IMAGE_HOSTS` | build | Extra image origins for the CSP (Cloudinary is built in) |
 | `NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION`, `NEXT_PUBLIC_BING_SITE_VERIFICATION` | build (optional) | Verification codes from Google Search Console / Bing Webmaster Tools (the `content` of their meta tag) |
+| `NEXT_PUBLIC_SENTRY_DSN` | build (optional) | Sentry DSN for browser reports (errors, traces, replays on error, logs). Sent through `/api/monitoring`, so the CSP needs no change. Unset = off |
+| `SENTRY_DSN` | runtime (optional) | Same DSN for the Worker's server-side reports (`worker.ts`) |
+| `NEXT_PUBLIC_SENTRY_ENVIRONMENT` | build (optional) | Sentry environment (default `production`) |
+| `SENTRY_ORG`, `SENTRY_PROJECT`, `SENTRY_AUTH_TOKEN` | build (optional) | Upload source maps during the build; the release is the commit (`WORKERS_CI_COMMIT_SHA`) |
 | `IOS_APP_IDS` | runtime (mobile) | `<TeamID>.com.fahmialfareza.sakdulur`; serves `/.well-known/apple-app-site-association` |
 | `ANDROID_APP_PACKAGE`, `ANDROID_CERT_SHA256` | runtime (mobile) | Package name and signing fingerprints; serves `/.well-known/assetlinks.json` |
 

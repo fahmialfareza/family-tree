@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
 
@@ -60,4 +61,14 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+// Source maps are uploaded to Sentry (and then deleted from the build) only when SENTRY_AUTH_TOKEN is set where the
+// build runs. Workers Builds names the release after the commit, which the Worker reports as well.
+export default withSentryConfig(withNextIntl(nextConfig), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  release: { name: process.env.WORKERS_CI_COMMIT_SHA || undefined },
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});

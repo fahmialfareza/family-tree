@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { CloudOff, RotateCcw, TriangleAlert } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -31,6 +32,7 @@ export default function ErrorPage({ error }: { error: Error & { digest?: string 
   const { offline } = useOffline();
   useEffect(() => {
     console.error(error);
+    Sentry.captureException(error);
     // Offline a reload can't help (and would leave the saved copy for an error page).
     if (navigator.onLine) reloadOnce();
   }, [error]);

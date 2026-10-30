@@ -7,12 +7,23 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ApiError, isOfflineError } from "@/lib/api/client";
 import { registerServiceWorker } from "@/lib/offline";
+import { SENTRY_DSN } from "@/lib/sentry";
+
+// Session Replay (sent only when an error happens, see instrumentation-client.ts) is loaded here rather than on every
+// page. Names, dates and photos of relatives are private, so every text, input and image is masked.
+function addSessionReplay() {
+  if (!SENTRY_DSN) return;
+  void import("@sentry/nextjs").then((Sentry) =>
+    Sentry.addIntegration(Sentry.replayIntegration({ maskAllText: true, maskAllInputs: true, blockAllMedia: true })),
+  );
+}
 
 // A separate client module from providers.tsx: client modules ship whole, so these stay off the marketing pages.
 /** The app, sign-in and admin sections (see app-scope.tsx): data fetching, tooltips and toasts. */
 export function AppProviders({ children }: { children: React.ReactNode }) {
   useDownloadToasts();
   useEffect(registerServiceWorker, []);
+  useEffect(addSessionReplay, []);
   const [queryClient] = useState(
     () =>
       new QueryClient({
