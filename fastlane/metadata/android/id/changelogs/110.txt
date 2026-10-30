@@ -1,0 +1,4 @@
+• Lebih cepat: layar aplikasi kini tersimpan di aplikasi, jadi terbuka dan berpindah layar tanpa menunggu situs web
+• Selalu bisa dibuka saat offline, dengan pohon yang pernah dilihat
+• Tetap masuk: sesi Anda disimpan dan diperbarui di aplikasi
+• Di balik layar: laporan kesalahan membantu kami memperbaiki masalah lebih cepat (tanpa data keluarga)

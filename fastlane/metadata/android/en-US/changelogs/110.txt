@@ -1,0 +1,4 @@
+• Faster: the app's screens are now part of the app, so it opens and moves between screens without waiting for the website
+• Opens offline every time, with the trees you've viewed before
+• Sign-in stays put: your session is kept and renewed in the app
+• Behind the scenes: crash and error reports help us fix problems sooner (no family details are sent)
