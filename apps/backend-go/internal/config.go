@@ -49,6 +49,10 @@ func CheckProductionConfig() error {
 // defaultDevOrigin is the only CORS origin allowed outside production when ALLOWED_ORIGINS is unset.
 const defaultDevOrigin = "http://localhost:3000"
 
+// tauriOrigin is the origin of the desktop and mobile apps on macOS and iOS (apps/native). On Windows and Android
+// they are http://tauri.localhost, an ordinary origin.
+const tauriOrigin = "tauri://localhost"
+
 // AllowedOrigins parses ALLOWED_ORIGINS: comma-separated exact origins such as https://app.example.com
 // (scheme + host[:port], no path). Unset means http://localhost:3000 outside production.
 func AllowedOrigins() ([]string, error) {
@@ -63,6 +67,10 @@ func AllowedOrigins() ([]string, error) {
 	for _, o := range strings.Split(raw, ",") {
 		o = strings.TrimRight(strings.TrimSpace(o), "/")
 		if o == "" {
+			continue
+		}
+		if strings.EqualFold(o, tauriOrigin) {
+			origins = append(origins, tauriOrigin)
 			continue
 		}
 		u, err := url.Parse(o)

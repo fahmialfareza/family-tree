@@ -55,13 +55,15 @@ func NewRouter(nrApp *newrelic.Application) (*gin.Engine, error) {
 	r.GET("/healthz", healthz)
 	r.GET("/readyz", readyz)
 
-	// CORS: exact origins only. The frontend calls the API server-side with bearer tokens, so no credentials.
+	// CORS: exact origins only. The web frontend calls the API server-side and the apps (apps/native) call it from
+	// their own origin (tauri://localhost, http://tauri.localhost), both with bearer tokens, so no credentials.
 	config := cors.DefaultConfig()
 	config.AllowOrigins = origins
+	config.CustomSchemas = []string{"tauri://"}
 	config.AllowCredentials = false
-	config.AllowHeaders = []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "Cache-Control", "Referer", "x-requested-with", "ngrok-skip-browser-warning", requestIDHeader}
+	config.AllowHeaders = []string{"Accept", "Content-Type", "Content-Length", "Accept-Encoding", "Authorization", "Cache-Control", "Referer", "x-requested-with", "ngrok-skip-browser-warning", "X-Locale", requestIDHeader}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-	config.ExposeHeaders = []string{"Content-Type", "Cache-Control", requestIDHeader}
+	config.ExposeHeaders = []string{"Content-Type", "Cache-Control", "Content-Disposition", requestIDHeader}
 	config.MaxAge = 12 * time.Hour
 	// Sign in with Apple on the web returns with a form POST from Apple's page (oauth_apple_web.go).
 	config.AllowOriginWithContextFunc = func(c *gin.Context, origin string) bool {

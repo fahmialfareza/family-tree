@@ -20,7 +20,7 @@ browser ──► frontend (Cloudflare)  ──BACKEND_URL──►  Go API (Rai
 | `PORT` | no | Set by Railway |
 | `APP_BASE_URL` | prod | Frontend origin, `https://…` — used in email links and after Google sign-in |
 | `API_BASE_URL` | prod | This API's public origin, `https://…` — Google OAuth callback |
-| `ALLOWED_ORIGINS` | prod | Frontend origin(s), comma-separated, no path (e.g. `https://familytree.example`) |
+| `ALLOWED_ORIGINS` | prod | Frontend origin(s), comma-separated, no path. Production: `https://sakdulur.com,tauri://localhost,http://tauri.localhost` (the last two are the desktop and mobile apps, which call the API directly) |
 | `BFF_SHARED_SECRET` | prod | ≥ 32 random characters, **same value as the frontend's** |
 | `TRUSTED_PROXIES` / `CLIENT_IP_HEADER` | prod (one) | For requests that do not come through the frontend. If unsure on Railway use `TRUSTED_PROXIES=none` |
 | `REDIS_URL` | prod | Rate limits and caching are off without it |
