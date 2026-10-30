@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "useDefineForClassFields": true,
+    "lib": ["DOM", "DOM.Iterable", "ES2022"],
+    "skipLibCheck": true,
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "paths": {
+      "@/lib/api/client": ["./src/native/api-client.ts"],
+      "@/lib/native": ["./src/native/native.ts"],
+      "@/lib/offline": ["./src/native/offline.ts"],
+      "@frontend/*": ["../frontend/src/*"],
+      "@/*": ["../frontend/src/*"],
+      "next/link": ["./src/shims/link.tsx"],
+      "next/navigation": ["./src/shims/navigation.ts"],
+      "next-intl": ["./src/shims/intl.tsx"]
+    }
+  },
+  "include": ["src", "vite.config.ts"]
+}

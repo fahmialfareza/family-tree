@@ -1,5 +1,7 @@
 // Browser-side API client. Requests go to this app's /api/proxy/* route, which attaches the session
 // from httpOnly cookies and refreshes it when needed; page code never sees a token.
+// The desktop and mobile apps (apps/native) replace this module with one that calls the API directly: keep its
+// exports in step with apps/native/src/native/api-client.ts.
 //
 // Offline (see lib/offline.ts and public/sw.js) reads come from the saved copy; changes need the network, so they
 // fail at once with status 0 and an "offline" message instead of a bare network error.
@@ -76,6 +78,21 @@ export async function sessionRequest<T>(path: string, body?: Record<string, unkn
   }
   await clearOfflineData();
   return json?.data as T;
+}
+
+/** A raw API response (file downloads: exports, "download my data"). */
+export function apiFetch(path: string): Promise<Response> {
+  return fetch(`/api/proxy${path}`, { credentials: "same-origin" });
+}
+
+/** Ends this device's session (clears the session cookies). */
+export async function endSession() {
+  await fetch("/api/session/logout", { method: "POST" });
+}
+
+/** Saves the UI language (cookie, and the account when signed in). */
+export async function saveLocale(locale: string) {
+  await fetch("/api/locale", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ locale }) });
 }
 
 export function errorMessage(error: unknown, fallback = "Something went wrong"): string {

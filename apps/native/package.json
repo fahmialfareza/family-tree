@@ -2,11 +2,15 @@
   "name": "native",
   "version": "0.1.0",
   "private": true,
-  "description": "Sakdulur for macOS, Windows, Linux, iOS and Android: a Tauri 2 shell around the hosted site (apps/frontend)",
+  "description": "Sakdulur for macOS, Windows, Linux, iOS and Android: a Tauri 2 app with apps/frontend's screens bundled (Vite)",
   "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check-types": "tsc -p tsconfig.json --noEmit",
     "tauri": "tauri",
     "desktop": "tauri dev",
-    "desktop:local": "SAKDULUR_SITE_URL=http://localhost:3000 tauri dev",
+    "desktop:local": "VITE_API_URL=http://localhost:4000 tauri dev",
     "desktop:build": "tauri build",
     "icons": "tauri icon app-icon.png && swift scripts/ios-icons-opaque.swift src-tauri/gen/apple/Assets.xcassets/AppIcon.appiconset/*.png",
     "desktop:build:signed": "tauri build --config src-tauri/tauri.developer-id.conf.json",
@@ -15,6 +19,29 @@
     "release:version": "node ./scripts/set-release-version.mjs"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.12.0"
-  }
+    "@sentry/vite-plugin": "^11.10.0",
+    "@tailwindcss/vite": "4.2.4",
+    "@tauri-apps/cli": "^2.12.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^6.1.2",
+    "tailwindcss": "4.2.4",
+    "typescript": "5.9.3",
+    "vite": "^8.3.5"
+  },
+  "dependencies": {
+    "@fontsource-variable/fraunces": "^5.3.0",
+    "@fontsource-variable/plus-jakarta-sans": "^5.3.0",
+    "@sentry/react": "^11.10.0",
+    "@tanstack/query-async-storage-persister": "5.104.5",
+    "@tanstack/react-query": "5.104.5",
+    "@tanstack/react-query-persist-client": "5.104.5",
+    "idb-keyval": "^6.3.0",
+    "lucide-react": "0.555.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-router-dom": "^7.18.5",
+    "use-intl": "4.14.9"
+  },
+  "type": "module"
 }

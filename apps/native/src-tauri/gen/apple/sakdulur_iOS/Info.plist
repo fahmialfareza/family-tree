@@ -81,9 +81,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>WKAppBoundDomains</key>
-	<array>
-		<string>sakdulur.com</string>
-	</array>
 </dict>
 </plist>

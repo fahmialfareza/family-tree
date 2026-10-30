@@ -19,6 +19,7 @@ import { useCreateInvite, useInvites, useMe, useMembers, useRemoveMember, useRev
 import type { TreeRole } from "@/lib/api/types";
 import { initials } from "@/lib/format";
 import { shareLink, useNativePlatform } from "@/lib/native";
+import { SITE_URL } from "@/lib/brand";
 import { useOnlineRole } from "@/lib/offline";
 import { InviteLinks } from "./invite-links";
 
@@ -48,7 +49,7 @@ export function Members({ treeId }: { treeId: string }) {
     e.preventDefault();
     try {
       const res = await createInvite.mutateAsync({ email: email.trim(), role: inviteRole });
-      setLastLink(`${window.location.origin}/invite?token=${encodeURIComponent(res.token)}`);
+      setLastLink(`${SITE_URL}/invite?token=${encodeURIComponent(res.token)}`);
       setEmail("");
       toast.success(t("invited", { email: res.invite.email }));
     } catch (err) {

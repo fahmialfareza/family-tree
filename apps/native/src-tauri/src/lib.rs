@@ -1,14 +1,12 @@
-//! Sakdulur for desktop and mobile: one window showing the hosted site (sakdulur.com), which is
-//! server-rendered and keeps its session in httpOnly cookies, so it cannot be bundled.
+//! Sakdulur for desktop and mobile: one window showing the bundled app (apps/native: apps/frontend's screens built
+//! with Vite), which calls the API directly. `window.__SAKDULUR_APP__ = { client, site }` tells it the platform.
 //!
-//! The site gets no native access except the sakdulur plugin's commands (plugins/sakdulur: Sign in with Apple
-//! on iPhone and Mac), granted at runtime for the site's own address. The rest of the app's part is here:
-//! - starts on a bundled launcher (launcher/index.html): instant splash, offline screen, then the site's
-//!   /app with ?client=<platform>, which marks the session as the app (see apps/frontend middleware.ts)
-//! - keeps the window on the site: other addresses (Google sign-in, WhatsApp, mailto) open in the
-//!   system browser or app, never inside the window
-//! - deep links: Google sign-in returns through com.fahmialfareza.sakdulur:/auth/google/complete?...,
-//!   which is loaded in the window so the site finishes the sign-in
+//! The app's native access is the sakdulur plugin's commands (plugins/sakdulur: Sign in with Apple on iPhone and
+//! Mac, saving files on phones), granted in capabilities/default.json. The rest of the app's part is here:
+//! - keeps the window on the app: other addresses (Google sign-in, WhatsApp, mailto, the API's sign-in pages) open
+//!   in the system browser or app, never inside the window; the website's public pages (Privacy, Terms) open over it
+//! - deep links: Google sign-in returns through com.fahmialfareza.sakdulur:/auth/google/complete?..., which the
+//!   window opens as the app's own /auth/google/complete?... so the app finishes the sign-in
 //! - no page zoom (pinch, double-tap, Ctrl+scroll, Ctrl/Cmd +/-), like a native app
 //! - downloads (exports) are saved to the Downloads folder; the page is told when one starts and ends (a
 //!   "sakdulur:download" DOM event, so it can show a toast) without the page calling into the app
@@ -22,14 +20,14 @@ use tauri::{AppHandle, Manager, Url, Webview, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_opener::OpenerExt;
 
-/// The site the app shows. Builds for local development set SAKDULUR_SITE_URL=http://localhost:3000.
+/// The public website, for its Privacy and Terms pages (the app links to them).
 const SITE_URL: &str = match option_env!("SAKDULUR_SITE_URL") {
     Some(url) => url,
     None => "https://sakdulur.com",
 };
 /// Custom URL scheme (also the app identifier); the API's MOBILE_APP_SCHEME must match.
 const SCHEME: &str = "com.fahmialfareza.sakdulur";
-/// Paths a deep link may open on the site: one ending in "/" covers the paths under it, the others match exactly.
+/// Paths a deep link may open in the app: one ending in "/" covers the paths under it, the others match exactly.
 const DEEP_LINK_PATHS: [&str; 2] = ["/auth/", "/invite"];
 /// Links handed to the system browser or app; any other scheme (file:, other apps' schemes) is ignored.
 const OUTSIDE_SCHEMES: [&str; 5] = ["http", "https", "mailto", "tel", "whatsapp"];
@@ -52,19 +50,18 @@ fn site() -> Url {
     Url::parse(SITE_URL).expect("SAKDULUR_SITE_URL must be a valid URL")
 }
 
-/// Pages the window may show: the site itself and the bundled launcher.
-fn is_internal(url: &Url, site: &Url) -> bool {
+/// Pages the window may show: the bundled app (and, in development, its Vite dev server).
+fn is_internal(url: &Url, dev: Option<&Url>) -> bool {
     match url.scheme() {
         "tauri" | "asset" | "about" | "blob" | "data" => true,
-        "http" | "https" => {
-            // Windows and Android serve bundled files from http(s)://tauri.localhost.
-            url.host_str() == Some("tauri.localhost")
-                || (url.scheme() == site.scheme()
-                    && url.host_str() == site.host_str()
-                    && url.port_or_known_default() == site.port_or_known_default())
-        }
+        // Windows and Android serve bundled files from http(s)://tauri.localhost.
+        "http" | "https" => url.host_str() == Some("tauri.localhost") || dev.is_some_and(|dev| same_origin(url, dev)),
         _ => false,
     }
+}
+
+fn same_origin(a: &Url, b: &Url) -> bool {
+    a.scheme() == b.scheme() && a.host_str() == b.host_str() && a.port_or_known_default() == b.port_or_known_default()
 }
 
 /// Opens a URL in the system browser or app. Off the main thread: the window's handlers run there, and on Android
@@ -84,23 +81,22 @@ fn open_outside_now(app: &AppHandle, url: &Url) {
     }
 }
 
-/// A page of the site itself (not the bundled launcher, which is http(s)://tauri.localhost/ on Android).
-fn is_site_page(url: &Url, site: &Url) -> bool {
-    url.scheme() == site.scheme() && url.host_str() == site.host_str() && url.port_or_known_default() == site.port_or_known_default()
-}
-
-/// The site's public pages (landing, Privacy, Terms, with or without /en and /id): marketing pages that don't
-/// belong inside the app window.
-fn is_public_page(url: &Url) -> bool {
+/// The website's public pages (Privacy, Terms, with or without /en and /id), which the app links to by path
+/// (apps/frontend native-bridge.tsx turns those links into navigations). The app's "/" is its own start.
+fn public_page(url: &Url) -> Option<&str> {
     let path = url.path().trim_end_matches('/');
-    let path = path.strip_prefix("/en").or_else(|| path.strip_prefix("/id")).unwrap_or(path);
-    matches!(path, "" | "/privacy" | "/terms")
+    let page = path.strip_prefix("/en").or_else(|| path.strip_prefix("/id")).unwrap_or(path);
+    let localized = page.len() != path.len();
+    (matches!(page, "/privacy" | "/terms") || (localized && page.is_empty())).then_some(path)
 }
 
-/// Public pages open over the app: Safari's sheet on iPhone, the system browser elsewhere. Off the main thread:
-/// the window's handlers run there, and the plugin call waits for Swift code that needs the main thread too.
-fn open_public_page(app: &AppHandle, url: &Url) {
-    let (app, url) = (app.clone(), url.clone());
+/// Public pages open over the app, from the website: Safari's sheet on iPhone, the system browser elsewhere. Off
+/// the main thread: the window's handlers run there, and the plugin call waits for Swift code that needs the main
+/// thread too.
+fn open_public_page(app: &AppHandle, path: &str) {
+    let mut url = site();
+    url.set_path(path);
+    let app = app.clone();
     std::thread::spawn(move || {
         if tauri_plugin_sakdulur::open_in_app_browser(&app, url.as_str()).is_err() {
             open_outside_now(&app, &url);
@@ -108,7 +104,7 @@ fn open_public_page(app: &AppHandle, url: &Url) {
     });
 }
 
-/// The site path of a deep link. The API sends com.fahmialfareza.sakdulur://auth/google/complete?code=...
+/// The app path of a deep link. The API sends com.fahmialfareza.sakdulur://auth/google/complete?code=...
 /// (so "auth" parses as the host); the single-slash form :/auth/google/complete is accepted too.
 fn deep_link_path(link: &Url) -> Option<String> {
     if link.scheme() != SCHEME {
@@ -124,38 +120,33 @@ fn deep_link_path(link: &Url) -> Option<String> {
         .then_some(path)
 }
 
-/// A deep link waiting for the launcher: when the link starts the app (or arrives while the launcher is still
-/// loading), navigating at once loses to the launcher's own load and its redirect to /app, so the user saw
-/// /welcome until the sign-in finished. The launcher's page-load handler follows it instead.
+/// A deep link that arrived before the app's page loaded (it started the app): opened once it has.
 #[derive(Default)]
-struct PendingLink(Mutex<Option<Url>>);
+struct PendingLink(Mutex<Option<String>>);
 
-/// Whether the window shows the site (not the launcher), kept by on_page_load. open_deep_link reads this instead
-/// of window.url(): on Android the deep link arrives on the main thread, which window.url() then blocks until it
-/// times out (10 s), and wry panics answering it late, closing the app.
+/// Whether the app's page has loaded, kept by on_page_load (read instead of window.url(): on Android the deep link
+/// arrives on the main thread, which window.url() then blocks until it times out, and wry panics answering it late).
 #[derive(Default)]
-struct OnSite(AtomicBool);
+struct Loaded(AtomicBool);
 
-/// Loads a deep link in the window: ...://auth/google/complete?code=... -> https://sakdulur.com/auth/google/complete?code=...
+/// Opens a deep link in the app: ...://auth/google/complete?code=... -> /auth/google/complete?code=...
 fn open_deep_link(app: &AppHandle, link: &Url) {
     let Some(path) = deep_link_path(link) else {
         eprintln!("ignored deep link: {link}");
         return;
     };
-    let mut target = site();
-    target.set_path(&path);
-    target.set_query(link.query());
+    let target = match link.query() {
+        Some(q) => format!("{path}?{q}"),
+        None => path,
+    };
+    if !app.state::<Loaded>().0.load(Ordering::SeqCst) {
+        *app.state::<PendingLink>().0.lock().unwrap() = Some(target);
+        return;
+    }
     if let Some(window) = app.get_webview_window("main") {
-        let on_site = app.state::<OnSite>().0.load(Ordering::SeqCst);
-        if !on_site {
-            // Still on the launcher: follow the link when it has loaded (see on_page_load in run()).
-            *app.state::<PendingLink>().0.lock().unwrap() = Some(target);
-            return;
-        }
-        // Cover the current page (often /welcome) while the site completes the sign-in; see signing_in.js.
-        let invite = path.starts_with("/invite");
-        let _ = window.eval(include_str!("signing_in.js").replace("__INVITE__", if invite { "true" } else { "false" }));
-        let _ = window.navigate(target);
+        // A whole load of the app at that path (it serves index.html for every path).
+        let target = serde_json::to_string(&target).unwrap_or_default();
+        let _ = window.eval(format!("location.assign({target});"));
         #[cfg(desktop)]
         let _ = window.unminimize();
         let _ = window.set_focus();
@@ -208,33 +199,21 @@ pub fn run() {
         // which the site may not do (no IPC), so external links did nothing; on_navigation handles them instead.
         .plugin(tauri_plugin_opener::Builder::new().open_js_links_on_click(false).build())
         .manage(PendingLink::default())
-        .manage(OnSite::default())
+        .manage(Loaded::default())
         .setup(|app| {
-            let site = site();
-            // The only IPC the site gets: the plugin's commands, for pages on the site's own address.
-            app.add_capability(
-                tauri::ipc::CapabilityBuilder::new("site")
-                    .remote(format!("{}/*", SITE_URL.trim_end_matches('/')))
-                    .window("main")
-                    .permission("sakdulur:allow-apple-authorize")
-                    .permission("sakdulur:allow-save-file"),
-            )?;
+            // `tauri dev` shows the Vite dev server (devUrl) instead of the bundled files.
+            let dev = if cfg!(debug_assertions) { app.config().build.dev_url.clone() } else { None };
             let handle = app.handle().clone();
             let nav_handle = handle.clone();
-            let nav_site = site.clone();
+            let nav_dev = dev.clone();
             let popup_handle = handle.clone();
-            let popup_site = site.clone();
-            let load_site = site.clone();
+            let popup_dev = dev.clone();
             // File names by download URL: macOS does not report the path when a download finishes.
             let downloads: Arc<Mutex<HashMap<String, String>>> = Arc::default();
 
             let builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()));
             // Window size is desktop-only: on phones the window is the screen (a fixed size there made the
             // page render its desktop layout, cut off, above a black strip).
-            // iPhone/iPad: WKWebView runs the site's service worker (its offline copy) only for App-Bound Domains
-            // (WKAppBoundDomains in Info.plist). Other sites already open outside the app.
-            #[cfg(target_os = "ios")]
-            let builder = builder.limit_navigations_to_app_bound_domains(site.host_str() == Some("sakdulur.com"));
             #[cfg(desktop)]
             let builder = builder
                 .title("Sakdulur")
@@ -242,7 +221,7 @@ pub fn run() {
                 .min_inner_size(360.0, 640.0)
                 .zoom_hotkeys_enabled(false);
             let window = builder
-                // Read by the launcher (and visible to the site, which does not depend on it).
+                // The platform, for the app (apps/frontend lib/native.ts nativePlatform).
                 .initialization_script(&format!(
                     "window.__SAKDULUR_APP__ = {{ client: {:?}, site: {:?} }};",
                     client(),
@@ -251,44 +230,36 @@ pub fn run() {
                 // No page zoom in the app (pinch, double-tap, Ctrl+scroll); see src/no_zoom.js.
                 .initialization_script(include_str!("no_zoom.js"))
                 .on_navigation(move |url| {
-                    // The site's public pages open over the app (the site turns those links into navigations).
-                    if is_site_page(url, &nav_site) && is_public_page(url) {
-                        open_public_page(&nav_handle, url);
-                        return false;
-                    }
-                    if is_internal(url, &nav_site) {
+                    if is_internal(url, nav_dev.as_ref()) {
+                        // The website's public pages open over the app.
+                        if let Some(path) = public_page(url) {
+                            open_public_page(&nav_handle, path);
+                            return false;
+                        }
                         return true;
                     }
                     open_outside(&nav_handle, url);
                     false
                 })
-                // target="_blank" links: the site in this window, its public pages and other sites outside (the site
-                // opens Privacy/Terms links this way in the app, see apps/frontend native-bridge.tsx).
+                // target="_blank" links: the app's own paths in this window, public pages over it, other sites outside.
                 .on_new_window(move |url, _features| {
-                    if is_site_page(&url, &popup_site) && is_public_page(&url) {
-                        open_public_page(&popup_handle, &url);
-                    } else if is_internal(&url, &popup_site) {
-                        if let Some(window) = popup_handle.get_webview_window("main") {
-                            let _ = window.navigate(url);
-                        }
-                    } else {
+                    if !is_internal(&url, popup_dev.as_ref()) {
                         open_outside(&popup_handle, &url);
+                    } else if let Some(path) = public_page(&url) {
+                        open_public_page(&popup_handle, path);
+                    } else if let Some(window) = popup_handle.get_webview_window("main") {
+                        let _ = window.navigate(url);
                     }
                     NewWindowResponse::Deny
                 })
-                // The launcher has loaded: follow a deep link that arrived before it (started by the link, or the
-                // link came while the window was still loading), before the launcher redirects to /app.
+                // The app has loaded: open a deep link that arrived before (it started the app).
                 .on_page_load(move |webview, payload| {
-                    let on_site = is_site_page(payload.url(), &load_site);
-                    webview.state::<OnSite>().0.store(on_site, Ordering::SeqCst);
-                    if payload.event() == PageLoadEvent::Finished && !on_site {
+                    if payload.event() == PageLoadEvent::Finished {
+                        webview.state::<Loaded>().0.store(true, Ordering::SeqCst);
                         let pending = webview.state::<PendingLink>().0.lock().unwrap().take();
                         if let Some(target) = pending {
-                            // Leave from the launcher's own script, marking it as leaving first: the navigation
-                            // cancels the launcher's ping, and its failure handler must not redirect to /app over
-                            // the sign-in (see launcher/index.html, openSite).
-                            let target = serde_json::to_string(target.as_str()).unwrap_or_default();
-                            let _ = webview.eval(format!("window.__SAKDULUR_LEAVING__ = true; location.replace({target});"));
+                            let target = serde_json::to_string(&target).unwrap_or_default();
+                            let _ = webview.eval(format!("location.replace({target});"));
                         }
                     }
                 })
@@ -349,22 +320,26 @@ mod tests {
     }
 
     #[test]
-    fn launcher_is_not_a_site_page() {
-        let site = Url::parse("https://sakdulur.com").unwrap();
-        for launcher in ["http://tauri.localhost/", "https://tauri.localhost/index.html", "tauri://localhost/"] {
-            assert!(!is_site_page(&Url::parse(launcher).unwrap(), &site), "{launcher}");
+    fn internal_pages() {
+        let url = |raw: &str| Url::parse(raw).unwrap();
+        let dev = url("http://localhost:1420");
+        for app in ["http://tauri.localhost/app", "https://tauri.localhost/index.html", "tauri://localhost/app/t/x"] {
+            assert!(is_internal(&url(app), None), "{app}");
         }
-        assert!(is_site_page(&Url::parse("https://sakdulur.com/privacy").unwrap(), &site));
+        assert!(is_internal(&url("http://localhost:1420/app"), Some(&dev)));
+        for outside in ["https://sakdulur.com/app", "http://localhost:4000/api/auth/google/start", "https://accounts.google.com/"] {
+            assert!(!is_internal(&url(outside), Some(&dev)), "{outside}");
+        }
     }
 
     #[test]
     fn public_pages() {
-        let public = |raw: &str| is_public_page(&Url::parse(raw).unwrap());
-        for p in ["https://sakdulur.com/", "https://sakdulur.com/privacy", "https://sakdulur.com/id/terms", "https://sakdulur.com/en", "https://sakdulur.com/en/privacy/"] {
-            assert!(public(p), "{p}");
-        }
-        for p in ["https://sakdulur.com/app", "https://sakdulur.com/auth/login", "https://sakdulur.com/welcome", "https://sakdulur.com/entries", "https://sakdulur.com/privacy-old"] {
-            assert!(!public(p), "{p}");
+        let public = |raw: &str| public_page(&Url::parse(raw).unwrap()).map(str::to_string);
+        assert_eq!(public("tauri://localhost/privacy").as_deref(), Some("/privacy"));
+        assert_eq!(public("http://tauri.localhost/id/terms/").as_deref(), Some("/id/terms"));
+        assert_eq!(public("tauri://localhost/en").as_deref(), Some("/en"));
+        for p in ["tauri://localhost/", "tauri://localhost/app", "tauri://localhost/auth/login", "tauri://localhost/welcome", "tauri://localhost/entries", "tauri://localhost/privacy-old"] {
+            assert_eq!(public(p), None, "{p}");
         }
     }
 

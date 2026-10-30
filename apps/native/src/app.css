@@ -1,0 +1,9 @@
+/* The website's styles (Tailwind theme, colors, the native-app rules), and its components as Tailwind sources. */
+@import "../../frontend/src/app/globals.css";
+@source "../../frontend/src";
+
+/* next/font sets these on the website; here the same fonts come from @fontsource (bundled, works offline). */
+:root {
+  --font-sans: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Fraunces Variable", ui-serif, Georgia, serif;
+}

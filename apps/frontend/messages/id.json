@@ -833,7 +833,8 @@
     "savedPhotos": "Tersimpan di Foto",
     "savedDevice": "Tersimpan di ponsel ini",
     "photosDenied": "Sakdulur tidak dapat menambahkan foto. Izinkan di Pengaturan › Sakdulur › Foto.",
-    "downloadFailed": "Gagal mengunduh. Silakan coba lagi."
+    "downloadFailed": "Gagal mengunduh. Silakan coba lagi.",
+    "signingIn": "Sedang masuk…"
   },
   "links": {
     "kinds": {
