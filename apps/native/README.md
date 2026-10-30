@@ -46,6 +46,10 @@ pnpm desktop:build           # release bundles for this OS (.app/.dmg, .msi/.exe
 pnpm icons                   # regenerate icons from app-icon.png
 ```
 
+Sign in with Apple on the Mac shows Apple's sheet (Touch ID) only in a build signed with its entitlement: an unsigned
+`tauri dev` / `tauri build --debug` app falls back to the browser on purpose. Test it with
+`VITE_API_URL=https://api.sakdulur.com pnpm desktop:build:dev-signed` and open `src-tauri/target/release/bundle/macos/Sakdulur.app`.
+
 The local API must allow the app's origins: `ALLOWED_ORIGINS=http://localhost:3000,http://localhost:1420,tauri://localhost,http://tauri.localhost`.
 Deep links only work in a built app (macOS registers the scheme from the bundle): `pnpm tauri build --debug --bundles app`,
 open the `.app`, then `open "com.fahmialfareza.sakdulur:/auth/google/complete?code=x"`.
