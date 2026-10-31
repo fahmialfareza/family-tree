@@ -1,9 +1,9 @@
-name: Daily Postgres Backup
+name: Weekly Postgres Backup
 
-# Daily dumps (kept 14 days) plus a weekly copy every Saturday (kept 8 weeks).
+# Weekly dumps every Sunday 00:00 WIB (Saturday 17:00 UTC), kept 8 weeks.
 on:
   schedule:
-    - cron: "0 17 * * *"
+    - cron: "0 17 * * 6"
   workflow_dispatch:
 
 permissions:
@@ -76,18 +76,9 @@ jobs:
 
           aws s3 cp \
             "${{ steps.backup.outputs.backup_path }}" \
-            "s3://${R2_BUCKET}/postgres/daily/${{ steps.backup.outputs.backup_filename }}" \
+            "s3://${R2_BUCKET}/postgres/weekly/${{ steps.backup.outputs.backup_filename }}" \
             --endpoint-url "${endpoint_url}" \
             --only-show-errors
-
-          # Saturdays (UTC) and manual runs also keep a weekly copy.
-          if [[ "$(date -u +%u)" == "6" || "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            aws s3 cp \
-              "${{ steps.backup.outputs.backup_path }}" \
-              "s3://${R2_BUCKET}/postgres/weekly/${{ steps.backup.outputs.backup_filename }}" \
-              --endpoint-url "${endpoint_url}" \
-              --only-show-errors
-          fi
 
       - name: Delete expired backups
         env:
@@ -114,5 +105,6 @@ jobs:
             done
           }
 
-          prune daily 14
           prune weekly 56
+          # Drains the old daily/ prefix from before backups went weekly; remove after 2026-11-14.
+          prune daily 14

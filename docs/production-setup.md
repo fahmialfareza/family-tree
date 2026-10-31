@@ -72,7 +72,7 @@ Local development needs none of these: both apps fall back to `http://localhost:
 
 ## Going live checklist
 
-1. **Back up production** (`gh workflow run "Daily Postgres Backup"`) and confirm the dump in R2.
+1. **Back up production** (`gh workflow run "Weekly Postgres Backup"`) and confirm the dump in R2.
 2. Set every "prod" variable above on Railway, plus `APP_ENV=production`, and the frontend variables in Cloudflare.
    Generate secrets with `openssl rand -base64 48`.
 3. Resend: verify the sending domain; set `EMAIL_FROM` on it.
@@ -118,7 +118,7 @@ columns to `users`.
 - **Health**: `GET /healthz` (process up) and `GET /readyz` (Postgres + Redis). The Docker image has a HEALTHCHECK.
 - **Migrations**: SQL files in `apps/backend-go/internal/migrations`, applied on startup. Roll back one step with
   `go run github.com/pressly/goose/v3/cmd/goose@v3.29.0 -dir internal/migrations postgres "$DATABASE_URL" down`.
-- **Backups**: daily dumps kept 14 days, weekly copies kept 8 weeks (`docs/postgres-backup.md`). Practice a restore
+- **Backups**: weekly dumps kept 8 weeks (`docs/postgres-backup.md`). Practice a restore
   into a scratch database with `scripts/restore-postgres.sh` every few months.
 - **Monitoring**: with New Relic enabled, alert on error rate, p95 latency and 5xx; add an uptime check on `/readyz`.
 - **Staging**: run a second Railway environment and Worker with their own database, secrets and URLs before

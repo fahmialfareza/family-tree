@@ -7,7 +7,7 @@ import { BRAND } from "./brand";
 export type LegalSection = { h: string; p?: string[]; list?: string[] };
 export type LegalDoc = { title: string; updated: string; intro: string; sections: LegalSection[] };
 
-export const LEGAL_UPDATED = "2026-10-30";
+export const LEGAL_UPDATED = "2026-10-31";
 export const MIN_AGE = 13;
 
 const operator = process.env.NEXT_PUBLIC_OPERATOR_NAME || "Fahmi Alfareza";
@@ -134,7 +134,7 @@ export function privacyPolicy(locale: string): LegalDoc {
             "Menghapus akun akan langsung menghapus akun, sesi, keanggotaan, dan pohon yang hanya Anda miliki beserta isinya. Jika Anda satu-satunya pemilik pohon yang juga dipakai orang lain, Anda harus menyerahkan kepemilikan terlebih dahulu.",
             "Orang, keluarga, atau pohon yang dihapus di dalam aplikasi disembunyikan dari semua anggota, tetapi catatannya tetap tersimpan sebagai riwayat sampai pohonnya dihapus atau Anda meminta penghapusan permanen melalui email.",
             "Sesi masuk berakhir paling lama 30 hari setelah terakhir digunakan; tautan email berlaku 1 jam (atur ulang kata sandi), 24 jam (verifikasi), atau 7 hari (undangan).",
-            "Cadangan basis data harian disimpan 14 hari dan cadangan mingguan 8 minggu; data yang dihapus hilang dari cadangan setelah masa itu.",
+            "Cadangan basis data mingguan disimpan 8 minggu; data yang dihapus hilang dari cadangan setelah masa itu.",
             "Log server dan data pemantauan disimpan dalam waktu terbatas, umumnya tidak lebih dari 90 hari.",
           ],
         },
@@ -293,7 +293,7 @@ export function privacyPolicy(locale: string): LegalDoc {
           "Deleting your account immediately removes your account, sessions, memberships, and the trees only you belong to, with their content. If you are the only owner of a tree others use, you must hand ownership over first.",
           "People, families or trees deleted inside the app are hidden from all members, but the records are kept as history until the tree is deleted or you ask us by email to erase them permanently.",
           "Sign-in sessions end at most 30 days after last use; email links last 1 hour (password reset), 24 hours (verification) or 7 days (invitations).",
-          "Daily database backups are kept for 14 days and weekly backups for 8 weeks; deleted data disappears from backups after that.",
+          "Weekly database backups are kept for 8 weeks; deleted data disappears from backups after that.",
           "Server logs and monitoring data are kept for a limited time, generally no longer than 90 days.",
         ],
       },

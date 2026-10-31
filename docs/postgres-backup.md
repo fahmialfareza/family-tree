@@ -24,8 +24,8 @@ During each run the workflow:
 1. Installs the PostgreSQL client from the PGDG apt repository. `PG_CLIENT_VERSION` must be the same major version as the Railway server or newer.
 2. Installs AWS CLI for the R2 upload.
 3. Creates a compressed custom-format dump such as `family-tree-postgres-2026-10-25-170000.dump` and checks it with `pg_restore --list`.
-4. Uploads the dump to `s3://<R2_BUCKET>/postgres/daily/` (kept 14 days) and, on Saturdays and manual runs, also to `postgres/weekly/` (kept 8 weeks), using the Cloudflare R2 S3-compatible endpoint.
-5. Deletes dumps older than 4 weeks from that prefix.
+4. Uploads the dump to `s3://<R2_BUCKET>/postgres/weekly/` using the Cloudflare R2 S3-compatible endpoint.
+5. Deletes weekly dumps older than 8 weeks. Until 2026-11-14 it also drains the old `postgres/daily/` prefix (dumps older than 14 days) left over from when backups ran daily.
 
 ## Trigger A Backup Manually
 
@@ -55,6 +55,6 @@ Restore into a local or staging database first before touching production.
 ## Verify The Backup
 
 1. Confirm the GitHub Actions job completed successfully.
-2. Confirm a new object exists in the R2 bucket under `postgres/daily/` (and `postgres/weekly/` for manual runs).
+2. Confirm a new object exists in the R2 bucket under `postgres/weekly/`.
 3. Download the dump and run `pg_restore --list /path/to/file.dump`.
 4. Periodically restore it into a disposable database with `./scripts/restore-postgres.sh`.
